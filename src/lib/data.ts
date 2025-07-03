@@ -16,7 +16,7 @@ export const menuItems: MenuItem[] = [
     price: 8.99,
     category: 'appetizers',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'bruschetta food'
+    imageHint: 'bruschetta'
   },
   {
     id: 'app-2',
@@ -34,7 +34,7 @@ export const menuItems: MenuItem[] = [
     price: 12.00,
     category: 'appetizers',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'calamari food'
+    imageHint: 'fried calamari'
   },
   // Mains
   {
@@ -53,7 +53,7 @@ export const menuItems: MenuItem[] = [
     price: 15.50,
     category: 'mains',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'burger fries'
+    imageHint: 'classic burger'
   },
   {
     id: 'main-3',
@@ -62,7 +62,7 @@ export const menuItems: MenuItem[] = [
     price: 18.00,
     category: 'mains',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'pasta carbonara'
+    imageHint: 'spaghetti carbonara'
   },
   {
     id: 'main-4',
@@ -71,7 +71,7 @@ export const menuItems: MenuItem[] = [
     price: 32.00,
     category: 'mains',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'steak dinner'
+    imageHint: 'ribeye steak'
   },
   // Drinks
   {
@@ -99,7 +99,7 @@ export const menuItems: MenuItem[] = [
     price: 9.00,
     category: 'drinks',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'red wine'
+    imageHint: 'glass wine'
   },
   // Desserts
   {
@@ -109,7 +109,7 @@ export const menuItems: MenuItem[] = [
     price: 9.50,
     category: 'desserts',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'chocolate cake'
+    imageHint: 'lava cake'
   },
   {
     id: 'dessert-2',
@@ -118,7 +118,7 @@ export const menuItems: MenuItem[] = [
     price: 8.00,
     category: 'desserts',
     imageUrl: 'https://placehold.co/600x400.png',
-    imageHint: 'cheesecake slice'
+    imageHint: 'newyork cheesecake'
   },
 ];
 
