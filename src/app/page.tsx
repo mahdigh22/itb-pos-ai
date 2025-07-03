@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
-import type { OrderItem, MenuItem } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, OrderStatus } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
+import OrderProgress from '@/components/pos/order-progress';
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -22,6 +23,7 @@ import { LayoutDashboard, Users } from 'lucide-react';
 
 export default function Home() {
   const [order, setOrder] = useState<OrderItem[]>([]);
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
 
@@ -63,12 +65,43 @@ export default function Home() {
     setCheckoutAlertOpen(true);
   };
 
+  const handleUpdateOrderStatus = (orderId: string, status: OrderStatus) => {
+    setActiveOrders(prev =>
+      prev.map(o => (o.id === orderId ? { ...o, status } : o))
+    );
+  };
+
+  const handleClearOrder = (orderId: string) => {
+    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+  }
+
   const confirmCheckout = () => {
-    console.log('Checkout confirmed:', order);
+    const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const tax = subtotal * 0.08;
+    const total = subtotal + tax;
+
+    const newOrder: ActiveOrder = {
+      id: `order-${Date.now()}`,
+      items: [...order],
+      status: 'Preparing',
+      total: total,
+      createdAt: new Date(),
+    };
+
+    setActiveOrders(prev => [newOrder, ...prev]);
+
+    setTimeout(() => {
+      handleUpdateOrderStatus(newOrder.id, 'Ready');
+    }, 15000);
+
+    setTimeout(() => {
+      handleUpdateOrderStatus(newOrder.id, 'Completed');
+    }, 30000);
+
     setOrder([]);
     toast({
-        title: "Checkout Successful!",
-        description: "Your payment has been processed.",
+        title: "Order Sent!",
+        description: "Your order is being prepared and is now tracked below.",
     });
     setCheckoutAlertOpen(false);
   }
@@ -91,8 +124,9 @@ export default function Home() {
 
       <TabsContent value="pos">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
             <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+            <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
           </div>
           <div className="lg:col-span-1">
             <OrderSummary

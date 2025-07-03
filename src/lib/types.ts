@@ -26,3 +26,13 @@ export interface Member {
   avatarUrl: string;
   avatarHint: string;
 }
+
+export type OrderStatus = 'Preparing' | 'Ready' | 'Completed';
+
+export interface ActiveOrder {
+  id: string;
+  items: OrderItem[];
+  status: OrderStatus;
+  total: number;
+  createdAt: Date;
+}
