@@ -15,7 +15,7 @@ export const menuItems: MenuItem[] = [
     description: 'Grilled bread with tomatoes, garlic, basil, and olive oil.',
     price: 8.99,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1505253716362-afb7421838f2?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1579752173426-3f518c7de4c2?w=600&h=400&fit=crop',
     imageHint: 'bruschetta food'
   },
   {
@@ -24,7 +24,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy spinach and artichoke dip served with tortilla chips.',
     price: 10.50,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1629583622013-bf1b181b75f8?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1563652129994-e27640477215?w=600&h=400&fit=crop',
     imageHint: 'spinach dip'
   },
   {
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     description: 'Lightly fried calamari with a spicy marinara sauce.',
     price: 12.00,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1625535332930-cf0616b34b46?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1574900889212-2f73b2245231?w=600&h=400&fit=crop',
     imageHint: 'fried calamari'
   },
   // Mains
