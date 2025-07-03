@@ -41,6 +41,7 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
                             src={item.imageUrl}
                             alt={item.name}
                             fill
+                            unoptimized
                             data-ai-hint={item.imageHint}
                             className="object-cover"
                           />
