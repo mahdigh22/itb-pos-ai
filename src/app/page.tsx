@@ -17,7 +17,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-
 export default function Home() {
   const [order, setOrder] = useState<OrderItem[]>([]);
   const { toast } = useToast()
@@ -33,10 +32,6 @@ export default function Home() {
       }
       return [...prevOrder, { ...item, quantity: 1 }];
     });
-    toast({
-      title: `${item.name} added`,
-      description: "Item added to your order.",
-    })
   };
 
   const handleUpdateQuantity = (itemId: string, quantity: number) => {
@@ -51,11 +46,6 @@ export default function Home() {
 
   const handleRemoveItem = (itemId: string) => {
     setOrder((prevOrder) => prevOrder.filter((item) => item.id !== itemId));
-    toast({
-      title: `Item removed`,
-      description: "Item removed from your order.",
-      variant: 'destructive'
-    })
   };
 
   const handleNewCheck = () => {
@@ -72,7 +62,7 @@ export default function Home() {
 
   const confirmCheckout = () => {
     console.log('Checkout confirmed:', order);
-    handleNewCheck();
+    setOrder([]);
     toast({
         title: "Checkout Successful!",
         description: "Your payment has been processed.",
@@ -81,12 +71,12 @@ export default function Home() {
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-3 xl:col-span-2">
+    <div className="space-y-6">
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-2">
           <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
         </div>
-        <div className="lg:col-span-2 xl:col-span-1">
+        <div className="lg:col-span-1">
           <OrderSummary
             order={order}
             onUpdateQuantity={handleUpdateQuantity}
@@ -110,6 +100,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
