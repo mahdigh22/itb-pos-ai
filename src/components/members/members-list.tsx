@@ -48,7 +48,7 @@ export default function MembersList({ members }: { members: Member[] }) {
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="person avatar" />
+                                            <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint={member.avatarHint} />
                                             <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                         {member.name}

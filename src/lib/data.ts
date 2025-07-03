@@ -130,6 +130,7 @@ export const members: Member[] = [
     phone: '555-0101',
     joined: '2023-01-15T10:00:00Z',
     avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'woman smiling',
   },
   {
     id: 'mem-2',
@@ -138,6 +139,7 @@ export const members: Member[] = [
     phone: '555-0102',
     joined: '2023-02-20T11:30:00Z',
     avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'man portrait',
   },
   {
     id: 'mem-3',
@@ -146,6 +148,7 @@ export const members: Member[] = [
     phone: '555-0103',
     joined: '2023-03-10T09:00:00Z',
     avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'man smiling',
   },
   {
     id: 'mem-4',
@@ -154,6 +157,7 @@ export const members: Member[] = [
     phone: '555-0104',
     joined: '2023-04-05T14:00:00Z',
     avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'woman portrait',
   },
     {
     id: 'mem-5',
@@ -162,5 +166,6 @@ export const members: Member[] = [
     phone: '555-0105',
     joined: '2023-05-25T18:00:00Z',
     avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'man glasses',
   },
 ];

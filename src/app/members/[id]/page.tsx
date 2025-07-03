@@ -28,7 +28,7 @@ export default function MemberProfilePage({ params }: { params: { id: string } }
             <Card>
                 <CardHeader className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
                     <Avatar className="h-28 w-28 border">
-                        <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint="person avatar"/>
+                        <AvatarImage src={member.avatarUrl} alt={member.name} data-ai-hint={member.avatarHint}/>
                         <AvatarFallback className="text-4xl">{member.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-grow">

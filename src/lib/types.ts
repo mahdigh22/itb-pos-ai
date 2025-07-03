@@ -24,4 +24,5 @@ export interface Member {
   phone: string;
   joined: string; // ISO date string
   avatarUrl: string;
+  avatarHint: string;
 }
