@@ -15,8 +15,8 @@ export const menuItems: MenuItem[] = [
     description: 'Grilled bread with tomatoes, garlic, basil, and olive oil.',
     price: 8.99,
     category: 'appetizers',
-    imageUrl: 'https://picsum.photos/seed/app-1/600/400',
-    imageHint: 'bruschetta'
+    imageUrl: 'https://placehold.co/600x400',
+    imageHint: 'bruschetta food'
   },
   {
     id: 'app-2',
@@ -24,7 +24,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy spinach and artichoke dip served with tortilla chips.',
     price: 10.50,
     category: 'appetizers',
-    imageUrl: 'https://picsum.photos/seed/app-2/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'spinach dip'
   },
   {
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     description: 'Lightly fried calamari with a spicy marinara sauce.',
     price: 12.00,
     category: 'appetizers',
-    imageUrl: 'https://picsum.photos/seed/app-3/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'fried calamari'
   },
   // Mains
@@ -43,7 +43,7 @@ export const menuItems: MenuItem[] = [
     description: 'Salmon fillet grilled to perfection, served with asparagus.',
     price: 22.99,
     category: 'mains',
-    imageUrl: 'https://picsum.photos/seed/main-1/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'grilled salmon'
   },
   {
@@ -52,7 +52,7 @@ export const menuItems: MenuItem[] = [
     description: 'Angus beef patty with lettuce, tomato, and our special sauce.',
     price: 15.50,
     category: 'mains',
-    imageUrl: 'https://picsum.photos/seed/main-2/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'classic burger'
   },
   {
@@ -61,7 +61,7 @@ export const menuItems: MenuItem[] = [
     description: 'Classic pasta with pancetta, pecorino cheese, and egg.',
     price: 18.00,
     category: 'mains',
-    imageUrl: 'https://picsum.photos/seed/main-3/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'spaghetti carbonara'
   },
   {
@@ -70,7 +70,7 @@ export const menuItems: MenuItem[] = [
     description: '12oz Ribeye served with mashed potatoes and gravy.',
     price: 32.00,
     category: 'mains',
-    imageUrl: 'https://picsum.photos/seed/main-4/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'ribeye steak'
   },
   // Drinks
@@ -80,7 +80,7 @@ export const menuItems: MenuItem[] = [
     description: 'Freshly brewed and chilled to perfection.',
     price: 3.00,
     category: 'drinks',
-    imageUrl: 'https://picsum.photos/seed/drink-1/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'iced tea'
   },
   {
@@ -89,7 +89,7 @@ export const menuItems: MenuItem[] = [
     description: 'A selection of local and imported craft beers.',
     price: 7.50,
     category: 'drinks',
-    imageUrl: 'https://picsum.photos/seed/drink-2/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'craft beer'
   },
   {
@@ -98,7 +98,7 @@ export const menuItems: MenuItem[] = [
     description: 'A smooth and balanced red, perfect with any main.',
     price: 9.00,
     category: 'drinks',
-    imageUrl: 'https://picsum.photos/seed/drink-3/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'glass wine'
   },
   // Desserts
@@ -108,7 +108,7 @@ export const menuItems: MenuItem[] = [
     description: 'Warm chocolate cake with a molten center, served with vanilla ice cream.',
     price: 9.50,
     category: 'desserts',
-    imageUrl: 'https://picsum.photos/seed/dessert-1/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'lava cake'
   },
   {
@@ -117,7 +117,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy cheesecake with a graham cracker crust.',
     price: 8.00,
     category: 'desserts',
-    imageUrl: 'https://picsum.photos/seed/dessert-2/600/400',
+    imageUrl: 'https://placehold.co/600x400',
     imageHint: 'newyork cheesecake'
   },
 ];
@@ -129,7 +129,7 @@ export const members: Member[] = [
     email: 'alice.j@example.com',
     phone: '555-0101',
     joined: '2023-01-15T10:00:00Z',
-    avatarUrl: 'https://picsum.photos/seed/mem-1/100/100',
+    avatarUrl: 'https://placehold.co/100x100',
     avatarHint: 'woman smiling',
   },
   {
@@ -138,7 +138,7 @@ export const members: Member[] = [
     email: 'bob.w@example.com',
     phone: '555-0102',
     joined: '2023-02-20T11:30:00Z',
-    avatarUrl: 'https://picsum.photos/seed/mem-2/100/100',
+    avatarUrl: 'https://placehold.co/100x100',
     avatarHint: 'man portrait',
   },
   {
@@ -147,7 +147,7 @@ export const members: Member[] = [
     email: 'charlie.b@example.com',
     phone: '555-0103',
     joined: '2023-03-10T09:00:00Z',
-    avatarUrl: 'https://picsum.photos/seed/mem-3/100/100',
+    avatarUrl: 'https://placehold.co/100x100',
     avatarHint: 'man smiling',
   },
   {
@@ -156,7 +156,7 @@ export const members: Member[] = [
     email: 'diana.p@example.com',
     phone: '555-0104',
     joined: '2023-04-05T14:00:00Z',
-    avatarUrl: 'https://picsum.photos/seed/mem-4/100/100',
+    avatarUrl: 'https://placehold.co/100x100',
     avatarHint: 'woman portrait',
   },
     {
@@ -165,7 +165,7 @@ export const members: Member[] = [
     email: 'ethan.h@example.com',
     phone: '555-0105',
     joined: '2023-05-25T18:00:00Z',
-    avatarUrl: 'https://picsum.photos/seed/mem-5/100/100',
+    avatarUrl: 'https://placehold.co/100x100',
     avatarHint: 'man glasses',
   },
 ];
