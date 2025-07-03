@@ -19,9 +19,9 @@ export default function MemberProfilePage({ params }: { params: { id: string } }
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-headline font-bold">Member Profile</h1>
                  <Button variant="outline" asChild>
-                    <Link href="/members">
+                    <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to Members
+                        Back
                     </Link>
                 </Button>
             </div>

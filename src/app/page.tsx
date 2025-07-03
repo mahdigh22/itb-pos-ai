@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { categories, menuItems as initialMenuItems } from '@/lib/data';
+import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
 import type { OrderItem, MenuItem } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
+import MembersList from '@/components/members/members-list';
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -16,6 +17,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LayoutDashboard, Users } from 'lucide-react';
 
 export default function Home() {
   const [order, setOrder] = useState<OrderItem[]>([]);
@@ -71,21 +74,42 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-6">
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-2">
-          <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
-        </div>
-        <div className="lg:col-span-1">
-          <OrderSummary
-            order={order}
-            onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
-            onNewCheck={handleNewCheck}
-            onCheckout={handleCheckout}
-          />
-        </div>
+    <Tabs defaultValue="pos" className="w-full">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-headline font-bold">Dashboard</h1>
+        <TabsList>
+          <TabsTrigger value="pos" className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Point of Sale
+          </TabsTrigger>
+          <TabsTrigger value="members" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Members
+          </TabsTrigger>
+        </TabsList>
       </div>
+
+      <TabsContent value="pos">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2">
+            <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+          </div>
+          <div className="lg:col-span-1">
+            <OrderSummary
+              order={order}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onNewCheck={handleNewCheck}
+              onCheckout={handleCheckout}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="members">
+        <MembersList members={members} />
+      </TabsContent>
+
       <AlertDialog open={isCheckoutAlertOpen} onOpenChange={setCheckoutAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -100,6 +124,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Tabs>
   );
 }
