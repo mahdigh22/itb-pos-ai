@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
 import type { OrderItem, MenuItem, ActiveOrder, OrderStatus } from '@/lib/types';
@@ -21,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList } from 'lucide-react';
+import { Cpu, LayoutDashboard, Users, Loader2, ClipboardList } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -168,48 +169,64 @@ export default function Home() {
 
   return (
     <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
-      <div className="flex flex-col items-center mb-4">
-        <h1 className="text-3xl font-headline font-bold mb-4">Dashboard</h1>
-        <TabsList className="inline-grid h-14 w-full max-w-lg grid-cols-3 bg-muted p-1 rounded-lg">
-          <TabsTrigger value="pos" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-            <LayoutDashboard className="h-5 w-5" />
-            Point of Sale
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-            <ClipboardList className="h-5 w-5" />
-            Order Progress
-          </TabsTrigger>
-          <TabsTrigger value="members" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-            <Users className="h-5 w-5" />
-            Members
-          </TabsTrigger>
-        </TabsList>
+       <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between h-16">
+              <Link href="/" className="flex items-center gap-2 text-lg font-headline font-semibold text-primary">
+                <Cpu className="h-6 w-6" />
+                <span>POSitive</span>
+              </Link>
+              
+              <TabsList className="inline-grid h-12 w-full max-w-lg grid-cols-3 bg-muted p-1 rounded-lg">
+                <TabsTrigger value="pos" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                  <LayoutDashboard className="h-5 w-5" />
+                  Point of Sale
+                </TabsTrigger>
+                <TabsTrigger value="progress" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                  <ClipboardList className="h-5 w-5" />
+                  Order Progress
+                </TabsTrigger>
+                <TabsTrigger value="members" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                  <Users className="h-5 w-5" />
+                  Members
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="flex items-center gap-2 text-lg invisible" aria-hidden="true">
+                <Cpu className="h-6 w-6" />
+                <span>POSitive</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+      <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
+        <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+            <div className="lg:col-span-2 h-full flex flex-col">
+              <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+            </div>
+            <div className="lg:col-span-1 h-full">
+              <OrderSummary
+                order={order}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onNewCheck={handleNewCheck}
+                onCheckout={handleCheckout}
+              />
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
+          <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
+        </TabsContent>
+
+        <TabsContent value="members" className="h-full mt-0">
+          <MembersList members={members} />
+        </TabsContent>
       </div>
 
-      <TabsContent value="pos" className="flex-grow min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-          <div className="lg:col-span-2 h-full flex flex-col">
-             <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
-          </div>
-          <div className="lg:col-span-1 h-full">
-            <OrderSummary
-              order={order}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onNewCheck={handleNewCheck}
-              onCheckout={handleCheckout}
-            />
-          </div>
-        </div>
-      </TabsContent>
-      
-      <TabsContent value="progress" className="flex-grow min-h-0">
-        <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
-      </TabsContent>
-
-      <TabsContent value="members" className="h-full">
-        <MembersList members={members} />
-      </TabsContent>
 
       <AlertDialog open={isCheckoutAlertOpen} onOpenChange={setCheckoutAlertOpen}>
         <AlertDialogContent>
