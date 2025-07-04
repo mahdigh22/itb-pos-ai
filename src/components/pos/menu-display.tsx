@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,13 +36,11 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
                     .map((item) => (
                       <Card key={item.id} className="flex flex-col overflow-hidden transition-all hover:shadow-md bg-card/50 hover:bg-card">
                          <div className="relative w-full h-40">
-                           <Image
+                           <img
                             src={item.imageUrl}
                             alt={item.name}
-                            fill
-                            unoptimized
                             data-ai-hint={item.imageHint}
-                            className="object-cover"
+                            className="absolute inset-0 w-full h-full object-cover"
                           />
                          </div>
                         <CardHeader className="flex-grow pb-2">
