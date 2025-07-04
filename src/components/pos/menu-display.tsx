@@ -1,6 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import type { Category, MenuItem } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
@@ -20,9 +19,9 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0">
         <Tabs defaultValue={categories[0].id} className="w-full flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2">
             {categories.map((category) => (
-              <TabsTrigger key={category.id} value={category.id}>
+              <TabsTrigger key={category.id} value={category.id} className="h-14 text-base">
                 {category.name}
               </TabsTrigger>
             ))}
@@ -34,27 +33,33 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
                   {menuItems
                     .filter((item) => item.category === category.id)
                     .map((item) => (
-                      <Card key={item.id} className="flex flex-col overflow-hidden transition-all hover:shadow-md bg-card/50 hover:bg-card">
-                         <div className="relative w-full h-40">
-                           <img
+                       <Card
+                        key={item.id}
+                        onClick={() => onAddItem(item)}
+                        className="group flex flex-col overflow-hidden rounded-lg border-2 border-transparent transition-all hover:border-primary hover:shadow-lg cursor-pointer"
+                      >
+                        <div className="relative w-full h-40">
+                          <img
                             src={item.imageUrl}
                             alt={item.name}
                             data-ai-hint={item.imageHint}
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="w-full h-full object-cover"
                           />
-                         </div>
+                        </div>
                         <CardHeader className="flex-grow pb-2">
                           <CardTitle className="font-headline text-lg">{item.name}</CardTitle>
+                          <CardDescription className="text-sm text-muted-foreground pt-1 line-clamp-2">
+                            {item.description}
+                          </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex-grow">
-                           <p className="text-sm text-muted-foreground">{item.description}</p>
+                        <CardContent>
+                          <div className="flex justify-between items-center pt-2">
+                            <p className="font-bold text-xl text-primary">
+                              ${item.price.toFixed(2)}
+                            </p>
+                            <PlusCircle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                          </div>
                         </CardContent>
-                        <CardFooter className="flex justify-between items-center">
-                          <p className="font-semibold text-lg">${item.price.toFixed(2)}</p>
-                          <Button size="sm" onClick={() => onAddItem(item)}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add
-                          </Button>
-                        </CardFooter>
                       </Card>
                     ))}
                 </div>

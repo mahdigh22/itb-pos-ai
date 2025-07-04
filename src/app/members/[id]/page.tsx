@@ -63,10 +63,10 @@ export default function MemberProfilePage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-headline font-bold">Member Profile</h1>
-                 <Button variant="outline" asChild>
+                 <Button variant="outline" size="lg" asChild>
                     <Link href="/">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back
+                        Back to Dashboard
                     </Link>
                 </Button>
             </div>
@@ -83,7 +83,7 @@ export default function MemberProfilePage() {
                             {member.email}
                         </CardDescription>
                     </div>
-                     <Button>
+                     <Button size="lg">
                         <Edit className="mr-2 h-4 w-4"/>
                         Edit Profile
                      </Button>
