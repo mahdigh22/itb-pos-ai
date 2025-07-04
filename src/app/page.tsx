@@ -128,11 +128,11 @@ export default function Home() {
       <div className="flex flex-col items-center mb-4">
         <h1 className="text-3xl font-headline font-bold mb-4">Dashboard</h1>
         <TabsList className="grid w-full max-w-lg grid-cols-2 bg-muted p-1 rounded-full">
-          <TabsTrigger value="pos" className="h-12 text-base gap-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="pos" className="h-12 text-base gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-full data-[state=active]:shadow-sm">
             <LayoutDashboard className="h-5 w-5" />
             Point of Sale
           </TabsTrigger>
-          <TabsTrigger value="members" className="h-12 text-base gap-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="members" className="h-12 text-base gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-full data-[state=active]:shadow-sm">
             <Users className="h-5 w-5" />
             Members
           </TabsTrigger>
