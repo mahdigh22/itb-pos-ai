@@ -48,8 +48,8 @@ export default function OrderSummary({
             <ScrollArea className="flex-grow -mr-4 pr-4">
               <div className="space-y-4">
                 {order.map((item) => (
-                  <div key={item.lineItemId}>
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={item.lineItemId} className="relative pt-2">
+                    <div className="flex items-center justify-between gap-2 pr-8">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <img
                           src={item.imageUrl}
@@ -82,36 +82,36 @@ export default function OrderSummary({
                         </Button>
                       </div>
                     </div>
-                     {(item.customizations?.removed?.length || 0) > 0 || (item.customizations?.added?.length || 0) > 0 ? (
-                        <div className="pl-16 mt-1 flex flex-wrap gap-1">
-                            {item.customizations?.removed?.map(r => (
-                                <Badge key={r} variant="destructive" className="font-normal capitalize">
-                                    - {r}
-                                </Badge>
-                            ))}
-                            {item.customizations?.added?.map(a => (
-                                <Badge key={a} variant="secondary" className="font-normal capitalize">
-                                    + {a}
-                                </Badge>
-                            ))}
-                        </div>
-                    ) : null}
-                    <div className="flex justify-end gap-2 mt-1 -mb-2">
-                       {item.ingredients && item.ingredients.length > 0 && (
+                     <div className="pl-16 mt-1 flex flex-wrap items-center gap-2">
+                        {((item.customizations?.removed?.length || 0) > 0 || (item.customizations?.added?.length || 0) > 0) && (
+                            <div className="flex flex-wrap gap-1">
+                                {item.customizations?.removed?.map(r => (
+                                    <Badge key={r} variant="destructive" className="font-normal capitalize">
+                                        - {r}
+                                    </Badge>
+                                ))}
+                                {item.customizations?.added?.map(a => (
+                                    <Badge key={a} variant="secondary" className="font-normal capitalize">
+                                        + {a}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
+                        {item.ingredients && item.ingredients.length > 0 && (
                           <Button variant="outline" size="sm" className="h-7" onClick={() => onCustomizeItem(item)}>
                             <Settings2 className="h-3 w-3 mr-1.5"/>
                             Customize
                           </Button>
-                       )}
-                       <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive/80 hover:text-destructive"
-                          onClick={() => onRemoveItem(item.lineItemId)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        )}
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-0 right-0 h-7 w-7 text-destructive/80 hover:text-destructive"
+                      onClick={() => onRemoveItem(item.lineItemId)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
