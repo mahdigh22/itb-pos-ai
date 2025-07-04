@@ -55,10 +55,6 @@ export default function Home() {
 
   const handleNewCheck = () => {
     setOrder([]);
-    toast({
-      title: `New Check`,
-      description: "Current order cleared.",
-    })
   };
 
   const handleCheckout = () => {
@@ -76,6 +72,7 @@ export default function Home() {
   }
 
   const confirmCheckout = () => {
+    if (order.length === 0) return;
     const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08;
     const total = subtotal + tax;
@@ -107,8 +104,8 @@ export default function Home() {
   }
 
   return (
-    <Tabs defaultValue="pos" className="w-full">
-      <div className="flex justify-between items-center mb-8">
+    <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-headline font-bold">Dashboard</h1>
         <TabsList>
           <TabsTrigger value="pos" className="flex items-center gap-2">
@@ -122,13 +119,17 @@ export default function Home() {
         </TabsList>
       </div>
 
-      <TabsContent value="pos">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-2 space-y-8">
-            <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
-            <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
+      <TabsContent value="pos" className="flex-grow min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+          <div className="lg:col-span-2 grid grid-rows-5 gap-8 h-full">
+            <div className="row-span-3 min-h-0">
+              <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+            </div>
+            <div className="row-span-2 min-h-0">
+              <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
+            </div>
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 h-full">
             <OrderSummary
               order={order}
               onUpdateQuantity={handleUpdateQuantity}
@@ -140,7 +141,7 @@ export default function Home() {
         </div>
       </TabsContent>
 
-      <TabsContent value="members">
+      <TabsContent value="members" className="h-full">
         <MembersList members={members} />
       </TabsContent>
 

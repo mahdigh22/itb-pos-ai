@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Package, Soup } from 'lucide-react';
+import { X, CheckCircle, Package, Soup, ClipboardList } from 'lucide-react';
 import type { ActiveOrder, OrderStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,35 +20,26 @@ const statusConfig: Record<OrderStatus, { value: number; icon: React.ElementType
 
 export default function OrderProgress({ orders, onClearOrder }: OrderProgressProps) {
 
-  if (orders.length === 0) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">Order Progress</CardTitle>
-                <CardDescription>No active orders at the moment.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="text-center text-muted-foreground py-8">
-                    <p>Place a new order to see its progress here.</p>
-                </div>
-            </CardContent>
-        </Card>
-    )
-  }
-
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline">Order Progress</CardTitle>
         <CardDescription>Track active and recently completed orders.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px] w-full pr-4">
+      <CardContent className="flex-grow flex flex-col min-h-0">
+        {orders.length === 0 ? (
+            <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
+                <ClipboardList className="w-16 h-16 mb-4"/>
+                <p className="font-semibold">No active orders</p>
+                <p className="text-sm">Place a new order to see its progress here.</p>
+            </div>
+        ) : (
+        <ScrollArea className="h-full w-full pr-4">
             <div className="space-y-4">
                 {orders.map((order) => {
                 const config = statusConfig[order.status];
                 return (
-                    <div key={order.id} className="p-4 border rounded-lg space-y-3 transition-all">
+                    <div key={order.id} className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="font-semibold">Order #{order.id.split('-')[1]}</p>
@@ -80,6 +71,7 @@ export default function OrderProgress({ orders, onClearOrder }: OrderProgressPro
                 })}
             </div>
         </ScrollArea>
+      )}
       </CardContent>
     </Card>
   );

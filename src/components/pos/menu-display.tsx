@@ -14,13 +14,13 @@ interface MenuDisplayProps {
 
 export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDisplayProps) {
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="font-headline">Menu</CardTitle>
         <CardDescription>Select items to add to the order</CardDescription>
       </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={categories[0].id} className="w-full">
+      <CardContent className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue={categories[0].id} className="w-full flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             {categories.map((category) => (
               <TabsTrigger key={category.id} value={category.id}>
@@ -29,13 +29,13 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
             ))}
           </TabsList>
           {categories.map((category) => (
-            <TabsContent key={category.id} value={category.id} className="mt-4">
-              <ScrollArea className="h-[calc(100vh-22rem)]">
+            <TabsContent key={category.id} value={category.id} className="mt-4 flex-1 min-h-0">
+              <ScrollArea className="h-full">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pr-4">
                   {menuItems
                     .filter((item) => item.category === category.id)
                     .map((item) => (
-                      <Card key={item.id} className="flex flex-col overflow-hidden transition-all hover:shadow-md">
+                      <Card key={item.id} className="flex flex-col overflow-hidden transition-all hover:shadow-md bg-card/50 hover:bg-card">
                          <div className="relative w-full h-40">
                            <Image
                             src={item.imageUrl}

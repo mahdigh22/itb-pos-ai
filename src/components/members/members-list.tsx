@@ -28,13 +28,13 @@ import { format } from "date-fns"
 
 export default function MembersList({ members }: { members: Member[] }) {
     return (
-        <Card>
-            <CardContent>
+        <Card className="h-full flex flex-col">
+            <CardContent className="flex-1 overflow-y-auto p-0">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-card">
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="hidden md:table-cell">Email</TableHead>
+                            <TableHead className="w-[250px]">Name</TableHead>
+                            <TableHead>Email</TableHead>
                             <TableHead className="hidden lg:table-cell">Phone</TableHead>
                             <TableHead className="hidden sm:table-cell">Joined</TableHead>
                             <TableHead>
@@ -54,7 +54,7 @@ export default function MembersList({ members }: { members: Member[] }) {
                                         {member.name}
                                     </div>
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">{member.email}</TableCell>
+                                <TableCell>{member.email}</TableCell>
                                 <TableCell className="hidden lg:table-cell">{member.phone}</TableCell>
                                 <TableCell className="hidden sm:table-cell">
                                     <Badge variant="outline">{format(new Date(member.joined), "PPP")}</Badge>

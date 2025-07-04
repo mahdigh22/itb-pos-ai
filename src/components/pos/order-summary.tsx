@@ -27,20 +27,20 @@ export default function OrderSummary({
   const total = subtotal + tax;
 
   return (
-    <Card className="sticky top-24 flex flex-col">
+    <Card className="flex flex-col h-full">
       <CardHeader>
         <CardTitle className="font-headline">Current Order</CardTitle>
         <CardDescription>Review and manage the order items</CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow">
+      <CardContent className="flex-grow flex flex-col min-h-0">
         {order.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-12">
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground flex-grow">
             <ShoppingCart className="w-16 h-16 mb-4"/>
             <p className="font-semibold">Your order is empty</p>
             <p className="text-sm">Add items from the menu to get started.</p>
           </div>
         ) : (
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full flex-grow">
             <ScrollArea className="flex-grow -mr-4 pr-4">
               <div className="space-y-4">
                 {order.map((item) => (
@@ -80,7 +80,7 @@ export default function OrderSummary({
                 ))}
               </div>
             </ScrollArea>
-            <div className="mt-4 pt-4 border-t">
+            <div className="mt-auto pt-4 border-t">
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
