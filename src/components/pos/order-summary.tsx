@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2 } from 'lucide-react';
 import type { OrderItem } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
 
 interface OrderSummaryProps {
   order: OrderItem[];
@@ -82,9 +83,17 @@ export default function OrderSummary({
                       </div>
                     </div>
                      {(item.customizations?.removed?.length || 0) > 0 || (item.customizations?.added?.length || 0) > 0 ? (
-                        <div className="pl-16 pr-2 py-1 text-xs text-muted-foreground space-y-0.5">
-                            {item.customizations?.removed?.map(r => <p key={r} className="text-red-500">- {r}</p>)}
-                            {item.customizations?.added?.map(a => <p key={a} className="text-green-600">+ {a}</p>)}
+                        <div className="pl-16 mt-1 flex flex-wrap gap-1">
+                            {item.customizations?.removed?.map(r => (
+                                <Badge key={r} variant="destructive" className="font-normal capitalize">
+                                    - {r}
+                                </Badge>
+                            ))}
+                            {item.customizations?.added?.map(a => (
+                                <Badge key={a} variant="secondary" className="font-normal capitalize">
+                                    + {a}
+                                </Badge>
+                            ))}
                         </div>
                     ) : null}
                     <div className="flex justify-end gap-2 mt-1 -mb-2">
