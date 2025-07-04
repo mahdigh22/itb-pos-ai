@@ -19,12 +19,12 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0">
         <Tabs defaultValue={categories[0].id} className="w-full flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-4 bg-muted p-1 rounded-full h-14">
+          <TabsList className="grid w-full grid-cols-4 bg-muted p-1 rounded-lg h-14">
             {categories.map((category) => (
               <TabsTrigger
                 key={category.id}
                 value={category.id}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-full data-[state=active]:shadow-sm h-12 text-base"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-lg data-[state=active]:shadow-sm h-12 text-base"
               >
                 {category.name}
               </TabsTrigger>
