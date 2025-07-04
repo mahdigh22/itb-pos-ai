@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, LayoutGrid, ClipboardList } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -36,13 +37,15 @@ export default function Home() {
       router.replace('/login');
     } else {
       // Set sample data here, as this only runs on the client
-      const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
-      const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
-      if (sampleItem1 && sampleItem2 && order.length === 0 && activeOrders.length === 0) {
-        setOrder([
-          { ...sampleItem1, quantity: 2 },
-          { ...sampleItem2, quantity: 1 },
-        ]);
+      if (order.length === 0 && activeOrders.length === 0) {
+        const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
+        const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
+        if (sampleItem1 && sampleItem2) {
+          setOrder([
+            { ...sampleItem1, quantity: 2 },
+            { ...sampleItem2, quantity: 1 },
+          ]);
+        }
         
         const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
         const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
@@ -181,13 +184,25 @@ export default function Home() {
 
       <TabsContent value="pos" className="flex-grow min-h-0">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-          <div className="lg:col-span-2 grid grid-rows-5 gap-8 h-full">
-            <div className="row-span-3 min-h-0">
-              <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
-            </div>
-            <div className="row-span-2 min-h-0">
-              <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
-            </div>
+          <div className="lg:col-span-2 h-full flex flex-col">
+             <Tabs defaultValue="menu" className="w-full flex-grow flex flex-col min-h-0">
+                <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-lg h-14">
+                    <TabsTrigger value="menu" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                        <LayoutGrid className="h-5 w-5" />
+                        Menu
+                    </TabsTrigger>
+                    <TabsTrigger value="progress" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                        <ClipboardList className="h-5 w-5" />
+                        Order Progress
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="menu" className="flex-grow min-h-0 mt-4">
+                    <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+                </TabsContent>
+                <TabsContent value="progress" className="flex-grow min-h-0 mt-4">
+                    <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
+                </TabsContent>
+            </Tabs>
           </div>
           <div className="lg:col-span-1 h-full">
             <OrderSummary
