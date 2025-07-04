@@ -35,9 +35,49 @@ export default function Home() {
     if (isLoggedIn !== 'true') {
       router.replace('/login');
     } else {
+      // Set sample data here, as this only runs on the client
+      const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
+      const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
+      if (sampleItem1 && sampleItem2 && order.length === 0 && activeOrders.length === 0) {
+        setOrder([
+          { ...sampleItem1, quantity: 2 },
+          { ...sampleItem2, quantity: 1 },
+        ]);
+        
+        const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
+        const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
+        const sampleActiveItem3 = initialMenuItems.find(item => item.id === 'app-3');
+        const orders: ActiveOrder[] = [];
+        if (sampleActiveItem1 && sampleActiveItem2) {
+            const subtotal = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
+            const tax = subtotal * 0.08;
+            orders.push({
+                id: `order-${Math.floor(Date.now() / 1000) - 300}`,
+                items: [
+                    { ...sampleActiveItem1, quantity: 1 },
+                    { ...sampleActiveItem2, quantity: 2 },
+                ],
+                status: 'Ready',
+                total: subtotal + tax,
+                createdAt: new Date(Date.now() - 300000), // 5 minutes ago
+            });
+        }
+        if (sampleActiveItem3) {
+            const subtotal = sampleActiveItem3.price * 1;
+            const tax = subtotal * 0.08;
+            orders.push({
+                id: `order-${Math.floor(Date.now() / 1000) - 120}`,
+                items: [{ ...sampleActiveItem3, quantity: 1 }],
+                status: 'Preparing',
+                total: subtotal + tax,
+                createdAt: new Date(Date.now() - 120000), // 2 minutes ago
+            });
+        }
+        setActiveOrders(orders);
+      }
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, order.length, activeOrders.length]);
 
   const handleAddItem = (item: MenuItem) => {
     setOrder((prevOrder) => {
@@ -128,11 +168,11 @@ export default function Home() {
       <div className="flex flex-col items-center mb-4">
         <h1 className="text-3xl font-headline font-bold mb-4">Dashboard</h1>
         <TabsList className="inline-grid h-14 w-full max-w-md grid-cols-2 bg-muted p-1 rounded-lg">
-          <TabsTrigger value="pos" className="h-12 text-base gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-lg data-[state=active]:shadow-sm">
+          <TabsTrigger value="pos" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
             <LayoutDashboard className="h-5 w-5" />
             Point of Sale
           </TabsTrigger>
-          <TabsTrigger value="members" className="h-12 text-base gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-lg data-[state=active]:shadow-sm">
+          <TabsTrigger value="members" className="h-12 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
             <Users className="h-5 w-5" />
             Members
           </TabsTrigger>
