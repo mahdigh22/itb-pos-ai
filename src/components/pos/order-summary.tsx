@@ -1,16 +1,18 @@
+
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart } from 'lucide-react';
+import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2 } from 'lucide-react';
 import type { OrderItem } from '@/lib/types';
 
 interface OrderSummaryProps {
   order: OrderItem[];
-  onUpdateQuantity: (itemId: string, quantity: number) => void;
-  onRemoveItem: (itemId: string) => void;
+  onUpdateQuantity: (lineItemId: string, quantity: number) => void;
+  onRemoveItem: (lineItemId: string) => void;
   onNewCheck: () => void;
   onCheckout: () => void;
+  onCustomizeItem: (item: OrderItem) => void;
 }
 
 const TAX_RATE = 0.08; // 8%
@@ -21,6 +23,7 @@ export default function OrderSummary({
   onRemoveItem,
   onNewCheck,
   onCheckout,
+  onCustomizeItem
 }: OrderSummaryProps) {
   const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * TAX_RATE;
@@ -44,45 +47,61 @@ export default function OrderSummary({
             <ScrollArea className="flex-grow -mr-4 pr-4">
               <div className="space-y-4">
                 {order.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        data-ai-hint={item.imageHint}
-                        className="h-12 w-12 rounded-md object-cover flex-shrink-0"
-                      />
-                      <div className="flex-grow truncate">
-                        <p className="font-semibold truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                  <div key={item.lineItemId}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          data-ai-hint={item.imageHint}
+                          className="h-12 w-12 rounded-md object-cover flex-shrink-0"
+                        />
+                        <div className="flex-grow truncate">
+                          <p className="font-semibold truncate">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onUpdateQuantity(item.lineItemId, item.quantity - 1)}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onUpdateQuantity(item.lineItemId, item.quantity + 1)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-8 text-center font-medium">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => onRemoveItem(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                     {(item.customizations?.removed?.length || 0) > 0 || (item.customizations?.added?.length || 0) > 0 ? (
+                        <div className="pl-16 pr-2 py-1 text-xs text-muted-foreground space-y-0.5">
+                            {item.customizations?.removed?.map(r => <p key={r} className="text-red-500">- {r}</p>)}
+                            {item.customizations?.added?.map(a => <p key={a} className="text-green-600">+ {a}</p>)}
+                        </div>
+                    ) : null}
+                    <div className="flex justify-end gap-2 mt-1 -mb-2">
+                       {item.ingredients && item.ingredients.length > 0 && (
+                          <Button variant="outline" size="sm" className="h-7" onClick={() => onCustomizeItem(item)}>
+                            <Settings2 className="h-3 w-3 mr-1.5"/>
+                            Customize
+                          </Button>
+                       )}
+                       <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive/80 hover:text-destructive"
+                          onClick={() => onRemoveItem(item.lineItemId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                     </div>
                   </div>
                 ))}

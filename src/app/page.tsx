@@ -10,6 +10,7 @@ import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
 import OrderProgress from '@/components/pos/order-progress';
+import CustomizeItemDialog from '@/components/pos/customize-item-dialog';
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ export default function Home() {
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
+  const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(null);
 
   useEffect(() => {
     const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
@@ -45,8 +47,8 @@ export default function Home() {
         const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
         if (sampleItem1 && sampleItem2) {
           setOrder([
-            { ...sampleItem1, quantity: 2 },
-            { ...sampleItem2, quantity: 1 },
+            { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
+            { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}` },
           ]);
         }
         
@@ -60,8 +62,8 @@ export default function Home() {
             orders.push({
                 id: `order-${Math.floor(Date.now() / 1000) - 300}`,
                 items: [
-                    { ...sampleActiveItem1, quantity: 1 },
-                    { ...sampleActiveItem2, quantity: 2 },
+                    { ...sampleActiveItem1, quantity: 1, lineItemId: `main-1-${Date.now()+2}` },
+                    { ...sampleActiveItem2, quantity: 2, lineItemId: `drink-1-${Date.now()+3}` },
                 ],
                 status: 'Ready',
                 total: subtotal + tax,
@@ -73,7 +75,7 @@ export default function Home() {
             const tax = subtotal * 0.08;
             orders.push({
                 id: `order-${Math.floor(Date.now() / 1000) - 120}`,
-                items: [{ ...sampleActiveItem3, quantity: 1 }],
+                items: [{ ...sampleActiveItem3, quantity: 1, lineItemId: `app-3-${Date.now()+4}` }],
                 status: 'Preparing',
                 total: subtotal + tax,
                 createdAt: new Date(Date.now() - 120000), // 2 minutes ago
@@ -87,28 +89,70 @@ export default function Home() {
 
   const handleAddItem = (item: MenuItem) => {
     setOrder((prevOrder) => {
-      const existingItem = prevOrder.find((orderItem) => orderItem.id === item.id);
+      // Find an item with the same ID that has NO customizations.
+      const existingItem = prevOrder.find(
+        (orderItem) => orderItem.id === item.id && !orderItem.customizations
+      );
+
       if (existingItem) {
+        // If it exists, just increase the quantity of that line.
         return prevOrder.map((orderItem) =>
-          orderItem.id === item.id ? { ...orderItem, quantity: orderItem.quantity + 1 } : orderItem
+          orderItem.lineItemId === existingItem.lineItemId
+            ? { ...orderItem, quantity: orderItem.quantity + 1 }
+            : orderItem
         );
       }
-      return [...prevOrder, { ...item, quantity: 1 }];
+      
+      // Otherwise, add a new line item.
+      const newOrderItem: OrderItem = {
+        ...item,
+        quantity: 1,
+        lineItemId: `${item.id}-${Date.now()}`
+      };
+      return [...prevOrder, newOrderItem];
     });
   };
 
-  const handleUpdateQuantity = (itemId: string, quantity: number) => {
+  const handleUpdateQuantity = (lineItemId: string, quantity: number) => {
     if (quantity < 1) {
-      handleRemoveItem(itemId);
+      handleRemoveItem(lineItemId);
       return;
     }
     setOrder((prevOrder) =>
-      prevOrder.map((item) => (item.id === itemId ? { ...item, quantity } : item))
+      prevOrder.map((item) => (item.lineItemId === lineItemId ? { ...item, quantity } : item))
     );
   };
 
-  const handleRemoveItem = (itemId: string) => {
-    setOrder((prevOrder) => prevOrder.filter((item) => item.id !== itemId));
+  const handleRemoveItem = (lineItemId: string) => {
+    setOrder((prevOrder) => prevOrder.filter((item) => item.lineItemId !== lineItemId));
+  };
+  
+  const handleStartCustomization = (itemToCustomize: OrderItem) => {
+    if (itemToCustomize.quantity > 1) {
+      // Split the item
+      setOrder(prev => {
+        const otherItems = prev.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
+        const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
+        const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}` };
+        setCustomizingItem(newItemToCustomize);
+        return [...otherItems, originalItem, newItemToCustomize];
+      });
+    } else {
+      // Just open the dialog for the item
+      setCustomizingItem(itemToCustomize);
+    }
+  };
+
+  const handleUpdateCustomization = (
+    lineItemId: string, 
+    customizations: { added: string[], removed: string[] }
+  ) => {
+    setOrder(prev => 
+      prev.map(item => 
+        item.lineItemId === lineItemId ? { ...item, customizations } : item
+      )
+    );
+    setCustomizingItem(null);
   };
 
   const handleNewCheck = () => {
@@ -175,6 +219,7 @@ export default function Home() {
   }
 
   return (
+    <>
     <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
        <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
           <div className="container mx-auto px-4">
@@ -222,6 +267,7 @@ export default function Home() {
                 onRemoveItem={handleRemoveItem}
                 onNewCheck={handleNewCheck}
                 onCheckout={handleCheckout}
+                onCustomizeItem={handleStartCustomization}
               />
             </div>
           </div>
@@ -252,5 +298,11 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
     </Tabs>
+    <CustomizeItemDialog 
+        item={customizingItem}
+        onClose={() => setCustomizingItem(null)}
+        onSave={handleUpdateCustomization}
+    />
+    </>
   );
 }

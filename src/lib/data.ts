@@ -1,3 +1,4 @@
+
 import type { Category, MenuItem, Member } from './types';
 
 export const categories: Category[] = [
@@ -16,7 +17,8 @@ export const menuItems: MenuItem[] = [
     price: 8.99,
     category: 'appetizers',
     imageUrl: 'https://images.unsplash.com/photo-1579684947550-22e945225d9a?w=600&h=400&fit=crop',
-    imageHint: 'bruschetta food'
+    imageHint: 'bruschetta food',
+    ingredients: ['Grilled Bread', 'Tomatoes', 'Garlic', 'Basil', 'Olive Oil']
   },
   {
     id: 'app-2',
@@ -44,7 +46,8 @@ export const menuItems: MenuItem[] = [
     price: 22.99,
     category: 'mains',
     imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&h=400&fit=crop',
-    imageHint: 'grilled salmon'
+    imageHint: 'grilled salmon',
+    ingredients: ['Salmon Fillet', 'Asparagus', 'Lemon Wedge', 'Herbs']
   },
   {
     id: 'main-2',
@@ -53,7 +56,8 @@ export const menuItems: MenuItem[] = [
     price: 15.50,
     category: 'mains',
     imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=600&h=400&fit=crop',
-    imageHint: 'classic burger'
+    imageHint: 'classic burger',
+    ingredients: ['Angus Beef Patty', 'Lettuce', 'Tomato', 'Onion', 'Pickles', 'Special Sauce', 'Sesame Bun']
   },
   {
     id: 'main-3',
@@ -62,7 +66,8 @@ export const menuItems: MenuItem[] = [
     price: 18.00,
     category: 'mains',
     imageUrl: 'https://images.unsplash.com/photo-1608796882779-9943642d744a?w=600&h=400&fit=crop',
-    imageHint: 'spaghetti carbonara'
+    imageHint: 'spaghetti carbonara',
+    ingredients: ['Spaghetti', 'Pancetta', 'Pecorino Cheese', 'Egg Yolk', 'Black Pepper']
   },
   {
     id: 'main-4',

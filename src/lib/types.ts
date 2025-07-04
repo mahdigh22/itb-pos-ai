@@ -1,3 +1,4 @@
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -6,6 +7,7 @@ export interface MenuItem {
   category: string;
   imageUrl: string;
   imageHint: string;
+  ingredients?: string[];
 }
 
 export interface Category {
@@ -14,7 +16,12 @@ export interface Category {
 }
 
 export interface OrderItem extends MenuItem {
+  lineItemId: string; // Unique ID for this line in the order
   quantity: number;
+  customizations?: {
+    added: string[];
+    removed: string[];
+  };
 }
 
 export interface Member {
