@@ -44,10 +44,18 @@ export default function OrderSummary({
             <ScrollArea className="flex-grow -mr-4 pr-4">
               <div className="space-y-4">
                 {order.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div className="flex-grow">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                  <div key={item.id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        data-ai-hint={item.imageHint}
+                        className="h-12 w-12 rounded-md object-cover flex-shrink-0"
+                      />
+                      <div className="flex-grow truncate">
+                        <p className="font-semibold truncate">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
