@@ -15,7 +15,7 @@ export const menuItems: MenuItem[] = [
     description: 'Grilled bread with tomatoes, garlic, basil, and olive oil.',
     price: 8.99,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1579752173426-3f518c7de4c2?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1505253716362-afb542cabc80?w=600&h=400&fit=crop',
     imageHint: 'bruschetta food'
   },
   {
@@ -24,7 +24,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy spinach and artichoke dip served with tortilla chips.',
     price: 10.50,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1563652129994-e27640477215?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1629583751213-952b843956a3?w=600&h=400&fit=crop',
     imageHint: 'spinach dip'
   },
   {
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     description: 'Lightly fried calamari with a spicy marinara sauce.',
     price: 12.00,
     category: 'appetizers',
-    imageUrl: 'https://images.unsplash.com/photo-1574900889212-2f73b2245231?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1604329309873-34e8d4631c16?w=600&h=400&fit=crop',
     imageHint: 'fried calamari'
   },
   // Mains
@@ -43,7 +43,7 @@ export const menuItems: MenuItem[] = [
     description: 'Salmon fillet grilled to perfection, served with asparagus.',
     price: 22.99,
     category: 'mains',
-    imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1559847844-5315695d0464?w=600&h=400&fit=crop',
     imageHint: 'grilled salmon'
   },
   {
@@ -52,7 +52,7 @@ export const menuItems: MenuItem[] = [
     description: 'Angus beef patty with lettuce, tomato, and our special sauce.',
     price: 15.50,
     category: 'mains',
-    imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=400&fit=crop',
     imageHint: 'classic burger'
   },
   {
@@ -61,7 +61,7 @@ export const menuItems: MenuItem[] = [
     description: 'Classic pasta with pancetta, pecorino cheese, and egg.',
     price: 18.00,
     category: 'mains',
-    imageUrl: 'https://images.unsplash.com/photo-1608796335037-c817ea1a61da?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1588013273468-411962b2d28a?w=600&h=400&fit=crop',
     imageHint: 'spaghetti carbonara'
   },
   {
@@ -70,7 +70,7 @@ export const menuItems: MenuItem[] = [
     description: '12oz Ribeye served with mashed potatoes and gravy.',
     price: 32.00,
     category: 'mains',
-    imageUrl: 'https://images.unsplash.com/photo-1629408526563-a6414a1a6b4a?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1546964124-0cce460f38ef?w=600&h=400&fit=crop',
     imageHint: 'ribeye steak'
   },
   // Drinks
@@ -80,7 +80,7 @@ export const menuItems: MenuItem[] = [
     description: 'Freshly brewed and chilled to perfection.',
     price: 3.00,
     category: 'drinks',
-    imageUrl: 'https://images.unsplash.com/photo-1556745753-b2904692b3cd?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1536934522943-3140da275c93?w=600&h=400&fit=crop',
     imageHint: 'iced tea'
   },
   {
@@ -89,7 +89,7 @@ export const menuItems: MenuItem[] = [
     description: 'A selection of local and imported craft beers.',
     price: 7.50,
     category: 'drinks',
-    imageUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1587979294576-870371d25d19?w=600&h=400&fit=crop',
     imageHint: 'craft beer'
   },
   {
@@ -98,7 +98,7 @@ export const menuItems: MenuItem[] = [
     description: 'A smooth and balanced red, perfect with any main.',
     price: 9.00,
     category: 'drinks',
-    imageUrl: 'https://images.unsplash.com/photo-1553763564-98845722c6e6?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1599598192096-6d5a163a7f83?w=600&h=400&fit=crop',
     imageHint: 'glass wine'
   },
   // Desserts
@@ -108,7 +108,7 @@ export const menuItems: MenuItem[] = [
     description: 'Warm chocolate cake with a molten center, served with vanilla ice cream.',
     price: 9.50,
     category: 'desserts',
-    imageUrl: 'https://images.unsplash.com/photo-1614782631557-4d9a93f24050?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1579113800032-c38bd7635ba4?w=600&h=400&fit=crop',
     imageHint: 'lava cake'
   },
   {
@@ -117,7 +117,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy cheesecake with a graham cracker crust.',
     price: 8.00,
     category: 'desserts',
-    imageUrl: 'https://images.unsplash.com/photo-1542826438-c396851913c7?w=600&h=400&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1524351199678-941a58a3df50?w=600&h=400&fit=crop',
     imageHint: 'newyork cheesecake'
   },
 ];
