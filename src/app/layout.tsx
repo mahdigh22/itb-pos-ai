@@ -3,6 +3,7 @@
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from '@/components/theme-provider';
 
 export default function RootLayout({
   children,
@@ -21,10 +22,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn("font-body antialiased bg-background h-screen flex flex-col")}>
-        <main className="flex-grow min-h-0">
-          {children}
-        </main>
-        <Toaster />
+        <ThemeProvider>
+          <main className="flex-grow min-h-0">
+            {children}
+          </main>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

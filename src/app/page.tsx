@@ -22,7 +22,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cpu, LayoutDashboard, Users, Loader2, ClipboardList } from 'lucide-react';
+import { Cpu, LayoutDashboard, Users, Loader2, ClipboardList, LogOut } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
   const router = useRouter();
@@ -159,6 +161,11 @@ export default function Home() {
     setCheckoutAlertOpen(false);
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    router.push('/login');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -192,9 +199,11 @@ export default function Home() {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex items-center gap-2 text-lg invisible" aria-hidden="true">
-                <Cpu className="h-6 w-6" />
-                <span>POSitive</span>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log Out">
+                  <LogOut className="h-5 w-5" />
+                </Button>
               </div>
             </div>
           </div>
