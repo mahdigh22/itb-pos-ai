@@ -127,7 +127,7 @@ export default function Home() {
     <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
       <div className="flex flex-col items-center mb-4">
         <h1 className="text-3xl font-headline font-bold mb-4">Dashboard</h1>
-        <TabsList className="inline-grid grid-cols-2 bg-muted p-1 rounded-full">
+        <TabsList className="inline-grid h-14 grid-cols-2 bg-muted p-1 rounded-full">
           <TabsTrigger value="pos" className="h-12 text-base gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:rounded-full data-[state=active]:shadow-sm">
             <LayoutDashboard className="h-5 w-5" />
             Point of Sale
