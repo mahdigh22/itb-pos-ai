@@ -48,7 +48,7 @@ export default function Home() {
         if (sampleItem1 && sampleItem2) {
           setOrder([
             { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
-            { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}` },
+            { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
           ]);
         }
         
@@ -256,11 +256,11 @@ export default function Home() {
 
       <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
         <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-            <div className="lg:col-span-2 h-full flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
+            <div className="lg:col-span-3 h-full flex flex-col">
               <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
             </div>
-            <div className="lg:col-span-1 h-full">
+            <div className="lg:col-span-2 h-full">
               <OrderSummary
                 order={order}
                 onUpdateQuantity={handleUpdateQuantity}

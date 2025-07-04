@@ -45,73 +45,73 @@ export default function OrderSummary({
           </div>
         ) : (
           <div className="flex flex-col h-full flex-grow">
-            <ScrollArea className="flex-grow -mr-4 pr-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-grow -mr-6 pr-6">
+              <div className="space-y-2">
                 {order.map((item) => (
-                  <div key={item.lineItemId} className="relative pt-2">
-                    <div className="flex items-center justify-between gap-2 pr-8">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          data-ai-hint={item.imageHint}
-                          className="h-12 w-12 rounded-md object-cover flex-shrink-0"
-                        />
-                        <div className="flex-grow truncate">
-                          <p className="font-semibold truncate">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
-                        </div>
+                  <div key={item.lineItemId} className="flex flex-col py-3 border-b last:border-b-0">
+                    <div className="flex items-start">
+                      <div className="flex-1 pr-2">
+                        <p className="font-semibold leading-tight">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onUpdateQuantity(item.lineItemId, item.quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => onUpdateQuantity(item.lineItemId, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                     <div className="pl-16 mt-1 flex flex-wrap items-center gap-2">
-                        {((item.customizations?.removed?.length || 0) > 0 || (item.customizations?.added?.length || 0) > 0) && (
-                            <div className="flex flex-wrap gap-1">
-                                {item.customizations?.removed?.map(r => (
-                                    <Badge key={r} variant="destructive" className="font-normal capitalize">
-                                        - {r}
-                                    </Badge>
-                                ))}
-                                {item.customizations?.added?.map(a => (
-                                    <Badge key={a} variant="secondary" className="font-normal capitalize">
-                                        + {a}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
-                        {item.ingredients && item.ingredients.length > 0 && (
-                          <Button variant="outline" size="sm" className="h-7" onClick={() => onCustomizeItem(item)}>
-                            <Settings2 className="h-3 w-3 mr-1.5"/>
-                            Customize
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onUpdateQuantity(item.lineItemId, item.quantity - 1)}
+                          >
+                            <Minus className="h-4 w-4" />
                           </Button>
-                        )}
+                          <span className="w-8 text-center font-medium text-base">{item.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => onUpdateQuantity(item.lineItemId, item.quantity + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="w-20 text-right font-semibold text-base">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => onRemoveItem(item.lineItemId)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-0 right-0 h-7 w-7 text-destructive/80 hover:text-destructive"
-                      onClick={() => onRemoveItem(item.lineItemId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    {( (item.customizations?.added?.length || 0) > 0 || (item.customizations?.removed?.length || 0) > 0 || (item.ingredients && item.ingredients.length > 0) ) && (
+                      <div className="mt-2 flex items-center gap-4 flex-wrap">
+                        <div className="flex-grow flex flex-wrap gap-1">
+                          {item.customizations?.removed?.map(r => (
+                              <Badge key={r} variant="destructive" className="font-normal capitalize shadow-sm">
+                                  - {r}
+                              </Badge>
+                          ))}
+                          {item.customizations?.added?.map(a => (
+                              <Badge key={a} variant="secondary" className="font-normal capitalize shadow-sm">
+                                  + {a}
+                              </Badge>
+                          ))}
+                        </div>
+                        {item.ingredients && item.ingredients.length > 0 && (
+                          <div className="flex-shrink-0">
+                            <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => onCustomizeItem(item)}>
+                              <Settings2 className="h-3 w-3 mr-1.5"/>
+                              Customize
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
