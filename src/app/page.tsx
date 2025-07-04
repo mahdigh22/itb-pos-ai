@@ -23,9 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Cpu, LayoutDashboard, Users, Loader2, ClipboardList, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import ItbIcon from '@/components/itb-icon';
 
 export default function Home() {
   const router = useRouter();
@@ -224,9 +225,9 @@ export default function Home() {
        <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16">
-              <Link href="/" className="flex items-center gap-2 text-lg font-headline font-semibold text-primary">
-                <Cpu className="h-6 w-6" />
-                <span>POSitive</span>
+              <Link href="/" className="flex items-center gap-2 text-lg font-headline font-semibold">
+                <ItbIcon className="h-8 w-8" />
+                <span className="text-xl text-primary font-bold">Members</span>
               </Link>
               
               <TabsList className="inline-grid h-12 w-full max-w-lg grid-cols-3 bg-muted p-1 rounded-lg">
