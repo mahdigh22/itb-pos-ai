@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
 import type { OrderItem, MenuItem, ActiveOrder, OrderStatus } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
@@ -19,13 +20,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [order, setOrder] = useState<OrderItem[]>([]);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
+
+  useEffect(() => {
+    const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
+    if (isLoggedIn !== 'true') {
+      router.replace('/login');
+    } else {
+      setIsLoading(false);
+    }
+  }, [router]);
 
   const handleAddItem = (item: MenuItem) => {
     setOrder((prevOrder) => {
@@ -101,6 +113,14 @@ export default function Home() {
         description: "Your order is being prepared and is now tracked below.",
     });
     setCheckoutAlertOpen(false);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

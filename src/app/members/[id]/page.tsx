@@ -1,15 +1,60 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, notFound, useParams } from 'next/navigation';
 import { members } from "@/lib/data";
-import { notFound } from "next/navigation";
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, Calendar, ArrowLeft, Edit } from "lucide-react";
 import { format } from "date-fns";
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function MemberProfilePage({ params }: { params: { id: string } }) {
-    const member = members.find((m) => m.id === params.id);
+export default function MemberProfilePage() {
+    const router = useRouter();
+    const params = useParams();
+    const id = params.id as string;
+    const [isLoading, setIsLoading] = useState(true);
 
+    useEffect(() => {
+        const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
+        if (isLoggedIn !== 'true') {
+            router.replace('/login');
+        } else {
+            setIsLoading(false);
+        }
+    }, [router]);
+
+    const member = members.find((m) => m.id === id);
+
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-9 w-64" />
+                    <Skeleton className="h-10 w-28" />
+                </div>
+                <Card>
+                    <CardHeader className="flex flex-col sm:flex-row items-center gap-6">
+                        <Skeleton className="h-28 w-28 rounded-full" />
+                        <div className="flex-grow space-y-2">
+                            <Skeleton className="h-8 w-1/2" />
+                            <Skeleton className="h-5 w-3/4" />
+                        </div>
+                        <Skeleton className="h-10 w-32" />
+                    </CardHeader>
+                    <CardContent className="border-t pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+    
     if (!member) {
         notFound();
     }
