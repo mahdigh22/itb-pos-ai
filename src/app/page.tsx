@@ -125,15 +125,15 @@ export default function Home() {
 
   return (
     <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-headline font-bold">Dashboard</h1>
-        <TabsList>
-          <TabsTrigger value="pos" className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
+      <div className="flex flex-col items-start mb-4">
+        <h1 className="text-3xl font-headline font-bold mb-4">Dashboard</h1>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="pos" className="h-14 text-base gap-2">
+            <LayoutDashboard className="h-5 w-5" />
             Point of Sale
           </TabsTrigger>
-          <TabsTrigger value="members" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
+          <TabsTrigger value="members" className="h-14 text-base gap-2">
+            <Users className="h-5 w-5" />
             Members
           </TabsTrigger>
         </TabsList>
