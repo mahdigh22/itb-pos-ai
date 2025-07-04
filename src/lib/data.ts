@@ -15,7 +15,7 @@ export const menuItems: MenuItem[] = [
     description: 'Grilled bread with tomatoes, garlic, basil, and olive oil.',
     price: 8.99,
     category: 'appetizers',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1579684947550-22e945225d9a?w=600&h=400&fit=crop',
     imageHint: 'bruschetta food'
   },
   {
@@ -24,7 +24,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy spinach and artichoke dip served with tortilla chips.',
     price: 10.50,
     category: 'appetizers',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1565538810692-4295db2b8d0d?w=600&h=400&fit=crop',
     imageHint: 'spinach dip'
   },
   {
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     description: 'Lightly fried calamari with a spicy marinara sauce.',
     price: 12.00,
     category: 'appetizers',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1625944012226-5a507a228e93?w=600&h=400&fit=crop',
     imageHint: 'fried calamari'
   },
   // Mains
@@ -43,7 +43,7 @@ export const menuItems: MenuItem[] = [
     description: 'Salmon fillet grilled to perfection, served with asparagus.',
     price: 22.99,
     category: 'mains',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&h=400&fit=crop',
     imageHint: 'grilled salmon'
   },
   {
@@ -52,7 +52,7 @@ export const menuItems: MenuItem[] = [
     description: 'Angus beef patty with lettuce, tomato, and our special sauce.',
     price: 15.50,
     category: 'mains',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=600&h=400&fit=crop',
     imageHint: 'classic burger'
   },
   {
@@ -61,7 +61,7 @@ export const menuItems: MenuItem[] = [
     description: 'Classic pasta with pancetta, pecorino cheese, and egg.',
     price: 18.00,
     category: 'mains',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1608796882779-9943642d744a?w=600&h=400&fit=crop',
     imageHint: 'spaghetti carbonara'
   },
   {
@@ -70,7 +70,7 @@ export const menuItems: MenuItem[] = [
     description: '12oz Ribeye served with mashed potatoes and gravy.',
     price: 32.00,
     category: 'mains',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1628268907412-253554580345?w=600&h=400&fit=crop',
     imageHint: 'ribeye steak'
   },
   // Drinks
@@ -80,7 +80,7 @@ export const menuItems: MenuItem[] = [
     description: 'Freshly brewed and chilled to perfection.',
     price: 3.00,
     category: 'drinks',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1556745753-b2904692b3cd?w=600&h=400&fit=crop',
     imageHint: 'iced tea'
   },
   {
@@ -89,7 +89,7 @@ export const menuItems: MenuItem[] = [
     description: 'A selection of local and imported craft beers.',
     price: 7.50,
     category: 'drinks',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=600&h=400&fit=crop',
     imageHint: 'craft beer'
   },
   {
@@ -98,7 +98,7 @@ export const menuItems: MenuItem[] = [
     description: 'A smooth and balanced red, perfect with any main.',
     price: 9.00,
     category: 'drinks',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1598421715890-44917951a8f9?w=600&h=400&fit=crop',
     imageHint: 'glass wine'
   },
   // Desserts
@@ -108,7 +108,7 @@ export const menuItems: MenuItem[] = [
     description: 'Warm chocolate cake with a molten center, served with vanilla ice cream.',
     price: 9.50,
     category: 'desserts',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&h=400&fit=crop',
     imageHint: 'lava cake'
   },
   {
@@ -117,7 +117,7 @@ export const menuItems: MenuItem[] = [
     description: 'Creamy cheesecake with a graham cracker crust.',
     price: 8.00,
     category: 'desserts',
-    imageUrl: 'https://placehold.co/600x400.png',
+    imageUrl: 'https://images.unsplash.com/photo-1542826438-604241748b12?w=600&h=400&fit=crop',
     imageHint: 'newyork cheesecake'
   },
 ];
@@ -129,7 +129,7 @@ export const members: Member[] = [
     email: 'alice.j@example.com',
     phone: '555-0101',
     joined: '2023-01-15T10:00:00Z',
-    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
     avatarHint: 'woman smiling',
   },
   {
@@ -138,7 +138,7 @@ export const members: Member[] = [
     email: 'bob.w@example.com',
     phone: '555-0102',
     joined: '2023-02-20T11:30:00Z',
-    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
     avatarHint: 'man portrait',
   },
   {
@@ -147,7 +147,7 @@ export const members: Member[] = [
     email: 'charlie.b@example.com',
     phone: '555-0103',
     joined: '2023-03-10T09:00:00Z',
-    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop',
     avatarHint: 'man smiling',
   },
   {
@@ -156,7 +156,7 @@ export const members: Member[] = [
     email: 'diana.p@example.com',
     phone: '555-0104',
     joined: '2023-04-05T14:00:00Z',
-    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=100&h=100&fit=crop',
     avatarHint: 'woman portrait',
   },
     {
@@ -165,7 +165,7 @@ export const members: Member[] = [
     email: 'ethan.h@example.com',
     phone: '555-0105',
     joined: '2023-05-25T18:00:00Z',
-    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
     avatarHint: 'man glasses',
   },
 ];
