@@ -1,5 +1,5 @@
 
-import type { Category, MenuItem, Member, Employee } from './types';
+import type { Category, MenuItem, Employee } from './types';
 
 export const categories: Category[] = [
   { id: 'appetizers', name: 'Appetizers' },
@@ -124,54 +124,6 @@ export const menuItems: MenuItem[] = [
     category: 'desserts',
     imageUrl: 'https://images.unsplash.com/photo-1542826438-604241748b12?w=600&h=400&fit=crop',
     imageHint: 'newyork cheesecake'
-  },
-];
-
-export const members: Member[] = [
-  {
-    id: 'mem-1',
-    name: 'Alice Johnson',
-    email: 'alice.j@example.com',
-    phone: '555-0101',
-    joined: '2023-01-15T10:00:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    avatarHint: 'woman smiling',
-  },
-  {
-    id: 'mem-2',
-    name: 'Bob Williams',
-    email: 'bob.w@example.com',
-    phone: '555-0102',
-    joined: '2023-02-20T11:30:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    avatarHint: 'man portrait',
-  },
-  {
-    id: 'mem-3',
-    name: 'Charlie Brown',
-    email: 'charlie.b@example.com',
-    phone: '555-0103',
-    joined: '2023-03-10T09:00:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop',
-    avatarHint: 'man smiling',
-  },
-  {
-    id: 'mem-4',
-    name: 'Diana Prince',
-    email: 'diana.p@example.com',
-    phone: '555-0104',
-    joined: '2023-04-05T14:00:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=100&h=100&fit=crop',
-    avatarHint: 'woman portrait',
-  },
-    {
-    id: 'mem-5',
-    name: 'Ethan Hunt',
-    email: 'ethan.h@example.com',
-    phone: '555-0105',
-    joined: '2023-05-25T18:00:00Z',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-    avatarHint: 'man glasses',
   },
 ];
 

@@ -4,8 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
-import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check } from '@/lib/types';
+import { categories, menuItems as initialMenuItems } from '@/lib/data';
+import { getUsers } from '@/app/admin/users/actions';
+import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check, Member } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -38,6 +39,7 @@ export default function Home() {
 
   const [checks, setChecks] = useState<Check[]>([]);
   const [activeCheckId, setActiveCheckId] = useState<string | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   const order = useMemo(() => activeCheck?.items ?? [], [activeCheck]);
@@ -47,57 +49,64 @@ export default function Home() {
     if (isLoggedIn !== 'true') {
       router.replace('/login');
     } else {
-      // Set sample data here, as this only runs on the client
-      if (checks.length === 0 && activeOrders.length === 0) {
-        const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
-        const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
-        
-        let initialItems: OrderItem[] = [];
-        if (sampleItem1 && sampleItem2) {
-          initialItems = [
-            { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
-            { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
-          ];
+      // Fetch live data
+      const fetchInitialData = async () => {
+        const fetchedMembers = await getUsers();
+        setMembers(fetchedMembers);
+
+        // Set sample data here, as this only runs on the client
+        if (checks.length === 0 && activeOrders.length === 0) {
+          const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
+          const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
+          
+          let initialItems: OrderItem[] = [];
+          if (sampleItem1 && sampleItem2) {
+            initialItems = [
+              { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
+              { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
+            ];
+          }
+          
+          const initialCheckId = `check-${Date.now()}`;
+          setChecks([{ id: initialCheckId, name: 'Check 1', items: initialItems }]);
+          setActiveCheckId(initialCheckId);
+          
+          const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
+          const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
+          const sampleActiveItem3 = initialMenuItems.find(item => item.id === 'app-3');
+          const orders: ActiveOrder[] = [];
+          if (sampleActiveItem1 && sampleActiveItem2) {
+              const subtotal = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
+              const tax = subtotal * 0.08;
+              orders.push({
+                  id: `order-${Math.floor(Date.now() / 1000) - 300}`,
+                  checkName: 'Table 5',
+                  items: [
+                      { ...sampleActiveItem1, quantity: 1, lineItemId: `main-1-${Date.now()+2}` },
+                      { ...sampleActiveItem2, quantity: 2, lineItemId: `drink-1-${Date.now()+3}` },
+                  ],
+                  status: 'Ready',
+                  total: subtotal + tax,
+                  createdAt: new Date(Date.now() - 300000), // 5 minutes ago
+              });
+          }
+          if (sampleActiveItem3) {
+              const subtotal = sampleActiveItem3.price * 1;
+              const tax = subtotal * 0.08;
+              orders.push({
+                  id: `order-${Math.floor(Date.now() / 1000) - 120}`,
+                  checkName: 'Bar Seat 2',
+                  items: [{ ...sampleActiveItem3, quantity: 1, lineItemId: `app-3-${Date.now()+4}` }],
+                  status: 'Preparing',
+                  total: subtotal + tax,
+                  createdAt: new Date(Date.now() - 120000), // 2 minutes ago
+              });
+          }
+          setActiveOrders(orders);
         }
-        
-        const initialCheckId = `check-${Date.now()}`;
-        setChecks([{ id: initialCheckId, name: 'Check 1', items: initialItems }]);
-        setActiveCheckId(initialCheckId);
-        
-        const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
-        const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
-        const sampleActiveItem3 = initialMenuItems.find(item => item.id === 'app-3');
-        const orders: ActiveOrder[] = [];
-        if (sampleActiveItem1 && sampleActiveItem2) {
-            const subtotal = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
-            const tax = subtotal * 0.08;
-            orders.push({
-                id: `order-${Math.floor(Date.now() / 1000) - 300}`,
-                checkName: 'Table 5',
-                items: [
-                    { ...sampleActiveItem1, quantity: 1, lineItemId: `main-1-${Date.now()+2}` },
-                    { ...sampleActiveItem2, quantity: 2, lineItemId: `drink-1-${Date.now()+3}` },
-                ],
-                status: 'Ready',
-                total: subtotal + tax,
-                createdAt: new Date(Date.now() - 300000), // 5 minutes ago
-            });
-        }
-        if (sampleActiveItem3) {
-            const subtotal = sampleActiveItem3.price * 1;
-            const tax = subtotal * 0.08;
-            orders.push({
-                id: `order-${Math.floor(Date.now() / 1000) - 120}`,
-                checkName: 'Bar Seat 2',
-                items: [{ ...sampleActiveItem3, quantity: 1, lineItemId: `app-3-${Date.now()+4}` }],
-                status: 'Preparing',
-                total: subtotal + tax,
-                createdAt: new Date(Date.now() - 120000), // 2 minutes ago
-            });
-        }
-        setActiveOrders(orders);
+        setIsLoading(false);
       }
-      setIsLoading(false);
+      fetchInitialData();
     }
   }, [router, checks.length, activeOrders.length]);
 
@@ -274,7 +283,7 @@ export default function Home() {
             <div className="flex items-center justify-between h-16">
               <Link href="/" className="flex items-center gap-2 text-lg font-headline font-semibold">
                 <ItbIcon className="h-8 w-8" />
-                <span className="text-xl text-primary font-bold">Members</span>
+                <span className="text-xl text-primary font-bold">ITB Members</span>
               </Link>
               
               <TabsList className="inline-grid h-12 w-full max-w-lg grid-cols-3 bg-muted p-1 rounded-lg">

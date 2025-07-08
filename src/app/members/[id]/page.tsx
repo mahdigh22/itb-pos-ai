@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, notFound, useParams } from 'next/navigation';
-import { members } from "@/lib/data";
+import { getMember } from "@/app/admin/users/actions";
+import type { Member } from '@/lib/types';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,17 +17,29 @@ export default function MemberProfilePage() {
     const params = useParams();
     const id = params.id as string;
     const [isLoading, setIsLoading] = useState(true);
+    const [member, setMember] = useState<Member | null>(null);
 
     useEffect(() => {
         const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
         if (isLoggedIn !== 'true') {
             router.replace('/login');
-        } else {
-            setIsLoading(false);
+            return;
         }
-    }, [router]);
 
-    const member = members.find((m) => m.id === id);
+        if (id) {
+            const fetchMember = async () => {
+                setIsLoading(true);
+                const fetchedMember = await getMember(id);
+                if (fetchedMember) {
+                    setMember(fetchedMember);
+                } else {
+                    notFound();
+                }
+                setIsLoading(false);
+            };
+            fetchMember();
+        }
+    }, [router, id]);
 
     if (isLoading) {
         return (
@@ -56,11 +69,11 @@ export default function MemberProfilePage() {
     }
     
     if (!member) {
-        notFound();
+        return notFound();
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 md:p-8">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-headline font-bold">Member Profile</h1>
                  <Button variant="outline" size="lg" asChild>
