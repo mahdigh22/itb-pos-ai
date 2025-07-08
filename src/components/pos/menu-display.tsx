@@ -1,8 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlusCircle, BookOpen } from 'lucide-react';
 import type { Category, MenuItem } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
+import Link from 'next/link';
+import { Button } from '../ui/button';
 
 interface MenuDisplayProps {
   categories: Category[];
@@ -11,6 +13,25 @@ interface MenuDisplayProps {
 }
 
 export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDisplayProps) {
+  if (categories.length === 0) {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader>
+          <CardTitle className="font-headline">Menu</CardTitle>
+          <CardDescription>Select items to add to the order</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col min-h-0 justify-center items-center text-center text-muted-foreground">
+            <BookOpen className="w-16 h-16 mb-4"/>
+            <p className="font-semibold text-lg">Your menu is empty.</p>
+            <p className="text-sm mb-4">Add categories and items in the backoffice to get started.</p>
+            <Button asChild>
+                <Link href="/admin/menu">Go to Menu Management</Link>
+            </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
