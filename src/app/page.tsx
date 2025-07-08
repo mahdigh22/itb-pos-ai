@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
@@ -293,6 +293,11 @@ export default function Home() {
               </TabsList>
 
               <div className="flex items-center gap-2">
+                 <Button variant="ghost" size="icon" asChild>
+                    <Link href="/admin" aria-label="Admin Portal">
+                        <Settings className="h-5 w-5" />
+                    </Link>
+                </Button>
                 <ThemeToggle />
                 <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log Out">
                   <LogOut className="h-5 w-5" />
@@ -304,11 +309,11 @@ export default function Home() {
 
       <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
         <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 h-full">
-            <div className="lg:col-span-3 h-full flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
+            <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
               <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
             </div>
-            <div className="lg:col-span-2 h-full">
+            <div className="lg:col-span-2 xl:col-span-1 h-full">
               <OrderSummary
                 order={order}
                 checks={checks}
