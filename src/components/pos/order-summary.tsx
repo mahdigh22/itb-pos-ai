@@ -4,38 +4,66 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2 } from 'lucide-react';
-import type { OrderItem } from '@/lib/types';
+import type { OrderItem, Check } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface OrderSummaryProps {
   order: OrderItem[];
+  checks: Check[];
+  activeCheckId: string | null;
   onUpdateQuantity: (lineItemId: string, quantity: number) => void;
   onRemoveItem: (lineItemId: string) => void;
   onNewCheck: () => void;
   onCheckout: () => void;
   onCustomizeItem: (item: OrderItem) => void;
+  onSwitchCheck: (checkId: string) => void;
 }
 
 const TAX_RATE = 0.08; // 8%
 
 export default function OrderSummary({
   order,
+  checks,
+  activeCheckId,
   onUpdateQuantity,
   onRemoveItem,
   onNewCheck,
   onCheckout,
-  onCustomizeItem
+  onCustomizeItem,
+  onSwitchCheck,
 }: OrderSummaryProps) {
   const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
 
+  const activeCheck = checks.find(c => c.id === activeCheckId);
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
-        <CardTitle className="font-headline">Current Order</CardTitle>
-        <CardDescription>Review and manage the order items</CardDescription>
+        <div className="flex justify-between items-center">
+            <CardTitle className="font-headline">Current Order</CardTitle>
+            {checks.length > 1 && (
+                <Select value={activeCheckId ?? ''} onValueChange={onSwitchCheck}>
+                    <SelectTrigger className="w-[180px] h-9">
+                        <SelectValue placeholder="Select a check" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {checks.map(check => (
+                            <SelectItem key={check.id} value={check.id}>
+                                {check.name} ({check.items.length} items)
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
+        </div>
+        <CardDescription>
+            {activeCheck ? `Editing ${activeCheck.name}` : 'Review and manage the order items'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
         {order.length === 0 ? (
@@ -145,7 +173,7 @@ export default function OrderSummary({
       </CardContent>
       <CardFooter className="flex flex-col gap-2 pt-6 border-t">
         <Button className="w-full" size="lg" onClick={onCheckout} disabled={order.length === 0}>
-          <CreditCard className="mr-2 h-4 w-4" /> Checkout
+          <CreditCard className="mr-2 h-4 w-4" /> Send to Kitchen
         </Button>
         <Button variant="outline" className="w-full" onClick={onNewCheck}>
           <FilePlus className="mr-2 h-4 w-4" /> New Check

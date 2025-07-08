@@ -42,7 +42,7 @@ export default function OrderProgress({ orders, onClearOrder }: OrderProgressPro
                     <div key={order.id} className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="font-semibold">Order #{order.id.split('-')[1]}</p>
+                                <p className="font-semibold">{order.checkName} - #{order.id.split('-')[1].slice(-4)}</p>
                                 <p className="text-sm text-muted-foreground">
                                     {format(order.createdAt, "p")} - ${order.total.toFixed(2)}
                                 </p>
@@ -63,7 +63,7 @@ export default function OrderProgress({ orders, onClearOrder }: OrderProgressPro
                         <Progress value={config.value} className="h-2" />
                         <ul className="text-sm text-muted-foreground list-disc list-inside">
                             {order.items.map(item => (
-                                <li key={item.id}>{item.quantity}x {item.name}</li>
+                                <li key={item.lineItemId}>{item.quantity}x {item.name}</li>
                             ))}
                         </ul>
                     </div>

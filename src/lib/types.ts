@@ -36,10 +36,19 @@ export interface Member {
 
 export type OrderStatus = 'Preparing' | 'Ready' | 'Completed';
 
+// This is an order that has been sent to the kitchen
 export interface ActiveOrder {
   id: string;
   items: OrderItem[];
   status: OrderStatus;
   total: number;
   createdAt: Date;
+  checkName: string;
+}
+
+// This is a "check" or "tab" that is currently being built
+export interface Check {
+    id: string;
+    name: string;
+    items: OrderItem[];
 }

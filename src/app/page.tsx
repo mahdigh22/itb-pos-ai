@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { categories, menuItems as initialMenuItems, members } from '@/lib/data';
-import type { OrderItem, MenuItem, ActiveOrder, OrderStatus } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -31,12 +31,16 @@ import ItbIcon from '@/components/itb-icon';
 export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [order, setOrder] = useState<OrderItem[]>([]);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
-  const [isNewCheckAlertOpen, setNewCheckAlertOpen] = useState(false);
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(null);
+
+  const [checks, setChecks] = useState<Check[]>([]);
+  const [activeCheckId, setActiveCheckId] = useState<string | null>(null);
+
+  const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
+  const order = useMemo(() => activeCheck?.items ?? [], [activeCheck]);
 
   useEffect(() => {
     const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
@@ -44,15 +48,21 @@ export default function Home() {
       router.replace('/login');
     } else {
       // Set sample data here, as this only runs on the client
-      if (order.length === 0 && activeOrders.length === 0) {
+      if (checks.length === 0 && activeOrders.length === 0) {
         const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
         const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
+        
+        let initialItems: OrderItem[] = [];
         if (sampleItem1 && sampleItem2) {
-          setOrder([
+          initialItems = [
             { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
             { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
-          ]);
+          ];
         }
+        
+        const initialCheckId = `check-${Date.now()}`;
+        setChecks([{ id: initialCheckId, name: 'Check 1', items: initialItems }]);
+        setActiveCheckId(initialCheckId);
         
         const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
         const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
@@ -63,6 +73,7 @@ export default function Home() {
             const tax = subtotal * 0.08;
             orders.push({
                 id: `order-${Math.floor(Date.now() / 1000) - 300}`,
+                checkName: 'Table 5',
                 items: [
                     { ...sampleActiveItem1, quantity: 1, lineItemId: `main-1-${Date.now()+2}` },
                     { ...sampleActiveItem2, quantity: 2, lineItemId: `drink-1-${Date.now()+3}` },
@@ -77,6 +88,7 @@ export default function Home() {
             const tax = subtotal * 0.08;
             orders.push({
                 id: `order-${Math.floor(Date.now() / 1000) - 120}`,
+                checkName: 'Bar Seat 2',
                 items: [{ ...sampleActiveItem3, quantity: 1, lineItemId: `app-3-${Date.now()+4}` }],
                 status: 'Preparing',
                 total: subtotal + tax,
@@ -87,17 +99,23 @@ export default function Home() {
       }
       setIsLoading(false);
     }
-  }, [router, order.length, activeOrders.length]);
+  }, [router, checks.length, activeOrders.length]);
+
+  const updateActiveCheckItems = (updater: (prevItems: OrderItem[]) => OrderItem[]) => {
+    setChecks(prevChecks => 
+      prevChecks.map(c => 
+        c.id === activeCheckId ? { ...c, items: updater(c.items) } : c
+      )
+    );
+  };
 
   const handleAddItem = (item: MenuItem) => {
-    setOrder((prevOrder) => {
-      // Find an item with the same ID that has NO customizations.
+    updateActiveCheckItems((prevOrder) => {
       const existingItem = prevOrder.find(
         (orderItem) => orderItem.id === item.id && !orderItem.customizations
       );
 
       if (existingItem) {
-        // If it exists, just increase the quantity of that line.
         return prevOrder.map((orderItem) =>
           orderItem.lineItemId === existingItem.lineItemId
             ? { ...orderItem, quantity: orderItem.quantity + 1 }
@@ -105,12 +123,7 @@ export default function Home() {
         );
       }
       
-      // Otherwise, add a new line item.
-      const newOrderItem: OrderItem = {
-        ...item,
-        quantity: 1,
-        lineItemId: `${item.id}-${Date.now()}`
-      };
+      const newOrderItem: OrderItem = { ...item, quantity: 1, lineItemId: `${item.id}-${Date.now()}` };
       return [...prevOrder, newOrderItem];
     });
   };
@@ -120,19 +133,18 @@ export default function Home() {
       handleRemoveItem(lineItemId);
       return;
     }
-    setOrder((prevOrder) =>
+    updateActiveCheckItems(prevOrder =>
       prevOrder.map((item) => (item.lineItemId === lineItemId ? { ...item, quantity } : item))
     );
   };
 
   const handleRemoveItem = (lineItemId: string) => {
-    setOrder((prevOrder) => prevOrder.filter((item) => item.lineItemId !== lineItemId));
+    updateActiveCheckItems(prevOrder => prevOrder.filter((item) => item.lineItemId !== lineItemId));
   };
   
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
     if (itemToCustomize.quantity > 1) {
-      // Split the item
-      setOrder(prev => {
+      updateActiveCheckItems(prev => {
         const otherItems = prev.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
         const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
         const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}` };
@@ -140,7 +152,6 @@ export default function Home() {
         return [...otherItems, originalItem, newItemToCustomize];
       });
     } else {
-      // Just open the dialog for the item
       setCustomizingItem(itemToCustomize);
     }
   };
@@ -149,7 +160,7 @@ export default function Home() {
     lineItemId: string, 
     customizations: { added: string[], removed: string[] }
   ) => {
-    setOrder(prev => 
+    updateActiveCheckItems(prev => 
       prev.map(item => 
         item.lineItemId === lineItemId ? { ...item, customizations } : item
       )
@@ -158,22 +169,33 @@ export default function Home() {
   };
 
   const handleNewCheck = () => {
-    if (order.length > 0) {
-      setNewCheckAlertOpen(true);
-    }
-  };
+    const newCheckName = `Check ${checks.length + 1}`;
+    const newCheckId = `check-${Date.now()}`;
+    const newCheck: Check = { id: newCheckId, name: newCheckName, items: [] };
+    
+    setChecks(prevChecks => [...prevChecks, newCheck]);
+    setActiveCheckId(newCheckId);
 
-  const confirmNewCheck = () => {
-    setOrder([]);
-    setNewCheckAlertOpen(false);
     toast({
         title: "New Check Started",
-        description: "The current order has been cleared.",
+        description: `Switched to ${newCheckName}.`,
     });
   };
 
+  const handleSwitchCheck = (checkId: string) => {
+    setActiveCheckId(checkId);
+  }
+
   const handleCheckout = () => {
-    setCheckoutAlertOpen(true);
+    if (order.length > 0) {
+      setCheckoutAlertOpen(true);
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Cannot Checkout",
+        description: "The active check is empty.",
+      });
+    }
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: OrderStatus) => {
@@ -187,7 +209,7 @@ export default function Home() {
   }
 
   const confirmCheckout = () => {
-    if (order.length === 0) return;
+    if (!activeCheck || order.length === 0) return;
     const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08;
     const total = subtotal + tax;
@@ -198,6 +220,7 @@ export default function Home() {
       status: 'Preparing',
       total: total,
       createdAt: new Date(),
+      checkName: activeCheck.name,
     };
 
     setActiveOrders(prev => [newOrder, ...prev]);
@@ -210,10 +233,22 @@ export default function Home() {
       handleUpdateOrderStatus(newOrder.id, 'Completed');
     }, 30000);
 
-    setOrder([]);
+    setChecks(prevChecks => {
+        const remainingChecks = prevChecks.filter(c => c.id !== activeCheckId);
+        if (remainingChecks.length === 0) {
+            const newCheckId = `check-${Date.now()}`;
+            const newCheck: Check = { id: newCheckId, name: 'Check 1', items: [] };
+            setActiveCheckId(newCheckId);
+            return [newCheck];
+        } else {
+            setActiveCheckId(remainingChecks[0].id);
+            return remainingChecks;
+        }
+    });
+
     toast({
         title: "Order Sent!",
-        description: "Your order is being prepared and is now tracked below.",
+        description: `${activeCheck.name} is being prepared.`,
     });
     setCheckoutAlertOpen(false);
   }
@@ -276,11 +311,14 @@ export default function Home() {
             <div className="lg:col-span-2 h-full">
               <OrderSummary
                 order={order}
+                checks={checks}
+                activeCheckId={activeCheckId}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveItem={handleRemoveItem}
                 onNewCheck={handleNewCheck}
                 onCheckout={handleCheckout}
                 onCustomizeItem={handleStartCustomization}
+                onSwitchCheck={handleSwitchCheck}
               />
             </div>
           </div>
@@ -301,27 +339,12 @@ export default function Home() {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-headline">Confirm Checkout</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to proceed with the payment? This action cannot be undone.
+              Are you sure you want to send this check to the kitchen?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCheckout}>Confirm Payment</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isNewCheckAlertOpen} onOpenChange={setNewCheckAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-headline">Start a New Check?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will clear all items from the current order. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewCheck}>Start New Check</AlertDialogAction>
+            <AlertDialogAction onClick={confirmCheckout}>Confirm & Send</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
