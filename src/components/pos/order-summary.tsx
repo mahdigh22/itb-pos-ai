@@ -4,42 +4,53 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2 } from 'lucide-react';
-import type { OrderItem, Check } from '@/lib/types';
+import type { OrderItem, Check, OrderType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 
 interface OrderSummaryProps {
-  order: OrderItem[];
+  activeCheck: Check | undefined;
   checks: Check[];
-  activeCheckId: string | null;
   onUpdateQuantity: (lineItemId: string, quantity: number) => void;
   onRemoveItem: (lineItemId: string) => void;
   onNewCheck: () => void;
   onCheckout: () => void;
   onCustomizeItem: (item: OrderItem) => void;
   onSwitchCheck: (checkId: string) => void;
+  onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
 }
 
 const TAX_RATE = 0.08; // 8%
 
 export default function OrderSummary({
-  order,
+  activeCheck,
   checks,
-  activeCheckId,
   onUpdateQuantity,
   onRemoveItem,
   onNewCheck,
   onCheckout,
   onCustomizeItem,
   onSwitchCheck,
+  onUpdateDetails,
 }: OrderSummaryProps) {
+  const order = activeCheck?.items ?? [];
   const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
 
-  const activeCheck = checks.find(c => c.id === activeCheckId);
+  if (!activeCheck) {
+    return (
+        <Card className="flex flex-col h-full items-center justify-center text-muted-foreground">
+             <ShoppingCart className="w-16 h-16 mb-4"/>
+             <p className="font-semibold">No active check</p>
+        </Card>
+    )
+  }
 
   return (
     <Card className="flex flex-col h-full">
@@ -47,7 +58,7 @@ export default function OrderSummary({
         <div className="flex justify-between items-center">
             <CardTitle className="font-headline">Current Order</CardTitle>
             {checks.length > 1 && (
-                <Select value={activeCheckId ?? ''} onValueChange={onSwitchCheck}>
+                <Select value={activeCheck.id ?? ''} onValueChange={onSwitchCheck}>
                     <SelectTrigger className="w-[180px] h-9">
                         <SelectValue placeholder="Select a check" />
                     </SelectTrigger>
@@ -66,6 +77,42 @@ export default function OrderSummary({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
+        <Tabs 
+            value={activeCheck.orderType} 
+            onValueChange={(value) => onUpdateDetails({ 
+                orderType: value as OrderType,
+                // Clear other details when switching type
+                tableNumber: value === 'Dine In' ? activeCheck.tableNumber : '',
+                customerName: value === 'Take Away' ? activeCheck.customerName : '',
+            })}
+            className="w-full"
+        >
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="Dine In">Dine In</TabsTrigger>
+                <TabsTrigger value="Take Away">Take Away</TabsTrigger>
+            </TabsList>
+            <TabsContent value="Dine In" className="mt-4">
+                <Label htmlFor="table-number">Table Number</Label>
+                <Input 
+                    id="table-number" 
+                    placeholder="e.g., 12" 
+                    value={activeCheck.tableNumber || ''}
+                    onChange={(e) => onUpdateDetails({ tableNumber: e.target.value })}
+                />
+            </TabsContent>
+            <TabsContent value="Take Away" className="mt-4">
+                <Label htmlFor="customer-name">Customer Name</Label>
+                <Input 
+                    id="customer-name" 
+                    placeholder="e.g., John Doe" 
+                    value={activeCheck.customerName || ''}
+                    onChange={(e) => onUpdateDetails({ customerName: e.target.value })}
+                />
+            </TabsContent>
+        </Tabs>
+
+        <Separator className="my-4" />
+
         {order.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground flex-grow">
             <ShoppingCart className="w-16 h-16 mb-4"/>
@@ -73,7 +120,7 @@ export default function OrderSummary({
             <p className="text-sm">Add items from the menu to get started.</p>
           </div>
         ) : (
-          <div className="flex flex-col h-full flex-grow">
+          <div className="flex flex-col h-full flex-grow min-h-0">
             <ScrollArea className="flex-grow -mr-6 pr-6">
               <div className="space-y-2">
                 {order.map((item) => (

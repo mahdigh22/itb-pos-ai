@@ -27,14 +27,14 @@ export async function addCheck(check: Omit<Check, 'id'>): Promise<Check> {
     return { id: docRef.id, ...check };
 }
 
-export async function updateCheckItems(checkId: string, items: OrderItem[]) {
+export async function updateCheck(checkId: string, updates: Partial<Omit<Check, 'id'>>) {
   try {
     const checkRef = doc(db, 'checks', checkId);
-    await updateDoc(checkRef, { items });
+    await updateDoc(checkRef, updates);
     // No revalidate needed for this as it's a frequent action
     return { success: true };
   } catch (e) {
-    console.error("Error updating check items: ", e);
+    console.error("Error updating check: ", e);
     return { success: false, error: 'Failed to update check.' };
   }
 }
@@ -66,6 +66,9 @@ export async function getOrders(): Promise<ActiveOrder[]> {
         checkName: data.checkName,
         createdAt: (data.createdAt as Timestamp).toDate(),
         totalPreparationTime: data.totalPreparationTime,
+        orderType: data.orderType,
+        tableNumber: data.tableNumber,
+        customerName: data.customerName,
       });
     });
     return orders;

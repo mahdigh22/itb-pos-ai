@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Package, Soup, ClipboardList } from 'lucide-react';
+import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import type { ActiveOrder, OrderStatus } from '@/lib/types';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -58,9 +58,17 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
         <div className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="font-semibold">{order.checkName} - #{order.id.slice(-6)}</p>
-                    <p className="text-sm text-muted-foreground">
-                        Ordered at {format(order.createdAt, "p")} - Total: ${order.total.toFixed(2)}
+                    <div className="flex items-center gap-2">
+                        {order.orderType === 'Dine In' && <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
+                        {order.orderType === 'Take Away' && <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
+                        <p className="font-semibold">{order.checkName} - #{order.id.slice(-6)}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground pl-6">
+                        {order.orderType === 'Dine In' && `Table ${order.tableNumber || 'N/A'}`}
+                        {order.orderType === 'Take Away' && `For ${order.customerName || 'N/A'}`}
+                        {order.orderType === 'Delivery' && `For ${order.customerName || 'N/A'}`}
+                        {' · '}
+                        Total: ${order.total.toFixed(2)}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

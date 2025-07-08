@@ -1,4 +1,6 @@
 
+export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -46,6 +48,9 @@ export interface ActiveOrder {
   createdAt: Date;
   checkName: string;
   totalPreparationTime: number; // in minutes
+  orderType: OrderType;
+  tableNumber?: string;
+  customerName?: string;
 }
 
 // This is a "check" or "tab" that is currently being built
@@ -53,6 +58,9 @@ export interface Check {
     id: string;
     name: string;
     items: OrderItem[];
+    orderType: OrderType;
+    tableNumber?: string;
+    customerName?: string;
 }
 
 export interface Employee {

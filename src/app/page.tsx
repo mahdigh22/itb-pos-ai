@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getUsers } from '@/app/admin/users/actions';
-import { getChecks, addCheck, updateCheckItems, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus } from '@/app/pos/actions';
-import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category } from '@/lib/types';
+import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus } from '@/app/pos/actions';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -46,8 +46,7 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
-  const order = useMemo(() => activeCheck?.items ?? [], [activeCheck]);
-
+  
   useEffect(() => {
     const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
     if (isLoggedIn !== 'true') {
@@ -75,7 +74,8 @@ export default function Home() {
         setActiveOrders(fetchedOrders);
         
         if (fetchedChecks.length === 0) {
-            const newCheck = await addCheck({ name: 'Check 1', items: [] });
+            const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [], orderType: 'Dine In' };
+            const newCheck = await addCheck(newCheckData);
             setChecks([newCheck]);
             setActiveCheckId(newCheck.id);
         } else {
@@ -88,38 +88,39 @@ export default function Home() {
     }
   }, [router]);
 
-  const updateActiveCheckItems = async (updater: (prevItems: OrderItem[]) => OrderItem[]) => {
+  const updateActiveCheck = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;
-
-    const newItems = updater(order);
     
     // Optimistically update the UI
     setChecks(prevChecks => 
       prevChecks.map(c => 
-        c.id === activeCheckId ? { ...c, items: newItems } : c
+        c.id === activeCheckId ? { ...c, ...updates } : c
       )
     );
     
-    await updateCheckItems(activeCheckId, newItems);
+    await updateCheck(activeCheckId, updates);
   };
 
-  const handleAddItem = (item: MenuItem) => {
-    updateActiveCheckItems((prevOrder) => {
-      const existingItem = prevOrder.find(
-        (orderItem) => orderItem.id === item.id && !orderItem.customizations
-      );
 
-      if (existingItem) {
-        return prevOrder.map((orderItem) =>
-          orderItem.lineItemId === existingItem.lineItemId
-            ? { ...orderItem, quantity: orderItem.quantity + 1 }
-            : orderItem
-        );
-      }
-      
+  const handleAddItem = (item: MenuItem) => {
+    const order = activeCheck?.items ?? [];
+    let newItems: OrderItem[];
+    const existingItem = order.find(
+      (orderItem) => orderItem.id === item.id && !orderItem.customizations
+    );
+
+    if (existingItem) {
+      newItems = order.map((orderItem) =>
+        orderItem.lineItemId === existingItem.lineItemId
+          ? { ...orderItem, quantity: orderItem.quantity + 1 }
+          : orderItem
+      );
+    } else {
       const newOrderItem: OrderItem = { ...item, quantity: 1, lineItemId: `${item.id}-${Date.now()}` };
-      return [...prevOrder, newOrderItem];
-    });
+      newItems = [...order, newOrderItem];
+    }
+
+    updateActiveCheck({ items: newItems });
   };
 
   const handleUpdateQuantity = (lineItemId: string, quantity: number) => {
@@ -127,25 +128,24 @@ export default function Home() {
       handleRemoveItem(lineItemId);
       return;
     }
-    updateActiveCheckItems(prevOrder =>
-      prevOrder.map((item) => (item.lineItemId === lineItemId ? { ...item, quantity } : item))
-    );
+    const newItems = (activeCheck?.items ?? []).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity } : item))
+    updateActiveCheck({ items: newItems });
   };
 
   const handleRemoveItem = (lineItemId: string) => {
-    updateActiveCheckItems(prevOrder => prevOrder.filter((item) => item.lineItemId !== lineItemId));
+    const newItems = (activeCheck?.items ?? []).filter((item) => item.lineItemId !== lineItemId);
+    updateActiveCheck({ items: newItems });
   };
   
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
+    const order = activeCheck?.items ?? [];
     if (itemToCustomize.quantity > 1) {
       // Create a separate item for customization
-      updateActiveCheckItems(prev => {
-        const otherItems = prev.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
-        const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
-        const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}` };
-        setCustomizingItem(newItemToCustomize);
-        return [...otherItems, originalItem, newItemToCustomize];
-      });
+      const otherItems = order.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
+      const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
+      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}` };
+      setCustomizingItem(newItemToCustomize);
+      updateActiveCheck({ items: [...otherItems, originalItem, newItemToCustomize] });
     } else {
       setCustomizingItem(itemToCustomize);
     }
@@ -155,17 +155,16 @@ export default function Home() {
     lineItemId: string, 
     customizations: { added: string[], removed: string[] }
   ) => {
-    updateActiveCheckItems(prev => 
-      prev.map(item => 
+    const newItems = (activeCheck?.items ?? []).map(item => 
         item.lineItemId === lineItemId ? { ...item, customizations } : item
-      )
-    );
+      );
+    updateActiveCheck({ items: newItems });
     setCustomizingItem(null);
   };
 
   const handleNewCheck = async () => {
     const newCheckName = `Check ${checks.length + 1}`;
-    const newCheckData = { name: newCheckName, items: [] };
+    const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [], orderType: 'Dine In' };
     const newCheck = await addCheck(newCheckData);
     
     setChecks(prevChecks => [...prevChecks, newCheck]);
@@ -182,7 +181,7 @@ export default function Home() {
   }
 
   const handleCheckout = () => {
-    if (order.length > 0) {
+    if (activeCheck && activeCheck.items.length > 0) {
       setCheckoutAlertOpen(true);
     } else {
       toast({
@@ -208,20 +207,23 @@ export default function Home() {
   }
 
   const confirmCheckout = async () => {
-    if (!activeCheck || !activeCheckId || order.length === 0) return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0) return;
 
-    const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const subtotal = activeCheck.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08; // TODO: Get from settings
     const total = subtotal + tax;
-    const totalPreparationTime = order.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
+    const totalPreparationTime = activeCheck.items.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
 
     const newOrderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date } = {
-      items: [...order],
+      items: [...activeCheck.items],
       status: 'Preparing',
       total: total,
       createdAt: new Date(),
       checkName: activeCheck.name,
       totalPreparationTime,
+      orderType: activeCheck.orderType,
+      tableNumber: activeCheck.tableNumber,
+      customerName: activeCheck.customerName,
     };
 
     await addOrder(newOrderData);
@@ -236,7 +238,8 @@ export default function Home() {
         setChecks(remainingChecks);
         setActiveCheckId(remainingChecks[0].id);
     } else {
-        const newCheck = await addCheck({ name: 'Check 1', items: [] });
+        const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [], orderType: 'Dine In' };
+        const newCheck = await addCheck(newCheckData);
         setChecks([newCheck]);
         setActiveCheckId(newCheck.id);
     }
@@ -310,15 +313,15 @@ export default function Home() {
             </div>
             <div className="lg:col-span-2 xl:col-span-1 h-full">
               <OrderSummary
-                order={order}
+                activeCheck={activeCheck}
                 checks={checks}
-                activeCheckId={activeCheckId}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveItem={handleRemoveItem}
                 onNewCheck={handleNewCheck}
                 onCheckout={handleCheckout}
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
+                onUpdateDetails={updateActiveCheck}
               />
             </div>
           </div>
