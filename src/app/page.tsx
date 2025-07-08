@@ -35,6 +35,7 @@ export default function Home() {
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
+  const [isNewCheckAlertOpen, setNewCheckAlertOpen] = useState(false);
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(null);
 
   useEffect(() => {
@@ -157,7 +158,18 @@ export default function Home() {
   };
 
   const handleNewCheck = () => {
+    if (order.length > 0) {
+      setNewCheckAlertOpen(true);
+    }
+  };
+
+  const confirmNewCheck = () => {
     setOrder([]);
+    setNewCheckAlertOpen(false);
+    toast({
+        title: "New Check Started",
+        description: "The current order has been cleared.",
+    });
   };
 
   const handleCheckout = () => {
@@ -298,6 +310,22 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={isNewCheckAlertOpen} onOpenChange={setNewCheckAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-headline">Start a New Check?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all items from the current order. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewCheck}>Start New Check</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Tabs>
     <CustomizeItemDialog 
         item={customizingItem}
