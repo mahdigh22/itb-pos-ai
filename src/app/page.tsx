@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getUsers } from '@/app/admin/users/actions';
-import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check, Member, Category } from '@/lib/types';
+import { getChecks, addCheck, updateCheckItems, deleteCheck, getOrders, addOrder, deleteOrder } from '@/app/pos/actions';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -54,60 +55,52 @@ export default function Home() {
     } else {
       const fetchInitialData = async () => {
         setIsLoading(true);
-        const [fetchedMembers, fetchedMenuItems, fetchedCategories] = await Promise.all([
+        const [
+          fetchedMembers, 
+          fetchedMenuItems, 
+          fetchedCategories, 
+          fetchedChecks, 
+          fetchedOrders
+        ] = await Promise.all([
             getUsers(),
             getMenuItems(),
-            getCategories()
+            getCategories(),
+            getChecks(),
+            getOrders()
         ]);
         setMembers(fetchedMembers);
         setMenuItems(fetchedMenuItems);
         setCategories(fetchedCategories);
-
-        if (checks.length === 0 && activeOrders.length === 0 && fetchedMenuItems.length > 1) {
-          const sampleItem1 = fetchedMenuItems[0];
-          const sampleItem2 = fetchedMenuItems[1];
-          
-          let initialItems: OrderItem[] = [
-            { ...sampleItem1, quantity: 2, lineItemId: `${sampleItem1.id}-${Date.now()}` },
-            { ...sampleItem2, quantity: 1, lineItemId: `${sampleItem2.id}-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
-          ];
-          
-          const initialCheckId = `check-${Date.now()}`;
-          setChecks([{ id: initialCheckId, name: 'Check 1', items: initialItems }]);
-          setActiveCheckId(initialCheckId);
-          
-          const sampleActiveItem1 = fetchedMenuItems.length > 2 ? fetchedMenuItems[2] : fetchedMenuItems[0];
-          const sampleActiveItem2 = fetchedMenuItems.length > 3 ? fetchedMenuItems[3] : fetchedMenuItems[1];
-          const orders: ActiveOrder[] = [];
-
-          const subtotal1 = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
-          const tax1 = subtotal1 * 0.08;
-          orders.push({
-              id: `order-${Math.floor(Date.now() / 1000) - 300}`,
-              checkName: 'Table 5',
-              items: [
-                  { ...sampleActiveItem1, quantity: 1, lineItemId: `${sampleActiveItem1.id}-${Date.now()+2}` },
-                  { ...sampleActiveItem2, quantity: 2, lineItemId: `${sampleActiveItem2.id}-${Date.now()+3}` },
-              ],
-              status: 'Ready',
-              total: subtotal1 + tax1,
-              createdAt: new Date(Date.now() - 300000), // 5 minutes ago
-          });
-
-          setActiveOrders(orders);
+        setChecks(fetchedChecks);
+        setActiveOrders(fetchedOrders);
+        
+        if (fetchedChecks.length === 0) {
+            const newCheck = await addCheck({ name: 'Check 1', items: [] });
+            setChecks([newCheck]);
+            setActiveCheckId(newCheck.id);
+        } else {
+            setActiveCheckId(fetchedChecks[0].id);
         }
+
         setIsLoading(false);
       }
       fetchInitialData();
     }
-  }, [router, checks.length, activeOrders.length]);
+  }, [router]);
 
-  const updateActiveCheckItems = (updater: (prevItems: OrderItem[]) => OrderItem[]) => {
+  const updateActiveCheckItems = async (updater: (prevItems: OrderItem[]) => OrderItem[]) => {
+    if (!activeCheckId) return;
+
+    const newItems = updater(order);
+    
+    // Optimistically update the UI
     setChecks(prevChecks => 
       prevChecks.map(c => 
-        c.id === activeCheckId ? { ...c, items: updater(c.items) } : c
+        c.id === activeCheckId ? { ...c, items: newItems } : c
       )
     );
+    
+    await updateCheckItems(activeCheckId, newItems);
   };
 
   const handleAddItem = (item: MenuItem) => {
@@ -145,6 +138,7 @@ export default function Home() {
   
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
     if (itemToCustomize.quantity > 1) {
+      // Create a separate item for customization
       updateActiveCheckItems(prev => {
         const otherItems = prev.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
         const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
@@ -169,17 +163,17 @@ export default function Home() {
     setCustomizingItem(null);
   };
 
-  const handleNewCheck = () => {
+  const handleNewCheck = async () => {
     const newCheckName = `Check ${checks.length + 1}`;
-    const newCheckId = `check-${Date.now()}`;
-    const newCheck: Check = { id: newCheckId, name: newCheckName, items: [] };
+    const newCheckData = { name: newCheckName, items: [] };
+    const newCheck = await addCheck(newCheckData);
     
     setChecks(prevChecks => [...prevChecks, newCheck]);
-    setActiveCheckId(newCheckId);
+    setActiveCheckId(newCheck.id);
 
     toast({
         title: "New Check Started",
-        description: `Switched to ${newCheckName}.`,
+        description: `Switched to ${newCheck.name}.`,
     });
   };
 
@@ -199,24 +193,19 @@ export default function Home() {
     }
   };
 
-  const handleUpdateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setActiveOrders(prev =>
-      prev.map(o => (o.id === orderId ? { ...o, status } : o))
-    );
-  };
-
-  const handleClearOrder = (orderId: string) => {
+  const handleClearOrder = async (orderId: string) => {
+    await deleteOrder(orderId);
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
   }
 
-  const confirmCheckout = () => {
-    if (!activeCheck || order.length === 0) return;
+  const confirmCheckout = async () => {
+    if (!activeCheck || !activeCheckId || order.length === 0) return;
+
     const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    const tax = subtotal * 0.08;
+    const tax = subtotal * 0.08; // TODO: Get from settings
     const total = subtotal + tax;
 
-    const newOrder: ActiveOrder = {
-      id: `order-${Date.now()}`,
+    const newOrderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date } = {
       items: [...order],
       status: 'Preparing',
       total: total,
@@ -224,28 +213,22 @@ export default function Home() {
       checkName: activeCheck.name,
     };
 
-    setActiveOrders(prev => [newOrder, ...prev]);
-
-    setTimeout(() => {
-      handleUpdateOrderStatus(newOrder.id, 'Ready');
-    }, 15000);
-
-    setTimeout(() => {
-      handleUpdateOrderStatus(newOrder.id, 'Completed');
-    }, 30000);
-
-    setChecks(prevChecks => {
-        const remainingChecks = prevChecks.filter(c => c.id !== activeCheckId);
-        if (remainingChecks.length === 0) {
-            const newCheckId = `check-${Date.now()}`;
-            const newCheck: Check = { id: newCheckId, name: 'Check 1', items: [] };
-            setActiveCheckId(newCheckId);
-            return [newCheck];
-        } else {
-            setActiveCheckId(remainingChecks[0].id);
-            return remainingChecks;
-        }
-    });
+    await addOrder(newOrderData);
+    await deleteCheck(activeCheckId);
+    
+    // Refetch orders and update checks state
+    const newOrders = await getOrders();
+    setActiveOrders(newOrders);
+    
+    const remainingChecks = checks.filter(c => c.id !== activeCheckId);
+    if (remainingChecks.length > 0) {
+        setChecks(remainingChecks);
+        setActiveCheckId(remainingChecks[0].id);
+    } else {
+        const newCheck = await addCheck({ name: 'Check 1', items: [] });
+        setChecks([newCheck]);
+        setActiveCheckId(newCheck.id);
+    }
 
     toast({
         title: "Order Sent!",
