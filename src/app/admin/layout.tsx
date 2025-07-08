@@ -15,22 +15,26 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  // If we're on the login page, don't show the protected layout.
-  if (pathname === '/admin/login') {
-    return <>{children}</>;
-  }
+  
+  const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
+    if (isLoginPage) {
+      // No auth check needed on the login page itself.
+      setIsCheckingAuth(false);
+      return;
+    }
+
     const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
     if (!isAdminLoggedIn) {
       router.replace('/admin/login');
     } else {
       setIsCheckingAuth(false);
     }
-  }, [router, pathname]);
+  }, [router, pathname, isLoginPage]);
 
-  if (isCheckingAuth) {
+  // While checking auth on a protected page, show a loader.
+  if (isCheckingAuth && !isLoginPage) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -38,6 +42,12 @@ export default function AdminLayout({
     );
   }
 
+  // If it's the login page, just render the page content without the admin layout.
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  // If auth check is complete and user is logged in, render the admin layout.
   return (
     <SidebarProvider>
       <AdminSidebar />
