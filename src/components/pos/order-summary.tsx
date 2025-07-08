@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2 } from 'lucide-react';
+import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2, Send } from 'lucide-react';
 import type { OrderItem, Check, OrderType } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 
 interface OrderSummaryProps {
@@ -19,7 +20,8 @@ interface OrderSummaryProps {
   onUpdateQuantity: (lineItemId: string, quantity: number) => void;
   onRemoveItem: (lineItemId: string) => void;
   onNewCheck: () => void;
-  onCheckout: () => void;
+  onSendToKitchen: () => void;
+  onCloseCheck: () => void;
   onCustomizeItem: (item: OrderItem) => void;
   onSwitchCheck: (checkId: string) => void;
   onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
@@ -33,7 +35,8 @@ export default function OrderSummary({
   onUpdateQuantity,
   onRemoveItem,
   onNewCheck,
-  onCheckout,
+  onSendToKitchen,
+  onCloseCheck,
   onCustomizeItem,
   onSwitchCheck,
   onUpdateDetails,
@@ -42,6 +45,7 @@ export default function OrderSummary({
   const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
+  const hasNewItems = activeCheck?.items.some(item => item.status === 'new') ?? false;
 
   if (!activeCheck) {
     return (
@@ -81,7 +85,6 @@ export default function OrderSummary({
             value={activeCheck.orderType} 
             onValueChange={(value) => onUpdateDetails({ 
                 orderType: value as OrderType,
-                // Clear other details when switching type
                 tableNumber: value === 'Dine In' ? activeCheck.tableNumber : '',
                 customerName: value === 'Take Away' ? activeCheck.customerName : '',
             })}
@@ -132,8 +135,14 @@ export default function OrderSummary({
                     <div className="flex-grow">
                         <div className="flex items-start">
                             <div className="flex-1 pr-2">
-                                <p className="font-semibold leading-tight">{item.name}</p>
-                                <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                                <div className="flex items-center gap-2">
+                                    <span title={item.status === 'new' ? 'New item' : 'Item sent'} className={cn(
+                                        "h-2 w-2 rounded-full",
+                                        item.status === 'new' ? 'bg-accent' : 'bg-muted-foreground'
+                                    )} />
+                                    <p className="font-semibold leading-tight">{item.name}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground ml-4">${item.price.toFixed(2)} each</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1">
@@ -219,9 +228,20 @@ export default function OrderSummary({
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-2 pt-6 border-t">
-        <Button className="w-full" size="lg" onClick={onCheckout} disabled={order.length === 0}>
-          <CreditCard className="mr-2 h-4 w-4" /> Send to Kitchen
-        </Button>
+        {activeCheck.orderType === 'Dine In' ? (
+            <>
+                <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={!hasNewItems}>
+                    <Send className="mr-2 h-4 w-4" /> Send New Items
+                </Button>
+                <Button className="w-full" variant="outline" onClick={onCloseCheck} disabled={order.length === 0}>
+                    <CreditCard className="mr-2 h-4 w-4" /> Close & Pay Bill
+                </Button>
+            </>
+        ) : (
+             <Button className="w-full" size="lg" onClick={onCloseCheck} disabled={order.length === 0}>
+                <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
+            </Button>
+        )}
         <Button variant="outline" className="w-full" onClick={onNewCheck}>
           <FilePlus className="mr-2 h-4 w-4" /> New Check
         </Button>

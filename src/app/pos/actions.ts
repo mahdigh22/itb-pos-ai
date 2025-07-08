@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, getDocs, doc, Timestamp, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, getDoc, Timestamp, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ActiveOrder, Check, OrderItem, OrderStatus } from '@/lib/types';
 
@@ -50,7 +50,60 @@ export async function deleteCheck(checkId: string) {
     }
 }
 
+
 // Order Actions
+export async function sendNewItemsToKitchen(checkId: string) {
+    try {
+        const checkRef = doc(db, 'checks', checkId);
+        const checkSnap = await getDoc(checkRef);
+        if (!checkSnap.exists()) {
+            return { success: false, error: 'Check not found.' };
+        }
+
+        const check = { id: checkSnap.id, ...checkSnap.data() } as Check;
+        const newItems = check.items.filter(item => item.status === 'new');
+
+        if (newItems.length === 0) {
+            return { success: true, message: 'No new items to send.' };
+        }
+
+        // Create a new order with only the new items
+        const subtotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+        const tax = subtotal * 0.08; // TODO: get from settings
+        const total = subtotal + tax;
+        const totalPreparationTime = newItems.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
+
+        const newOrderData = {
+            items: newItems,
+            status: 'Preparing' as OrderStatus,
+            total: total,
+            createdAt: Timestamp.now(),
+            checkName: `${check.name} (Batch)`,
+            totalPreparationTime,
+            orderType: check.orderType,
+            tableNumber: check.tableNumber,
+            customerName: check.customerName,
+        };
+        await addDoc(collection(db, 'orders'), newOrderData);
+
+        // Update the original check items to 'sent'
+        const updatedItems = check.items.map(item => 
+            item.status === 'new' ? { ...item, status: 'sent' as const } : item
+        );
+        await updateDoc(checkRef, { items: updatedItems });
+
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error("Error sending items to kitchen: ", e);
+        if (e instanceof Error) {
+          return { success: false, error: e.message };
+        }
+        return { success: false, error: 'An unknown error occurred.' };
+    }
+}
+
+
 export async function getOrders(): Promise<ActiveOrder[]> {
   try {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));

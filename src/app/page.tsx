@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getUsers } from '@/app/admin/users/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -35,7 +35,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
-  const [isCheckoutAlertOpen, setCheckoutAlertOpen] = useState(false);
+  const [isCloseCheckAlertOpen, setCloseCheckAlertOpen] = useState(false);
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(null);
 
   const [checks, setChecks] = useState<Check[]>([]);
@@ -105,18 +105,18 @@ export default function Home() {
   const handleAddItem = (item: MenuItem) => {
     const order = activeCheck?.items ?? [];
     let newItems: OrderItem[];
-    const existingItem = order.find(
-      (orderItem) => orderItem.id === item.id && !orderItem.customizations
+    const existingNewItem = order.find(
+      (orderItem) => orderItem.id === item.id && !orderItem.customizations && orderItem.status === 'new'
     );
 
-    if (existingItem) {
+    if (existingNewItem) {
       newItems = order.map((orderItem) =>
-        orderItem.lineItemId === existingItem.lineItemId
+        orderItem.lineItemId === existingNewItem.lineItemId
           ? { ...orderItem, quantity: orderItem.quantity + 1 }
           : orderItem
       );
     } else {
-      const newOrderItem: OrderItem = { ...item, quantity: 1, lineItemId: `${item.id}-${Date.now()}` };
+      const newOrderItem: OrderItem = { ...item, quantity: 1, lineItemId: `${item.id}-${Date.now()}`, status: 'new' };
       newItems = [...order, newOrderItem];
     }
 
@@ -128,7 +128,7 @@ export default function Home() {
       handleRemoveItem(lineItemId);
       return;
     }
-    const newItems = (activeCheck?.items ?? []).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity } : item))
+    const newItems = (activeCheck?.items ?? []).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' } : item))
     updateActiveCheck({ items: newItems });
   };
 
@@ -140,10 +140,9 @@ export default function Home() {
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
     const order = activeCheck?.items ?? [];
     if (itemToCustomize.quantity > 1) {
-      // Create a separate item for customization
       const otherItems = order.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
       const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
-      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}` };
+      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}`, status: 'new' as const };
       setCustomizingItem(newItemToCustomize);
       updateActiveCheck({ items: [...otherItems, originalItem, newItemToCustomize] });
     } else {
@@ -156,7 +155,7 @@ export default function Home() {
     customizations: { added: string[], removed: string[] }
   ) => {
     const newItems = (activeCheck?.items ?? []).map(item => 
-        item.lineItemId === lineItemId ? { ...item, customizations } : item
+        item.lineItemId === lineItemId ? { ...item, customizations, status: 'new' as const } : item
       );
     updateActiveCheck({ items: newItems });
     setCustomizingItem(null);
@@ -180,33 +179,42 @@ export default function Home() {
     setActiveCheckId(checkId);
   }
 
-  const handleCheckout = () => {
-    if (activeCheck && activeCheck.items.length > 0) {
-      setCheckoutAlertOpen(true);
+  const handleSendToKitchen = async () => {
+    if (!activeCheckId || !activeCheck) return;
+    if (activeCheck.orderType === 'Take Away') {
+        await handleFinalizeAndPay();
+        return;
+    }
+
+    // Optimistically update UI
+    setChecks(prevChecks => prevChecks.map(c => {
+        if (c.id !== activeCheckId) return c;
+        const updatedItems = c.items.map(i => i.status === 'new' ? { ...i, status: 'sent' as const } : i);
+        return { ...c, items: updatedItems };
+    }));
+
+    const result = await sendNewItemsToKitchen(activeCheckId);
+
+    if (result.success) {
+        toast({
+            title: "Items Sent!",
+            description: `New items for ${activeCheck.name} sent to the kitchen.`,
+        });
+        const newOrders = await getOrders();
+        setActiveOrders(newOrders);
     } else {
-      toast({
-        variant: "destructive",
-        title: "Cannot Checkout",
-        description: "The active check is empty.",
-      });
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: result.error || 'Could not send items to kitchen.',
+        });
+        // Revert optimistic update on failure - refetch from server
+        const updatedChecks = await getChecks();
+        setChecks(updatedChecks);
     }
   };
 
-  const handleCompleteOrder = async (orderId: string) => {
-    await updateOrderStatus(orderId, 'Completed');
-    setActiveOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Completed'} : o));
-    toast({
-        title: "Order Completed",
-        description: "The order has been marked as complete.",
-    });
-  }
-
-  const handleClearOrder = async (orderId: string) => {
-    await deleteOrder(orderId);
-    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
-  }
-
-  const confirmCheckout = async () => {
+  const handleFinalizeAndPay = async () => {
     if (!activeCheck || !activeCheckId || activeCheck.items.length === 0) return;
 
     const subtotal = activeCheck.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -234,8 +242,9 @@ export default function Home() {
     setActiveOrders(newOrders);
     
     const remainingChecks = checks.filter(c => c.id !== activeCheckId);
+    setChecks(remainingChecks);
+
     if (remainingChecks.length > 0) {
-        setChecks(remainingChecks);
         setActiveCheckId(remainingChecks[0].id);
     } else {
         const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [], orderType: 'Dine In' };
@@ -245,11 +254,30 @@ export default function Home() {
     }
 
     toast({
-        title: "Order Sent!",
-        description: `${activeCheck.name} is being prepared.`,
+        title: "Order Sent & Closed!",
+        description: `${activeCheck.name} sent and check is closed.`,
     });
-    setCheckoutAlertOpen(false);
+    setCloseCheckAlertOpen(false);
   }
+
+  const handleCloseCheck = () => {
+     setCloseCheckAlertOpen(true);
+  }
+
+  const handleCompleteOrder = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'Completed');
+    setActiveOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Completed'} : o));
+    toast({
+        title: "Order Completed",
+        description: "The order has been marked as complete.",
+    });
+  }
+
+  const handleClearOrder = async (orderId: string) => {
+    await deleteOrder(orderId);
+    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+  }
+
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
@@ -318,7 +346,8 @@ export default function Home() {
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemoveItem={handleRemoveItem}
                 onNewCheck={handleNewCheck}
-                onCheckout={handleCheckout}
+                onSendToKitchen={handleSendToKitchen}
+                onCloseCheck={handleCloseCheck}
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
                 onUpdateDetails={updateActiveCheck}
@@ -337,17 +366,17 @@ export default function Home() {
       </div>
 
 
-      <AlertDialog open={isCheckoutAlertOpen} onOpenChange={setCheckoutAlertOpen}>
+      <AlertDialog open={isCloseCheckAlertOpen} onOpenChange={setCloseCheckAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-headline">Confirm Checkout</AlertDialogTitle>
+            <AlertDialogTitle className="font-headline">Confirm Close & Pay</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to send this check to the kitchen?
+                This will finalize the entire check, send it as one order, and close it. This action is for final payment. Are you sure?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCheckout}>Confirm & Send</AlertDialogAction>
+            <AlertDialogAction onClick={handleFinalizeAndPay}>Yes, Close & Pay</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

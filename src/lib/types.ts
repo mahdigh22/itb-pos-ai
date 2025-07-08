@@ -25,6 +25,7 @@ export interface OrderItem extends MenuItem {
     added: string[];
     removed: string[];
   };
+  status: 'new' | 'sent';
 }
 
 export interface Member {
