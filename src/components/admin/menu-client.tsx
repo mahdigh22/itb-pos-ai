@@ -3,7 +3,7 @@
 import { useState, useRef, useOptimistic } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,7 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
             category: formData.get('category') as string,
             imageUrl: formData.get('imageUrl') as string || 'https://placehold.co/600x400.png',
             imageHint: 'food placeholder',
+            preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
         };
         addOptimisticMenuItem(newItem);
         itemFormRef.current?.reset();
@@ -106,6 +107,9 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
                                     </Select>
                                 </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue="5" required /></div>
+                            </div>
                             <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" /></div>
                              <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
@@ -119,13 +123,14 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
                 <CardHeader><CardTitle>Menu Items</CardTitle><CardDescription>A list of all items on your menu.</CardDescription></CardHeader>
                 <CardContent>
                    <Table>
-                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Price</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Price</TableHead><TableHead>Prep Time</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                         <TableBody>
                             {optimisticMenuItems.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell>{optimisticCategories.find(c => c.id === item.category)?.name}</TableCell>
                                     <TableCell>${item.price.toFixed(2)}</TableCell>
+                                    <TableCell>{item.preparationTime} mins</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>

@@ -65,6 +65,7 @@ export async function getOrders(): Promise<ActiveOrder[]> {
         total: data.total,
         checkName: data.checkName,
         createdAt: (data.createdAt as Timestamp).toDate(),
+        totalPreparationTime: data.totalPreparationTime,
       });
     });
     return orders;

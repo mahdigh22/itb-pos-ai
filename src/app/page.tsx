@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getUsers } from '@/app/admin/users/actions';
-import { getChecks, addCheck, updateCheckItems, deleteCheck, getOrders, addOrder, deleteOrder } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheckItems, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -193,6 +193,15 @@ export default function Home() {
     }
   };
 
+  const handleCompleteOrder = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'Completed');
+    setActiveOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Completed'} : o));
+    toast({
+        title: "Order Completed",
+        description: "The order has been marked as complete.",
+    });
+  }
+
   const handleClearOrder = async (orderId: string) => {
     await deleteOrder(orderId);
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
@@ -204,6 +213,7 @@ export default function Home() {
     const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08; // TODO: Get from settings
     const total = subtotal + tax;
+    const totalPreparationTime = order.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
 
     const newOrderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date } = {
       items: [...order],
@@ -211,6 +221,7 @@ export default function Home() {
       total: total,
       createdAt: new Date(),
       checkName: activeCheck.name,
+      totalPreparationTime,
     };
 
     await addOrder(newOrderData);
@@ -314,7 +325,7 @@ export default function Home() {
         </TabsContent>
         
         <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
-          <OrderProgress orders={activeOrders} onClearOrder={handleClearOrder} />
+          <OrderProgress orders={activeOrders} onCompleteOrder={handleCompleteOrder} onClearOrder={handleClearOrder} />
         </TabsContent>
 
         <TabsContent value="members" className="h-full mt-0">

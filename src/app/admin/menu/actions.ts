@@ -14,6 +14,7 @@ export async function addMenuItem(formData: FormData) {
     category: formData.get('category') as string,
     imageUrl: formData.get('imageUrl') as string || `https://placehold.co/600x400.png`,
     imageHint: 'food placeholder', // Simple hint for now
+    preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
   };
 
   try {

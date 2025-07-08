@@ -8,6 +8,7 @@ export interface MenuItem {
   imageUrl: string;
   imageHint: string;
   ingredients?: string[];
+  preparationTime: number; // in minutes
 }
 
 export interface Category {
@@ -38,12 +39,13 @@ export type OrderStatus = 'Preparing' | 'Ready' | 'Completed';
 
 // This is an order that has been sent to the kitchen
 export interface ActiveOrder {
-  id: string;
+  id:string;
   items: OrderItem[];
   status: OrderStatus;
   total: number;
   createdAt: Date;
   checkName: string;
+  totalPreparationTime: number; // in minutes
 }
 
 // This is a "check" or "tab" that is currently being built
