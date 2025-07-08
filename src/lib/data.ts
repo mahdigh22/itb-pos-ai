@@ -1,5 +1,5 @@
 
-import type { Category, MenuItem, Member } from './types';
+import type { Category, MenuItem, Member, Employee } from './types';
 
 export const categories: Category[] = [
   { id: 'appetizers', name: 'Appetizers' },
@@ -172,5 +172,29 @@ export const members: Member[] = [
     joined: '2023-05-25T18:00:00Z',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
     avatarHint: 'man glasses',
+  },
+];
+
+export const employees: Employee[] = [
+  {
+    id: 'emp-1',
+    name: 'Jane Doe',
+    email: 'jane.d@example.com',
+    role: 'Manager',
+    startDate: '2022-08-01T09:00:00Z',
+  },
+  {
+    id: 'emp-2',
+    name: 'John Smith',
+    email: 'john.s@example.com',
+    role: 'Chef',
+    startDate: '2023-01-10T08:00:00Z',
+  },
+  {
+    id: 'emp-3',
+    name: 'Sam Wilson',
+    email: 'sam.w@example.com',
+    role: 'Server',
+    startDate: '2023-05-15T12:00:00Z',
   },
 ];

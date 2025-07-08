@@ -52,3 +52,11 @@ export interface Check {
     name: string;
     items: OrderItem[];
 }
+
+export interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Manager' | 'Server' | 'Chef';
+  startDate: string; // ISO date string
+}
