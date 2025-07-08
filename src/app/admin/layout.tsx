@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/admin-sidebar';
@@ -13,7 +13,13 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // If we're on the login page, don't show the protected layout.
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   useEffect(() => {
     const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
@@ -22,7 +28,7 @@ export default function AdminLayout({
     } else {
       setIsCheckingAuth(false);
     }
-  }, [router]);
+  }, [router, pathname]);
 
   if (isCheckingAuth) {
     return (
