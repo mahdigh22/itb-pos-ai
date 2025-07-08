@@ -60,3 +60,9 @@ export interface Employee {
   role: 'Manager' | 'Server' | 'Chef';
   startDate: string; // ISO date string
 }
+
+export interface PriceList {
+    id: string;
+    name: string;
+    discount: number; // as a percentage
+}

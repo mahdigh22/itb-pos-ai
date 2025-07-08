@@ -1,0 +1,73 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { PriceList } from '@/lib/types';
+
+const SETTINGS_COLLECTION = 'settings';
+const MAIN_SETTINGS_DOC = 'main';
+
+interface Settings {
+    taxRate: number;
+    priceLists: PriceList[];
+}
+
+export async function getSettings(): Promise<Settings> {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            return docSnap.data() as Settings;
+        } else {
+            // Default settings if document doesn't exist
+            const defaultSettings: Settings = {
+                taxRate: 8.0,
+                priceLists: [
+                    { id: 'pl-1', name: 'Default', discount: 0 },
+                    { id: 'pl-2', name: 'Happy Hour', discount: 20 },
+                    { id: 'pl-3', name: 'Employee Discount', discount: 50 },
+                ],
+            };
+            await setDoc(docRef, defaultSettings);
+            return defaultSettings;
+        }
+    } catch (error) {
+        console.error("Error fetching settings: ", error);
+        // Fallback to default settings on error
+        return { taxRate: 8.0, priceLists: [] };
+    }
+}
+
+export async function saveTaxRate(newRate: number) {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, { taxRate: newRate });
+        revalidatePath('/admin/settings');
+        return { success: true };
+    } catch (error) {
+        console.error("Error saving tax rate: ", error);
+        return { success: false, error: 'Failed to save tax rate.' };
+    }
+}
+
+export async function addPriceList(formData: FormData) {
+    const newPriceList: PriceList = {
+        id: `pl-${Date.now()}`,
+        name: formData.get('name') as string,
+        discount: parseFloat(formData.get('discount') as string),
+    };
+    
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, {
+            priceLists: arrayUnion(newPriceList)
+        });
+        revalidatePath('/admin/settings');
+        return { success: true };
+    } catch (error) {
+        console.error("Error adding price list: ", error);
+        return { success: false, error: 'Failed to add price list.' };
+    }
+}

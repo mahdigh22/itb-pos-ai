@@ -4,9 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { categories, menuItems as initialMenuItems } from '@/lib/data';
+import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getUsers } from '@/app/admin/users/actions';
-import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check, Member } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, OrderStatus, Check, Member, Category } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -40,6 +40,9 @@ export default function Home() {
   const [checks, setChecks] = useState<Check[]>([]);
   const [activeCheckId, setActiveCheckId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   const order = useMemo(() => activeCheck?.items ?? [], [activeCheck]);
@@ -49,59 +52,48 @@ export default function Home() {
     if (isLoggedIn !== 'true') {
       router.replace('/login');
     } else {
-      // Fetch live data
       const fetchInitialData = async () => {
-        const fetchedMembers = await getUsers();
+        setIsLoading(true);
+        const [fetchedMembers, fetchedMenuItems, fetchedCategories] = await Promise.all([
+            getUsers(),
+            getMenuItems(),
+            getCategories()
+        ]);
         setMembers(fetchedMembers);
+        setMenuItems(fetchedMenuItems);
+        setCategories(fetchedCategories);
 
-        // Set sample data here, as this only runs on the client
-        if (checks.length === 0 && activeOrders.length === 0) {
-          const sampleItem1 = initialMenuItems.find(item => item.id === 'app-1');
-          const sampleItem2 = initialMenuItems.find(item => item.id === 'main-2');
+        if (checks.length === 0 && activeOrders.length === 0 && fetchedMenuItems.length > 1) {
+          const sampleItem1 = fetchedMenuItems[0];
+          const sampleItem2 = fetchedMenuItems[1];
           
-          let initialItems: OrderItem[] = [];
-          if (sampleItem1 && sampleItem2) {
-            initialItems = [
-              { ...sampleItem1, quantity: 2, lineItemId: `app-1-${Date.now()}` },
-              { ...sampleItem2, quantity: 1, lineItemId: `main-2-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
-            ];
-          }
+          let initialItems: OrderItem[] = [
+            { ...sampleItem1, quantity: 2, lineItemId: `${sampleItem1.id}-${Date.now()}` },
+            { ...sampleItem2, quantity: 1, lineItemId: `${sampleItem2.id}-${Date.now()+1}`, customizations: { added: ['Bacon'], removed: ['Onion'] } },
+          ];
           
           const initialCheckId = `check-${Date.now()}`;
           setChecks([{ id: initialCheckId, name: 'Check 1', items: initialItems }]);
           setActiveCheckId(initialCheckId);
           
-          const sampleActiveItem1 = initialMenuItems.find(item => item.id === 'main-1');
-          const sampleActiveItem2 = initialMenuItems.find(item => item.id === 'drink-1');
-          const sampleActiveItem3 = initialMenuItems.find(item => item.id === 'app-3');
+          const sampleActiveItem1 = fetchedMenuItems.length > 2 ? fetchedMenuItems[2] : fetchedMenuItems[0];
+          const sampleActiveItem2 = fetchedMenuItems.length > 3 ? fetchedMenuItems[3] : fetchedMenuItems[1];
           const orders: ActiveOrder[] = [];
-          if (sampleActiveItem1 && sampleActiveItem2) {
-              const subtotal = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
-              const tax = subtotal * 0.08;
-              orders.push({
-                  id: `order-${Math.floor(Date.now() / 1000) - 300}`,
-                  checkName: 'Table 5',
-                  items: [
-                      { ...sampleActiveItem1, quantity: 1, lineItemId: `main-1-${Date.now()+2}` },
-                      { ...sampleActiveItem2, quantity: 2, lineItemId: `drink-1-${Date.now()+3}` },
-                  ],
-                  status: 'Ready',
-                  total: subtotal + tax,
-                  createdAt: new Date(Date.now() - 300000), // 5 minutes ago
-              });
-          }
-          if (sampleActiveItem3) {
-              const subtotal = sampleActiveItem3.price * 1;
-              const tax = subtotal * 0.08;
-              orders.push({
-                  id: `order-${Math.floor(Date.now() / 1000) - 120}`,
-                  checkName: 'Bar Seat 2',
-                  items: [{ ...sampleActiveItem3, quantity: 1, lineItemId: `app-3-${Date.now()+4}` }],
-                  status: 'Preparing',
-                  total: subtotal + tax,
-                  createdAt: new Date(Date.now() - 120000), // 2 minutes ago
-              });
-          }
+
+          const subtotal1 = sampleActiveItem1.price * 1 + sampleActiveItem2.price * 2;
+          const tax1 = subtotal1 * 0.08;
+          orders.push({
+              id: `order-${Math.floor(Date.now() / 1000) - 300}`,
+              checkName: 'Table 5',
+              items: [
+                  { ...sampleActiveItem1, quantity: 1, lineItemId: `${sampleActiveItem1.id}-${Date.now()+2}` },
+                  { ...sampleActiveItem2, quantity: 2, lineItemId: `${sampleActiveItem2.id}-${Date.now()+3}` },
+              ],
+              status: 'Ready',
+              total: subtotal1 + tax1,
+              createdAt: new Date(Date.now() - 300000), // 5 minutes ago
+          });
+
           setActiveOrders(orders);
         }
         setIsLoading(false);
@@ -320,7 +312,7 @@ export default function Home() {
         <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
           <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
             <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
-              <MenuDisplay categories={categories} menuItems={initialMenuItems} onAddItem={handleAddItem} />
+              <MenuDisplay categories={categories} menuItems={menuItems} onAddItem={handleAddItem} />
             </div>
             <div className="lg:col-span-2 xl:col-span-1 h-full">
               <OrderSummary
