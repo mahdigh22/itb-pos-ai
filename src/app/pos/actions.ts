@@ -108,9 +108,9 @@ export async function sendNewItemsToKitchen(checkId: string) {
             checkName: `${check.name} (Batch)`,
             totalPreparationTime,
             orderType: check.orderType,
-            tableNumber: check.tableNumber,
-            customerName: check.customerName,
-            priceListId: check.priceListId,
+            tableNumber: check.tableNumber || null,
+            customerName: check.customerName || null,
+            priceListId: check.priceListId || null,
             discountApplied: discountPercentage,
         };
         await addDoc(collection(db, 'orders'), newOrderData);
@@ -151,6 +151,8 @@ export async function getOrders(): Promise<ActiveOrder[]> {
         orderType: data.orderType,
         tableNumber: data.tableNumber,
         customerName: data.customerName,
+        priceListId: data.priceListId,
+        discountApplied: data.discountApplied,
       });
     });
     return orders;
@@ -169,11 +171,16 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
             return rest;
         });
 
-        await addDoc(collection(db, 'orders'), {
+        const dataToSave = {
             ...orderData,
             items: sanitizedItems,
             createdAt: Timestamp.fromDate(orderData.createdAt),
-        });
+            tableNumber: orderData.tableNumber || null,
+            customerName: orderData.customerName || null,
+            priceListId: orderData.priceListId || null,
+        };
+
+        await addDoc(collection(db, 'orders'), dataToSave);
         revalidatePath('/');
         return { success: true };
     } catch (e) {
