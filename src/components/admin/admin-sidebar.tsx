@@ -24,7 +24,7 @@ export default function AdminSidebar() {
     const router = useRouter();
 
     const handleLogout = () => {
-        localStorage.removeItem('isAdminLoggedIn');
+        localStorage.removeItem('currentEmployee');
         router.push('/admin/login');
     };
 

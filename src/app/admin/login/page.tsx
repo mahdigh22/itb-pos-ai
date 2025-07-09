@@ -21,10 +21,19 @@ export default function AdminLoginPage() {
 
   const handleLogin = () => {
     if (email === CORRECT_EMAIL && password === CORRECT_PASSWORD) {
-      localStorage.setItem('isAdminLoggedIn', 'true');
+      // Create a temporary admin user object to grant access
+      const adminEmployee = {
+        id: 'admin-bootstrap',
+        name: 'Admin',
+        email: CORRECT_EMAIL,
+        role: 'Manager',
+        startDate: new Date().toISOString(),
+      };
+      localStorage.setItem('currentEmployee', JSON.stringify(adminEmployee));
+      
       toast({
         title: 'Login Successful',
-        description: 'Welcome to the Backoffice!',
+        description: 'Welcome to the Backoffice! Please create your employee accounts.',
       });
       router.push('/admin');
     } else {
