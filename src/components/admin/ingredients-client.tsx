@@ -1,31 +1,84 @@
 
 'use client';
 
-import { useState, useRef, useOptimistic } from 'react';
+import { useState, useOptimistic } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import type { Ingredient } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { addIngredient } from '@/app/admin/ingredients/actions';
+import { addIngredient, updateIngredient, deleteIngredient } from '@/app/admin/ingredients/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+
+function IngredientForm({ ingredient, onFormSubmit, onCancel }) {
+    return (
+        <form action={onFormSubmit} className="space-y-4">
+             <input type="hidden" name="id" value={ingredient?.id || ''} />
+            <div className="space-y-2">
+                <Label htmlFor="name">Ingredient Name</Label>
+                <Input id="name" name="name" placeholder="e.g. Cherry Tomatoes" required defaultValue={ingredient?.name} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="stock">Initial Stock</Label>
+                    <Input id="stock" name="stock" type="number" placeholder="1000" required defaultValue={ingredient?.stock || 0} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="unit">Unit of Measure</Label>
+                    <Select name="unit" required defaultValue={ingredient?.unit || "pcs"}>
+                        <SelectTrigger id="unit">
+                            <SelectValue placeholder="Select a unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="g">grams (g)</SelectItem>
+                            <SelectItem value="kg">kilograms (kg)</SelectItem>
+                            <SelectItem value="ml">milliliters (ml)</SelectItem>
+                            <SelectItem value="l">liters (l)</SelectItem>
+                            <SelectItem value="pcs">pieces (pcs)</SelectItem>
+                            <SelectItem value="slice">slice</SelectItem>
+                            <SelectItem value="btl">bottle (btl)</SelectItem>
+                            <SelectItem value="can">can</SelectItem>
+                            <SelectItem value="oz">ounce (oz)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit">{ingredient ? 'Save Changes' : 'Add Ingredient'}</Button>
+            </DialogFooter>
+        </form>
+    );
+}
+
 
 export default function IngredientsClient({ initialIngredients }: { initialIngredients: Ingredient[] }) {
     const { toast } = useToast();
-    const formRef = useRef<HTMLFormElement>(null);
-    const [isDialogOpen, setDialogOpen] = useState(false);
-    
-    const [optimisticIngredients, addOptimisticIngredient] = useOptimistic<Ingredient[], Ingredient>(
+    const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [deletingIngredient, setDeletingIngredient] = useState<Ingredient | null>(null);
+
+    const [optimisticIngredients, manageOptimisticIngredients] = useOptimistic<Ingredient[], {action: 'add' | 'delete', ingredient: Ingredient}>(
         initialIngredients,
-        (state, newIngredient) => [...state, newIngredient].sort((a, b) => a.name.localeCompare(b.name))
+        (state, { action, ingredient }) => {
+            switch (action) {
+                case 'add':
+                    return [...state, ingredient].sort((a, b) => a.name.localeCompare(b.name));
+                case 'delete':
+                    return state.filter((i) => i.id !== ingredient.id);
+                default:
+                    return state;
+            }
+        }
     );
 
-    const handleFormSubmit = async (formData: FormData) => {
+    const handleAddSubmit = async (formData: FormData) => {
         const newIngredient: Ingredient = {
             id: `optimistic-${Date.now()}`,
             name: formData.get('name') as string,
@@ -33,24 +86,38 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
             unit: formData.get('unit') as string || 'units',
         };
         
-        addOptimisticIngredient(newIngredient);
-
-        formRef.current?.reset();
-        setDialogOpen(false);
-
+        setAddDialogOpen(false);
+        manageOptimisticIngredients({ action: 'add', ingredient: newIngredient });
+        
         const result = await addIngredient(formData);
 
         if (result.success) {
-            toast({
-                title: 'Ingredient Added',
-                description: 'The new ingredient has been successfully added.',
-            });
+            toast({ title: 'Ingredient Added' });
         } else {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: result.error || 'Something went wrong.',
-            });
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+    
+    const handleEditSubmit = async (formData: FormData) => {
+        if (!editingIngredient) return;
+        setEditingIngredient(null);
+        const result = await updateIngredient(editingIngredient.id, formData);
+        if (result.success) {
+            toast({ title: 'Ingredient Updated' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deletingIngredient) return;
+        manageOptimisticIngredients({ action: 'delete', ingredient: deletingIngredient });
+        setDeletingIngredient(null);
+        const result = await deleteIngredient(deletingIngredient.id);
+        if (result.success) {
+            toast({ title: 'Ingredient Deleted' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
         }
     };
 
@@ -61,57 +128,10 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                     <h1 className="text-3xl font-bold font-headline">Ingredient Management</h1>
                     <p className="text-muted-foreground">Manage your master list of ingredients and their stock levels.</p>
                 </div>
-                <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New Ingredient
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New Ingredient</DialogTitle>
-                            <DialogDescription>Add a new ingredient to your master list.</DialogDescription>
-                        </DialogHeader>
-                        <form action={handleFormSubmit} ref={formRef} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Ingredient Name</Label>
-                                <Input id="name" name="name" placeholder="e.g. Cherry Tomatoes" required />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="stock">Initial Stock</Label>
-                                    <Input id="stock" name="stock" type="number" placeholder="1000" required defaultValue="0" />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="unit">Unit of Measure</Label>
-                                    <Select name="unit" required defaultValue="pcs">
-                                        <SelectTrigger id="unit">
-                                            <SelectValue placeholder="Select a unit" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="g">grams (g)</SelectItem>
-                                            <SelectItem value="kg">kilograms (kg)</SelectItem>
-                                            <SelectItem value="ml">milliliters (ml)</SelectItem>
-                                            <SelectItem value="l">liters (l)</SelectItem>
-                                            <SelectItem value="pcs">pieces (pcs)</SelectItem>
-                                            <SelectItem value="slice">slice</SelectItem>
-                                            <SelectItem value="btl">bottle (btl)</SelectItem>
-                                            <SelectItem value="can">can</SelectItem>
-                                            <SelectItem value="oz">ounce (oz)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button type="button" variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button type="submit">Add Ingredient</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                 <Button onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Ingredient
+                </Button>
             </div>
             <Card>
                 <CardHeader>
@@ -141,8 +161,8 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingIngredient(ingredient)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingIngredient(ingredient)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -152,6 +172,40 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                     </Table>
                 </CardContent>
             </Card>
+
+            <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Ingredient</DialogTitle>
+                        <DialogDescription>Add a new ingredient to your master list.</DialogDescription>
+                    </DialogHeader>
+                    <IngredientForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!editingIngredient} onOpenChange={(isOpen) => !isOpen && setEditingIngredient(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Ingredient</DialogTitle>
+                    </DialogHeader>
+                    <IngredientForm ingredient={editingIngredient} onFormSubmit={handleEditSubmit} onCancel={() => setEditingIngredient(null)} />
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={!!deletingIngredient} onOpenChange={(isOpen) => !isOpen && setDeletingIngredient(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the ingredient: <span className="font-bold">{deletingIngredient?.name}</span>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

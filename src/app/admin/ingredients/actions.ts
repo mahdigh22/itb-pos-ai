@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Ingredient } from '@/lib/types';
 
@@ -26,6 +26,44 @@ export async function addIngredient(formData: FormData) {
     return { success: false, error: 'Failed to add ingredient.' };
   }
 }
+
+export async function updateIngredient(id: string, formData: FormData) {
+    const ingredientUpdates = {
+        name: formData.get('name') as string,
+        stock: parseFloat(formData.get('stock') as string) || 0,
+        unit: formData.get('unit') as string || 'units',
+    };
+
+    try {
+        const ingredientRef = doc(db, 'ingredients', id);
+        await updateDoc(ingredientRef, ingredientUpdates);
+        revalidatePath('/admin/ingredients');
+        revalidatePath('/admin/menu');
+        return { success: true };
+    } catch (e) {
+        console.error('Error updating ingredient: ', e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to update ingredient.' };
+    }
+}
+
+export async function deleteIngredient(id: string) {
+    try {
+        await deleteDoc(doc(db, 'ingredients', id));
+        revalidatePath('/admin/ingredients');
+        revalidatePath('/admin/menu');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting ingredient: ', e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to delete ingredient.' };
+    }
+}
+
 
 export async function getIngredients(): Promise<Ingredient[]> {
   try {

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
 
@@ -28,6 +28,42 @@ export async function addEmployee(formData: FormData) {
     return { success: false, error: 'Failed to add employee.' };
   }
 }
+
+export async function updateEmployee(id: string, formData: FormData) {
+  const employeeUpdates = {
+    name: formData.get('name') as string,
+    email: formData.get('email') as string,
+    role: formData.get('role') as 'Manager' | 'Server' | 'Chef',
+  };
+
+  try {
+    const employeeRef = doc(db, 'employees', id);
+    await updateDoc(employeeRef, employeeUpdates);
+    revalidatePath('/admin/employees');
+    return { success: true };
+  } catch (e) {
+    console.error('Error updating document: ', e);
+    if (e instanceof Error) {
+        return { success: false, error: e.message };
+    }
+    return { success: false, error: 'Failed to update employee.' };
+  }
+}
+
+export async function deleteEmployee(id: string) {
+    try {
+        await deleteDoc(doc(db, 'employees', id));
+        revalidatePath('/admin/employees');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to delete employee.' };
+    }
+}
+
 
 export async function getEmployees(): Promise<Employee[]> {
   try {

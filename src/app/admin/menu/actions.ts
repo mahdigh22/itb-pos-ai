@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, getDocs, doc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { MenuItem, Category, Ingredient } from '@/lib/types';
 
@@ -32,6 +32,44 @@ export async function addMenuItem(formData: FormData) {
     return { success: false, error: 'Failed to add menu item.' };
   }
 }
+
+export async function updateMenuItem(id: string, formData: FormData) {
+    const ingredientLinksString = formData.get('ingredientLinks') as string;
+    const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
+
+    const itemUpdates = {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        price: parseFloat(formData.get('price') as string),
+        category: formData.get('category') as string,
+        imageUrl: formData.get('imageUrl') as string || `https://placehold.co/600x400.png`,
+        preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
+        ingredientLinks: ingredientLinks,
+    };
+    
+    try {
+        await updateDoc(doc(db, 'menuItems', id), itemUpdates);
+        revalidatePath('/admin/menu');
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error('Error updating document: ', e);
+        return { success: false, error: 'Failed to update menu item.' };
+    }
+}
+
+export async function deleteMenuItem(id: string) {
+    try {
+        await deleteDoc(doc(db, 'menuItems', id));
+        revalidatePath('/admin/menu');
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        return { success: false, error: 'Failed to delete menu item.' };
+    }
+}
+
 
 export async function getMenuItems(): Promise<MenuItem[]> {
   try {
@@ -96,6 +134,36 @@ export async function addCategory(formData: FormData) {
     return { success: false, error: 'Failed to add category.' };
   }
 }
+
+
+export async function updateCategory(id: string, formData: FormData) {
+    const categoryUpdates = {
+        name: formData.get('name') as string,
+    };
+    try {
+        await updateDoc(doc(db, 'categories', id), categoryUpdates);
+        revalidatePath('/admin/menu');
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error('Error updating document: ', e);
+        return { success: false, error: 'Failed to update category.' };
+    }
+}
+
+export async function deleteCategory(id: string) {
+    try {
+        // TODO: Add logic to handle menu items in this category
+        await deleteDoc(doc(db, 'categories', id));
+        revalidatePath('/admin/menu');
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        return { success: false, error: 'Failed to delete category.' };
+    }
+}
+
 
 export async function getCategories(): Promise<Category[]> {
   try {

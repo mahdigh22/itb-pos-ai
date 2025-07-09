@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useOptimistic } from 'react';
+import { useState, useOptimistic } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,20 +12,64 @@ import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import type { Employee } from "@/lib/types";
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { addEmployee } from '@/app/admin/employees/actions';
+import { addEmployee, updateEmployee, deleteEmployee } from '@/app/admin/employees/actions';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+
+function EmployeeForm({ employee, onFormSubmit, onCancel }) {
+    return (
+        <form action={onFormSubmit} className="space-y-4">
+            <input type="hidden" name="id" value={employee?.id || ''} />
+            <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" placeholder="Jane Doe" required defaultValue={employee?.name} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" name="email" type="email" placeholder="name@example.com" required defaultValue={employee?.email} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select name="role" required defaultValue={employee?.role || "Server"}>
+                    <SelectTrigger id="role">
+                        <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Server">Server</SelectItem>
+                        <SelectItem value="Chef">Chef</SelectItem>
+                        <SelectItem value="Manager">Manager</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit">{employee ? 'Save Changes' : 'Add Employee'}</Button>
+            </DialogFooter>
+        </form>
+    );
+}
 
 export default function EmployeesClient({ initialEmployees }: { initialEmployees: Employee[] }) {
     const { toast } = useToast();
-    const formRef = useRef<HTMLFormElement>(null);
-    const [isDialogOpen, setDialogOpen] = useState(false);
+    const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
     
-    const [optimisticEmployees, addOptimisticEmployee] = useOptimistic<Employee[], Employee>(
+    const [optimisticEmployees, manageOptimisticEmployees] = useOptimistic<Employee[], {action: 'add' | 'delete', employee: Employee}>(
         initialEmployees,
-        (state, newEmployee) => [...state, newEmployee].sort((a, b) => a.name.localeCompare(b.name))
+        (state, { action, employee }) => {
+            switch (action) {
+                case 'add':
+                    return [...state, employee].sort((a, b) => a.name.localeCompare(b.name));
+                case 'delete':
+                    return state.filter((e) => e.id !== employee.id);
+                default:
+                    return state;
+            }
+        }
     );
 
-    const handleFormSubmit = async (formData: FormData) => {
+    const handleAddSubmit = async (formData: FormData) => {
         const newEmployee: Employee = {
             id: `optimistic-${Date.now()}`,
             name: formData.get('name') as string,
@@ -34,24 +78,43 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
             startDate: new Date().toISOString(),
         };
         
-        addOptimisticEmployee(newEmployee);
-
-        formRef.current?.reset();
-        setDialogOpen(false);
+        setAddDialogOpen(false);
+        manageOptimisticEmployees({ action: 'add', employee: newEmployee });
 
         const result = await addEmployee(formData);
 
         if (result.success) {
-            toast({
-                title: 'Employee Added',
-                description: 'The new employee has been successfully added.',
-            });
+            toast({ title: 'Employee Added' });
         } else {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: result.error || 'Something went wrong.',
-            });
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+    
+    const handleEditSubmit = async (formData: FormData) => {
+        if (!editingEmployee) return;
+
+        setEditingEmployee(null);
+
+        const result = await updateEmployee(editingEmployee.id, formData);
+
+        if (result.success) {
+            toast({ title: 'Employee Updated' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deletingEmployee) return;
+
+        setDeletingEmployee(null);
+        manageOptimisticEmployees({ action: 'delete', employee: deletingEmployee });
+        
+        const result = await deleteEmployee(deletingEmployee.id);
+        if (result.success) {
+            toast({ title: 'Employee Deleted' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
         }
     };
 
@@ -62,49 +125,10 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                     <h1 className="text-3xl font-bold font-headline">Employee Management</h1>
                     <p className="text-muted-foreground">Manage your staff and their roles.</p>
                 </div>
-                <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New Employee
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New Employee</DialogTitle>
-                            <DialogDescription>Fill in the details for the new staff member.</DialogDescription>
-                        </DialogHeader>
-                        <form action={handleFormSubmit} ref={formRef} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input id="name" name="name" placeholder="Jane Doe" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" name="email" type="email" placeholder="name@example.com" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="role">Role</Label>
-                                <Select name="role" required defaultValue="Server">
-                                    <SelectTrigger id="role">
-                                        <SelectValue placeholder="Select a role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Server">Server</SelectItem>
-                                        <SelectItem value="Chef">Chef</SelectItem>
-                                        <SelectItem value="Manager">Manager</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button type="button" variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button type="submit">Add Employee</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                <Button onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Employee
+                </Button>
             </div>
             <Card>
                 <CardHeader>
@@ -138,8 +162,8 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingEmployee(employee)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingEmployee(employee)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -149,6 +173,43 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                     </Table>
                 </CardContent>
             </Card>
+
+            <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Employee</DialogTitle>
+                        <DialogDescription>Fill in the details for the new staff member.</DialogDescription>
+                    </DialogHeader>
+                    <EmployeeForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!editingEmployee} onOpenChange={(isOpen) => !isOpen && setEditingEmployee(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Employee</DialogTitle>
+                        <DialogDescription>Update the details for this staff member.</DialogDescription>
+                    </DialogHeader>
+                    <EmployeeForm employee={editingEmployee} onFormSubmit={handleEditSubmit} onCancel={() => setEditingEmployee(null)} />
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={!!deletingEmployee} onOpenChange={(isOpen) => !isOpen && setDeletingEmployee(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the employee
+                            <span className="font-bold"> {deletingEmployee?.name}</span>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
         </div>
     );
 }

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, addDoc, getDocs, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, Timestamp, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Member } from '@/lib/types';
 
@@ -33,6 +33,46 @@ export async function addUser(formData: FormData) {
   }
 }
 
+export async function updateUser(id: string, formData: FormData) {
+    const userUpdates = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+    };
+
+    try {
+        const userRef = doc(db, 'members', id);
+        await updateDoc(userRef, userUpdates);
+        revalidatePath('/admin/users');
+        revalidatePath('/');
+        revalidatePath('/members');
+        revalidatePath(`/members/${id}`);
+        return { success: true };
+    } catch (e) {
+        console.error('Error updating document: ', e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to update user.' };
+    }
+}
+
+export async function deleteUser(id: string) {
+    try {
+        await deleteDoc(doc(db, 'members', id));
+        revalidatePath('/admin/users');
+        revalidatePath('/');
+        revalidatePath('/members');
+        return { success: true };
+    } catch (e) {
+        console.error('Error deleting document: ', e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to delete user.' };
+    }
+}
+
 export async function getUsers(): Promise<Member[]> {
   try {
     const querySnapshot = await getDocs(collection(db, 'members'));
@@ -49,7 +89,7 @@ export async function getUsers(): Promise<Member[]> {
         avatarHint: data.avatarHint,
       });
     });
-    return members;
+    return members.sort((a,b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error("Error fetching users: ", error);
     return [];

@@ -71,3 +71,42 @@ export async function addPriceList(formData: FormData) {
         return { success: false, error: 'Failed to add price list.' };
     }
 }
+
+export async function updatePriceList(id: string, formData: FormData) {
+    const updatedPriceList: Partial<PriceList> = {
+        name: formData.get('name') as string,
+        discount: parseFloat(formData.get('discount') as string),
+    };
+    
+    try {
+        const settings = await getSettings();
+        const updatedPriceLists = settings.priceLists.map(pl => 
+            pl.id === id ? { ...pl, ...updatedPriceList } : pl
+        );
+        
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, { priceLists: updatedPriceLists });
+
+        revalidatePath('/admin/settings');
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating price list: ", error);
+        return { success: false, error: 'Failed to update price list.' };
+    }
+}
+
+export async function deletePriceList(id: string) {
+    try {
+        const settings = await getSettings();
+        const updatedPriceLists = settings.priceLists.filter(pl => pl.id !== id);
+        
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, { priceLists: updatedPriceLists });
+
+        revalidatePath('/admin/settings');
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting price list: ", error);
+        return { success: false, error: 'Failed to delete price list.' };
+    }
+}

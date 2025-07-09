@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 interface OrderSummaryProps {
@@ -22,6 +24,7 @@ interface OrderSummaryProps {
   onNewCheck: () => void;
   onSendToKitchen: () => void;
   onCloseCheck: () => void;
+  onClearCheck: () => void;
   onCustomizeItem: (item: OrderItem) => void;
   onSwitchCheck: (checkId: string) => void;
   onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
@@ -37,10 +40,12 @@ export default function OrderSummary({
   onNewCheck,
   onSendToKitchen,
   onCloseCheck,
+  onClearCheck,
   onCustomizeItem,
   onSwitchCheck,
   onUpdateDetails,
 }: OrderSummaryProps) {
+  const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
   const subtotal = order.reduce((acc, item) => {
     const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
@@ -50,6 +55,11 @@ export default function OrderSummary({
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
   const hasNewItems = activeCheck?.items.some(item => item.status === 'new') ?? false;
+  
+  const handleConfirmClear = () => {
+    onClearCheck();
+    setClearAlertOpen(false);
+  };
 
   if (!activeCheck) {
     return (
@@ -61,10 +71,19 @@ export default function OrderSummary({
   }
 
   return (
+    <>
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
             <CardTitle className="font-headline">Current Check</CardTitle>
+             {order.length > 0 && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setClearAlertOpen(true)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Clear Check</span>
+                </Button>
+            )}
+          </div>
             {checks.length > 1 && (
                 <Select value={activeCheck.id ?? ''} onValueChange={onSwitchCheck}>
                     <SelectTrigger className="w-[180px] h-9">
@@ -253,5 +272,19 @@ export default function OrderSummary({
         </Button>
       </CardFooter>
     </Card>
+    
+    <AlertDialog open={isClearAlertOpen} onOpenChange={setClearAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Clear all items from the check?</AlertDialogTitle>
+                <AlertDialogDescription>This action cannot be undone. All items will be removed from the current check.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmClear}>Yes, Clear Check</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

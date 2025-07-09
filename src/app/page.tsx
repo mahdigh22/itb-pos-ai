@@ -142,6 +142,10 @@ export default function Home() {
     updateActiveCheck({ items: newItems });
   };
   
+  const handleClearCheck = () => {
+    updateActiveCheck({ items: [] });
+  };
+  
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
     const order = activeCheck?.items ?? [];
     if (itemToCustomize.quantity > 1) {
@@ -365,6 +369,7 @@ export default function Home() {
                 onNewCheck={handleNewCheck}
                 onSendToKitchen={handleSendToKitchen}
                 onCloseCheck={handleCloseCheck}
+                onClearCheck={handleClearCheck}
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
                 onUpdateDetails={updateActiveCheck}

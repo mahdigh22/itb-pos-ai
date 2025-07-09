@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useTransition, useOptimistic } from 'react';
+import { useState, useOptimistic } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,21 +12,55 @@ import type { Member } from "@/lib/types";
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { addUser } from '@/app/admin/users/actions';
+import { addUser, updateUser, deleteUser } from '@/app/admin/users/actions';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+function UserForm({ user, onFormSubmit, onCancel }) {
+    return (
+        <form action={onFormSubmit} className="space-y-4">
+             <input type="hidden" name="id" value={user?.id || ''} />
+            <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" placeholder="John Doe" required defaultValue={user?.name} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" name="email" type="email" placeholder="name@example.com" required defaultValue={user?.email}/>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" name="phone" type="tel" placeholder="555-0101" defaultValue={user?.phone}/>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit">{user ? 'Save Changes' : 'Add User'}</Button>
+            </DialogFooter>
+        </form>
+    );
+}
 
 export default function UsersClient({ initialMembers }: { initialMembers: Member[] }) {
     const { toast } = useToast();
-    const formRef = useRef<HTMLFormElement>(null);
-    const [isDialogOpen, setDialogOpen] = useState(false);
+    const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<Member | null>(null);
+    const [deletingUser, setDeletingUser] = useState<Member | null>(null);
     
-    // useOptimistic provides instant UI feedback before the server action completes.
-    const [optimisticMembers, addOptimisticMember] = useOptimistic<Member[], Member>(
+    const [optimisticMembers, manageOptimisticMembers] = useOptimistic<Member[], { action: 'add' | 'delete', member: Member }>(
         initialMembers,
-        (state, newMember) => [...state, newMember]
+        (state, { action, member }) => {
+            switch(action) {
+                case 'add':
+                    return [...state, member].sort((a,b) => a.name.localeCompare(b.name));
+                case 'delete':
+                    return state.filter((m) => m.id !== member.id);
+                default:
+                    return state;
+            }
+        }
     );
 
-    const handleFormSubmit = async (formData: FormData) => {
+    const handleAddSubmit = async (formData: FormData) => {
         const newMember = {
             id: `optimistic-${Date.now()}`,
             name: formData.get('name') as string,
@@ -37,27 +71,38 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
             avatarHint: 'placeholder person',
         };
         
-        // Immediately update the UI
-        addOptimisticMember(newMember);
+        setAddDialogOpen(false);
+        manageOptimisticMembers({ action: 'add', member: newMember });
 
-        // Reset form and close dialog
-        formRef.current?.reset();
-        setDialogOpen(false);
-
-        // Call the server action
         const result = await addUser(formData);
 
         if (result.success) {
-            toast({
-                title: 'User Added',
-                description: 'The new user has been successfully added.',
-            });
+            toast({ title: 'User Added' });
         } else {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: result.error || 'Something went wrong.',
-            });
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+    
+    const handleEditSubmit = async (formData: FormData) => {
+        if (!editingUser) return;
+        setEditingUser(null);
+        const result = await updateUser(editingUser.id, formData);
+        if (result.success) {
+            toast({ title: 'User Updated' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deletingUser) return;
+        manageOptimisticMembers({ action: 'delete', member: deletingUser });
+        setDeletingUser(null);
+        const result = await deleteUser(deletingUser.id);
+        if (result.success) {
+            toast({ title: 'User Deleted' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
         }
     };
 
@@ -68,40 +113,10 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                     <h1 className="text-3xl font-bold font-headline">User Management</h1>
                     <p className="text-muted-foreground">Manage your members and customers.</p>
                 </div>
-                 <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New User
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New User</DialogTitle>
-                            <DialogDescription>Fill in the details for the new user.</DialogDescription>
-                        </DialogHeader>
-                        <form action={handleFormSubmit} ref={formRef} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Full Name</Label>
-                                <Input id="name" name="name" placeholder="John Doe" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input id="email" name="email" type="email" placeholder="name@example.com" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
-                                <Input id="phone" name="phone" type="tel" placeholder="555-0101" />
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button type="button" variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button type="submit">Add User</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                <Button onClick={() => setAddDialogOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New User
+                </Button>
             </div>
             <Card>
                 <CardHeader>
@@ -144,8 +159,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingUser(member)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingUser(member)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -155,6 +170,39 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                     </Table>
                 </CardContent>
             </Card>
+
+            <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New User</DialogTitle>
+                        <DialogDescription>Fill in the details for the new user.</DialogDescription>
+                    </DialogHeader>
+                    <UserForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!editingUser} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit User</DialogTitle>
+                        <DialogDescription>Update the details for this user.</DialogDescription>
+                    </DialogHeader>
+                    <UserForm user={editingUser} onFormSubmit={handleEditSubmit} onCancel={() => setEditingUser(null)} />
+                </DialogContent>
+            </Dialog>
+
+            <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>This will permanently delete the user <span className="font-bold">{deletingUser?.name}</span>.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
