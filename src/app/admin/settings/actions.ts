@@ -11,6 +11,7 @@ const MAIN_SETTINGS_DOC = 'main';
 interface Settings {
     taxRate: number;
     priceLists: PriceList[];
+    activePriceListId?: string;
 }
 
 export async function getSettings(): Promise<Settings> {
@@ -29,6 +30,7 @@ export async function getSettings(): Promise<Settings> {
                     { id: 'pl-2', name: 'Happy Hour', discount: 20 },
                     { id: 'pl-3', name: 'Employee Discount', discount: 50 },
                 ],
+                activePriceListId: 'pl-1',
             };
             await setDoc(docRef, defaultSettings);
             return defaultSettings;
@@ -36,7 +38,7 @@ export async function getSettings(): Promise<Settings> {
     } catch (error) {
         console.error("Error fetching settings: ", error);
         // Fallback to default settings on error
-        return { taxRate: 8.0, priceLists: [] };
+        return { taxRate: 8.0, priceLists: [], activePriceListId: undefined };
     }
 }
 
@@ -49,6 +51,19 @@ export async function saveTaxRate(newRate: number) {
     } catch (error) {
         console.error("Error saving tax rate: ", error);
         return { success: false, error: 'Failed to save tax rate.' };
+    }
+}
+
+export async function saveActivePriceList(priceListId: string | null) {
+    try {
+        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, { activePriceListId: priceListId || null });
+        revalidatePath('/admin/settings');
+        revalidatePath('/'); // For POS
+        return { success: true };
+    } catch (error) {
+        console.error("Error saving active price list: ", error);
+        return { success: false, error: 'Failed to save active price list.' };
     }
 }
 
@@ -101,7 +116,17 @@ export async function deletePriceList(id: string) {
         const updatedPriceLists = settings.priceLists.filter(pl => pl.id !== id);
         
         const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
-        await updateDoc(docRef, { priceLists: updatedPriceLists });
+        
+        const updateData: { priceLists: PriceList[], activePriceListId?: string | null } = {
+            priceLists: updatedPriceLists
+        };
+
+        // If the deleted price list was the active one, reset it.
+        if (settings.activePriceListId === id) {
+            updateData.activePriceListId = null;
+        }
+
+        await updateDoc(docRef, updateData);
 
         revalidatePath('/admin/settings');
         return { success: true };

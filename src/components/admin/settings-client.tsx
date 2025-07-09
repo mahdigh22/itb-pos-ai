@@ -7,16 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { saveTaxRate, addPriceList, updatePriceList, deletePriceList } from '@/app/admin/settings/actions';
+import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList } from '@/app/admin/settings/actions';
 import type { PriceList } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 
 interface SettingsClientProps {
     initialTaxRate: number;
     initialPriceLists: PriceList[];
+    initialActivePriceListId?: string;
 }
 
 function PriceListForm({ priceList, onFormSubmit, onCancel }) {
@@ -33,10 +35,11 @@ function PriceListForm({ priceList, onFormSubmit, onCancel }) {
     );
 }
 
-export default function SettingsClient({ initialTaxRate, initialPriceLists }: SettingsClientProps) {
+export default function SettingsClient({ initialTaxRate, initialPriceLists, initialActivePriceListId }: SettingsClientProps) {
     const { toast } = useToast();
     const [taxRate, setTaxRate] = useState(initialTaxRate);
     const [isSavingTax, setIsSavingTax] = useState(false);
+    const [activePriceListId, setActivePriceListId] = useState(initialActivePriceListId);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
@@ -63,6 +66,18 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists }: Se
             setTaxRate(initialTaxRate); // Revert on error
         }
         setIsSavingTax(false);
+    };
+
+    const handleActivePriceListChange = async (newId: string) => {
+        const finalId = newId === 'none' ? null : newId;
+        setActivePriceListId(finalId ?? undefined); // Optimistic UI update
+        const result = await saveActivePriceList(finalId);
+        if (result.success) {
+            toast({ title: 'Settings Saved', description: 'Active price list has been updated.' });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            setActivePriceListId(initialActivePriceListId); // Revert on error
+        }
     };
 
     const handleAddPriceList = async (formData: FormData) => {
@@ -114,11 +129,11 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists }: Se
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>Taxes</CardTitle>
-                    <CardDescription>Manage tax rates for your business.</CardDescription>
+                    <CardTitle>Taxes & Defaults</CardTitle>
+                    <CardDescription>Manage tax rates and default price lists for new checks.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="max-w-sm space-y-2">
+                <CardContent className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
                         <Label htmlFor="tax-rate">Default Tax Rate (%)</Label>
                         <Input 
                             id="tax-rate" 
@@ -126,17 +141,36 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists }: Se
                             value={taxRate} 
                             onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)} 
                         />
+                         <Button className="mt-2" onClick={handleSaveTax} disabled={isSavingTax}>
+                            {isSavingTax ? 'Saving...' : 'Save Tax Rate'}
+                        </Button>
                     </div>
-                   <Button className="mt-4" onClick={handleSaveTax} disabled={isSavingTax}>
-                        {isSavingTax ? 'Saving...' : 'Save Changes'}
-                   </Button>
+                    <div className="space-y-2">
+                        <Label htmlFor="active-price-list">Default Price List for New Checks</Label>
+                        <Select
+                            value={activePriceListId || 'none'}
+                            onValueChange={handleActivePriceListChange}
+                        >
+                            <SelectTrigger id="active-price-list">
+                                <SelectValue placeholder="Select a default..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None (No Discount)</SelectItem>
+                                {optimisticPriceLists.map((pl) => (
+                                    <SelectItem key={pl.id} value={pl.id}>
+                                        {pl.name} ({pl.discount}%)
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardContent>
             </Card>
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>Price Lists</CardTitle>
-                        <CardDescription>Manage different price lists (e.g., Happy Hour).</CardDescription>
+                        <CardTitle>Manage Price Lists</CardTitle>
+                        <CardDescription>Create or edit price lists (e.g., Happy Hour, Employee Discount).</CardDescription>
                     </div>
                     <Button variant="outline" onClick={() => setAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Price List</Button>
                 </CardHeader>

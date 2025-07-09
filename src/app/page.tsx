@@ -48,7 +48,7 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
-  const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[] } | null>(null);
+  const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[]; activePriceListId?: string; } | null>(null);
 
   const [activeTab, setActiveTab] = useState("pos");
 
@@ -87,7 +87,11 @@ export default function Home() {
         setSettings(fetchedSettings);
         
         if (fetchedChecks.length === 0) {
-            const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
+            const newCheckData: Omit<Check, 'id'> = { 
+              name: 'Check 1', 
+              items: [],
+              priceListId: fetchedSettings.activePriceListId,
+            };
             const newCheck = await addCheck(newCheckData);
             setChecks([newCheck]);
             setActiveCheckId(newCheck.id);
@@ -180,7 +184,11 @@ export default function Home() {
 
   const handleNewCheck = async () => {
     const newCheckName = `Check ${checks.length + 1}`;
-    const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [] };
+    const newCheckData: Omit<Check, 'id'> = { 
+      name: newCheckName, 
+      items: [],
+      priceListId: settings?.activePriceListId,
+    };
     const newCheck = await addCheck(newCheckData);
     
     setChecks(prevChecks => [...prevChecks, newCheck]);
@@ -249,7 +257,11 @@ export default function Home() {
       if (remainingChecks.length > 0) {
           setActiveCheckId(remainingChecks[0].id);
       } else {
-          const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
+          const newCheckData: Omit<Check, 'id'> = { 
+            name: 'Check 1', 
+            items: [],
+            priceListId: settings.activePriceListId,
+          };
           const newCheck = await addCheck(newCheckData);
           setChecks([newCheck]);
           setActiveCheckId(newCheck.id);
@@ -306,7 +318,11 @@ export default function Home() {
     if (remainingChecks.length > 0) {
         setActiveCheckId(remainingChecks[0].id);
     } else {
-        const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
+        const newCheckData: Omit<Check, 'id'> = { 
+          name: 'Check 1', 
+          items: [],
+          priceListId: settings.activePriceListId,
+        };
         const newCheck = await addCheck(newCheckData);
         setChecks([newCheck]);
         setActiveCheckId(newCheck.id);
