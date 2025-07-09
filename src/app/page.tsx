@@ -10,7 +10,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, updateOrderStatus, sendNewItemsToKitchen, archiveOrder } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -435,8 +435,12 @@ export default function Home() {
   }
 
   const handleClearOrder = async (orderId: string) => {
-    await deleteOrder(orderId);
+    await archiveOrder(orderId);
     setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+     toast({
+        title: "Order Cleared",
+        description: "The completed order has been removed from the view.",
+    });
   }
 
 

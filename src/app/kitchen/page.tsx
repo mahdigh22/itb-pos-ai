@@ -1,14 +1,15 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOrders, updateOrderStatus, deleteOrder } from '@/app/pos/actions';
+import { getOrders, updateOrderStatus, archiveOrder } from '@/app/pos/actions';
 import { getTables } from '@/app/admin/tables/actions';
 import type { ActiveOrder, RestaurantTable, Employee } from '@/lib/types';
 import OrderProgress from '@/components/pos/order-progress';
 import { useToast } from "@/hooks/use-toast"
-import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, LogOut, UserCircle } from 'lucide-react';
 import ItbIcon from '@/components/itb-icon';
@@ -53,7 +54,12 @@ export default function KitchenPage() {
 
       fetchInitialData();
       
-      const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+      const q = query(
+          collection(db, 'orders'), 
+          where('status', '!=', 'Archived'),
+          orderBy('status'),
+          orderBy('createdAt', 'desc')
+        );
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const liveOrders: ActiveOrder[] = [];
           querySnapshot.forEach((doc) => {
@@ -80,7 +86,11 @@ export default function KitchenPage() {
   }
 
   const handleClearOrder = async (orderId: string) => {
-    await deleteOrder(orderId);
+    await archiveOrder(orderId);
+     toast({
+        title: "Order Cleared",
+        description: "The completed order has been removed from the view.",
+    });
   }
 
   const handleLogout = () => {

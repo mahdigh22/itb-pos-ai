@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,6 +24,7 @@ const statusConfig: Record<OrderStatus, { icon: React.ElementType; label: string
     Preparing: { icon: Soup, label: "Preparing", badgeVariant: "secondary" },
     Ready: { icon: Package, label: "Ready", badgeVariant: "outline" },
     Completed: { icon: CheckCircle, label: "Completed", badgeVariant: "default" },
+    Archived: { icon: CheckCircle, label: "Archived", badgeVariant: "default" }, // Should not be visible
 };
 
 function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrder, onCompleteOrder: (id: string) => void, onClearOrder: (id: string) => void }) {
@@ -41,7 +43,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     let currentStatus: OrderStatus;
     let progress = 0;
     
-    if (order.status === 'Completed') {
+    if (order.status === 'Completed' || order.status === 'Archived') {
         currentStatus = 'Completed';
         progress = 100;
     } else {
@@ -118,6 +120,8 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
   }, [filter]);
 
   const filteredOrders = orders.filter(order => {
+      if (order.status === 'Archived') return false; // Always hide archived orders
+
       if (filter !== 'all' && order.orderType !== filter) {
           return false;
       }
@@ -126,6 +130,8 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
       }
       return true;
   });
+
+  const visibleOrders = orders.filter(o => o.status !== 'Archived');
 
   return (
     <Card className="h-full flex flex-col">
@@ -163,7 +169,7 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
-        {orders.length === 0 ? (
+        {visibleOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
                 <ClipboardList className="w-16 h-16 mb-4"/>
                 <p className="font-semibold">No active orders</p>
