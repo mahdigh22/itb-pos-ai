@@ -211,37 +211,56 @@ export default function Home() {
 
   const handleSendToKitchen = async () => {
     if (!activeCheckId || !activeCheck) return;
-    
-    // For "Take Away" orders, "sending" is the same as finalizing the bill.
+
     if (activeCheck.orderType === 'Take Away') {
-        await handleFinalizeAndPay();
-        return;
+      await handleFinalizeAndPay();
+      return;
     }
 
     // This logic is now only for "Dine In" orders
-    setChecks(prevChecks => prevChecks.map(c => {
-        if (c.id !== activeCheckId) return c;
-        const updatedItems = c.items.map(i => i.status === 'new' ? { ...i, status: 'sent' as const } : i);
-        return { ...c, items: updatedItems };
-    }));
+    const originalCheckId = activeCheckId;
+    const originalCheckName = activeCheck.name;
 
-    const result = await sendNewItemsToKitchen(activeCheckId);
+    const result = await sendNewItemsToKitchen(originalCheckId);
 
     if (result.success) {
-        toast({
-            title: "Items Sent!",
-            description: `New items for ${activeCheck.name} sent to the kitchen.`,
-        });
-        const newOrders = await getOrders();
-        setActiveOrders(newOrders);
+      toast({
+        title: "Items Sent!",
+        description: `New items for ${originalCheckName} sent to the kitchen.`,
+      });
+
+      // After sending, immediately create a new check.
+      const newCheckName = `Check ${checks.length + 1}`;
+      const newCheckData: Omit<Check, 'id'> = {
+        name: newCheckName,
+        items: [],
+        priceListId: settings?.activePriceListId,
+      };
+      const newCheck = await addCheck(newCheckData);
+
+      // Fetch the updated list of checks and orders
+      const [updatedChecks, newOrders] = await Promise.all([
+        getChecks(),
+        getOrders()
+      ]);
+      
+      setChecks(updatedChecks);
+      setActiveOrders(newOrders);
+      setActiveCheckId(newCheck.id); // Set the new, empty check as active.
+
+      toast({
+        title: "New Check Started",
+        description: `The previous check is available in 'Open Checks'.`,
+      });
+
     } else {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: result.error || 'Could not send items to kitchen.',
-        });
-        const updatedChecks = await getChecks();
-        setChecks(updatedChecks);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error || 'Could not send items to kitchen.',
+      });
+      const updatedChecks = await getChecks();
+      setChecks(updatedChecks);
     }
   };
 
@@ -496,3 +515,5 @@ export default function Home() {
     </>
   );
 }
+
+    
