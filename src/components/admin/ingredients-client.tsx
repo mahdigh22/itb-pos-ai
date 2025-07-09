@@ -13,6 +13,7 @@ import type { Ingredient } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { addIngredient } from '@/app/admin/ingredients/actions';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function IngredientsClient({ initialIngredients }: { initialIngredients: Ingredient[] }) {
     const { toast } = useToast();
@@ -84,7 +85,22 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="unit">Unit of Measure</Label>
-                                    <Input id="unit" name="unit" placeholder="e.g., grams, pcs, ml" required defaultValue="pcs" />
+                                    <Select name="unit" required defaultValue="pcs">
+                                        <SelectTrigger id="unit">
+                                            <SelectValue placeholder="Select a unit" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="g">grams (g)</SelectItem>
+                                            <SelectItem value="kg">kilograms (kg)</SelectItem>
+                                            <SelectItem value="ml">milliliters (ml)</SelectItem>
+                                            <SelectItem value="l">liters (l)</SelectItem>
+                                            <SelectItem value="pcs">pieces (pcs)</SelectItem>
+                                            <SelectItem value="slice">slice</SelectItem>
+                                            <SelectItem value="btl">bottle (btl)</SelectItem>
+                                            <SelectItem value="can">can</SelectItem>
+                                            <SelectItem value="oz">ounce (oz)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
                             <DialogFooter>
