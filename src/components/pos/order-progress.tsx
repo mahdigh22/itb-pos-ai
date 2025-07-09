@@ -12,6 +12,9 @@ import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderProgressProps {
   orders: ActiveOrder[];
@@ -108,9 +111,41 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     );
 }
 
-export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+export default function OrderProgress({ orders: initialOrders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+  const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
   const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
   const [selectedTableId, setSelectedTableId] = useState<string>('all');
+  const { toast } = useToast();
+
+    useEffect(() => {
+        const q = query(
+          collection(db, 'orders'), 
+          where('status', 'in', ['Preparing', 'Ready', 'Completed']),
+          orderBy('createdAt', 'desc')
+        );
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const liveOrders: ActiveOrder[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              liveOrders.push({
+                  id: doc.id,
+                  ...data,
+                  createdAt: (data.createdAt as Timestamp).toDate(),
+              } as ActiveOrder);
+          });
+          setOrders(liveOrders);
+      }, (error) => {
+        console.error("Error in orders snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
+      });
+
+      return () => unsubscribe();
+  }, [toast]);
+
 
   useEffect(() => {
     // Reset table filter if main filter is not 'Dine In'

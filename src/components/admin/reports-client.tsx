@@ -198,9 +198,9 @@ function OrderRow({ order }: { order: ActiveOrder }) {
                     <TableCell className="text-right font-medium">${order.total.toFixed(2)}</TableCell>
                 </TableRow>
                 <CollapsibleContent asChild>
-                     <tr>
+                     <tr className="bg-muted/50 hover:bg-muted/50">
                         <td colSpan={7}>
-                            <div className="p-4 bg-muted/50 rounded-md">
+                            <div className="p-4">
                                 <h4 className="font-semibold mb-2">Order Items:</h4>
                                 <ul className="space-y-1 text-sm">
                                     {order.items.map((item: OrderItem) => (

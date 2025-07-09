@@ -126,34 +126,6 @@ export default function Home() {
         setIsLoading(false);
       }
       fetchInitialData();
-
-      // Real-time listener for active orders
-      const q = query(
-          collection(db, 'orders'), 
-          where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-          orderBy('createdAt', 'desc')
-        );
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const liveOrders: ActiveOrder[] = [];
-          querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              liveOrders.push({
-                  id: doc.id,
-                  ...data,
-                  createdAt: (data.createdAt as Timestamp).toDate(),
-              } as ActiveOrder);
-          });
-          setActiveOrders(liveOrders);
-      }, (error) => {
-        console.error("Error in orders snapshot listener: ", error);
-        toast({
-          variant: "destructive",
-          title: "Real-time Update Error",
-          description: "Could not fetch live order updates. Please check console for details."
-        })
-      });
-
-      return () => unsubscribe();
     }
   }, [router, toast]);
 
