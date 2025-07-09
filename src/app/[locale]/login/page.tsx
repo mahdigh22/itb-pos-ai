@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +39,7 @@ export default function LoginPage() {
         toast({
           variant: 'destructive',
           title: t('loginFailedTitle'),
-          description: result.error || 'An unknown error occurred.',
+          description: result.error || t('loginFailedDescription'),
         });
       }
     });
