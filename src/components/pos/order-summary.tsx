@@ -52,6 +52,9 @@ export default function OrderSummary({
   const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
   
+  const isCheckPristine = !activeCheck?.items.some(item => item.status === 'sent');
+  const pristineChecks = checks.filter(c => !c.items.some(item => item.status === 'sent'));
+
   const sentItems = order.filter((item) => item.status === 'sent');
   const newItems = order.filter((item) => item.status === 'new');
 
@@ -105,13 +108,13 @@ export default function OrderSummary({
                 </Button>
             )}
           </div>
-            {checks.length > 1 && (
+            {isCheckPristine && pristineChecks.length > 1 && (
                 <Select value={activeCheck.id ?? ''} onValueChange={onSwitchCheck}>
                     <SelectTrigger className="w-[180px] h-9">
                         <SelectValue placeholder="Select a check" />
                     </SelectTrigger>
                     <SelectContent>
-                        {checks.map(check => (
+                        {pristineChecks.map(check => (
                             <SelectItem key={check.id} value={check.id}>
                                 {check.name} ({check.items.length} items)
                             </SelectItem>
