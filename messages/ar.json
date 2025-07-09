@@ -1,0 +1,26 @@
+{
+  "LoginPage": {
+    "title": "أعضاء ITB",
+    "description": "أدخل بيانات الاعتماد الخاصة بك للوصول إلى النظام.",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "name@example.com",
+    "passwordLabel": "كلمة المرور",
+    "loginButton": "تسجيل الدخول",
+    "loginSuccessTitle": "تم تسجيل الدخول بنجاح",
+    "loginSuccessDescription": "مرحبا بعودتك، {name}!",
+    "loginFailedTitle": "فشل تسجيل الدخول",
+    "loginFailedDescription": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+  },
+  "AdminLoginPage": {
+    "title": "المكتب الخلفي",
+    "description": "أدخل بيانات اعتماد المشرف للوصول إلى البوابة.",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "admin@example.com",
+    "passwordLabel": "كلمة المرور",
+    "loginButton": "تسجيل الدخول",
+    "loginSuccessTitle": "تم تسجيل دخول المشرف بنجاح",
+    "loginSuccessDescription": "مرحباً، {name}!",
+    "loginFailedTitle": "فشل تسجيل الدخول",
+    "loginFailedDescription": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+  }
+}

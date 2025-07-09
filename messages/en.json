@@ -1,0 +1,26 @@
+{
+  "LoginPage": {
+    "title": "ITB Members",
+    "description": "Enter your credentials to access the system.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "name@example.com",
+    "passwordLabel": "Password",
+    "loginButton": "Login",
+    "loginSuccessTitle": "Login Successful",
+    "loginSuccessDescription": "Welcome back, {name}!",
+    "loginFailedTitle": "Login Failed",
+    "loginFailedDescription": "Incorrect email or password."
+  },
+  "AdminLoginPage": {
+    "title": "Backoffice",
+    "description": "Enter your admin credentials to access the portal.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "admin@example.com",
+    "passwordLabel": "Password",
+    "loginButton": "Login",
+    "loginSuccessTitle": "Admin Login Successful",
+    "loginSuccessDescription": "Welcome, {name}!",
+    "loginFailedTitle": "Login Failed",
+    "loginFailedDescription": "Incorrect email or password."
+  }
+}
