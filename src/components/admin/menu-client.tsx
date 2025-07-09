@@ -42,6 +42,7 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
     );
 
     const handleItemFormSubmit = async (formData: FormData) => {
+        const ingredientsString = formData.get('ingredients') as string | null;
         const newItem = {
             id: `optimistic-item-${Date.now()}`,
             name: formData.get('name') as string,
@@ -51,6 +52,7 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
             imageUrl: formData.get('imageUrl') as string || 'https://placehold.co/600x400.png',
             imageHint: 'food placeholder',
             preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
+            ingredients: ingredientsString ? ingredientsString.split(',').map(i => i.trim()).filter(Boolean) : [],
         };
         addOptimisticMenuItem(newItem);
         itemFormRef.current?.reset();
@@ -109,6 +111,10 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue="5" required /></div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="item-ingredients">Ingredients (comma-separated)</Label>
+                                <Input id="item-ingredients" name="ingredients" placeholder="e.g. beef patty, lettuce, tomato" />
                             </div>
                             <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" /></div>
                              <DialogFooter>

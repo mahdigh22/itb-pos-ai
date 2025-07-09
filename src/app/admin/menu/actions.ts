@@ -7,6 +7,8 @@ import type { MenuItem, Category } from '@/lib/types';
 
 // Menu Item Actions
 export async function addMenuItem(formData: FormData) {
+  const ingredientsString = formData.get('ingredients') as string | null;
+
   const newItemData: Omit<MenuItem, 'id'> = {
     name: formData.get('name') as string,
     description: formData.get('description') as string,
@@ -15,6 +17,7 @@ export async function addMenuItem(formData: FormData) {
     imageUrl: formData.get('imageUrl') as string || `https://placehold.co/600x400.png`,
     imageHint: 'food placeholder', // Simple hint for now
     preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
+    ingredients: ingredientsString ? ingredientsString.split(',').map(i => i.trim()).filter(Boolean) : [],
   };
 
   try {
