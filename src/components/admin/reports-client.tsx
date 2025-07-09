@@ -1,18 +1,30 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import type { ActiveOrder } from '@/lib/types';
+import { useState, useMemo, useEffect } from 'react';
+import type { ActiveOrder, OrderItem, RestaurantTable } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { DollarSign, ShoppingCart, Percent, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from '@/lib/utils';
 
-export default function ReportsClient({ initialOrders }: { initialOrders: ActiveOrder[] }) {
+
+export default function ReportsClient({ initialOrders, tables }: { initialOrders: ActiveOrder[], tables: RestaurantTable[] }) {
     const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
+    const [filterText, setFilterText] = useState('');
+    const [filterType, setFilterType] = useState('all');
+    const [filterTable, setFilterTable] = useState('all');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
     useEffect(() => {
         const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -32,156 +44,181 @@ export default function ReportsClient({ initialOrders }: { initialOrders: Active
         return () => unsubscribe();
     }, []);
 
-    const reportData = useMemo(() => {
-        const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
-        const totalOrders = orders.length;
-        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-        const totalPrepTime = orders.reduce((acc, order) => acc + order.totalPreparationTime, 0);
-        const averagePrepTime = totalOrders > 0 ? totalPrepTime / totalOrders : 0;
-        
-        const orderTypeCounts = orders.reduce((acc, order) => {
-            const type = order.orderType || 'Unknown';
-            acc[type] = (acc[type] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            if (dateRange?.from && orderDate < startOfDay(dateRange.from)) return false;
+            if (dateRange?.to && orderDate > endOfDay(dateRange.to)) return false;
+            
+            if (filterType !== 'all' && order.orderType !== filterType) return false;
+            if (filterType === 'Dine In' && filterTable !== 'all' && order.tableId !== filterTable) return false;
 
-        const orderTypeData = Object.entries(orderTypeCounts).map(([name, value]) => ({ name, value }));
-        
-        const topSellingItems = orders
-            .flatMap(order => order.items)
-            .reduce((acc, item) => {
-                const existing = acc.get(item.name);
-                if (existing) {
-                    existing.quantity += item.quantity;
-                    existing.revenue += item.price * item.quantity;
-                } else {
-                    acc.set(item.name, {
-                        name: item.name,
-                        quantity: item.quantity,
-                        revenue: item.price * item.quantity
-                    });
-                }
-                return acc;
-            }, new Map<string, {name: string, quantity: number, revenue: number}>());
-
-        const sortedTopItems = Array.from(topSellingItems.values())
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 5);
-
-        const revenueByDay = orders.reduce((acc, order) => {
-            const day = format(order.createdAt, 'yyyy-MM-dd');
-            acc[day] = (acc[day] || 0) + order.total;
-            return acc;
-        }, {} as Record<string, number>);
-
-        const dailyRevenueData = Object.entries(revenueByDay)
-            .map(([date, revenue]) => ({ date, revenue: parseFloat(revenue.toFixed(2)) }))
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .slice(-30);
-
-        return {
-            totalRevenue,
-            totalOrders,
-            averageOrderValue,
-            averagePrepTime,
-            orderTypeData,
-            sortedTopItems,
-            dailyRevenueData
-        };
-    }, [orders]);
-    
-    const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
-
-    const chartConfig = {
-        revenue: { label: "Revenue", color: "hsl(var(--chart-1))" },
-        'Dine In': { label: "Dine In", color: "hsl(var(--chart-1))" },
-        'Take Away': { label: "Take Away", color: "hsl(var(--chart-2))" },
-        'Unknown': { label: "Unknown", color: "hsl(var(--chart-3))" }
-    };
+            if (filterText) {
+                const searchText = filterText.toLowerCase();
+                const matchesId = order.id.toLowerCase().includes(searchText);
+                const matchesCheckName = order.checkName.toLowerCase().includes(searchText);
+                const matchesCustomerName = order.customerName?.toLowerCase().includes(searchText);
+                return matchesId || matchesCheckName || (matchesCustomerName || false);
+            }
+            return true;
+        });
+    }, [orders, filterText, filterType, filterTable, dateRange]);
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold font-headline">Sales Reports</h1>
-                <p className="text-muted-foreground">A real-time overview of your sales performance.</p>
+                <h1 className="text-3xl font-bold font-headline">Order Reports</h1>
+                <p className="text-muted-foreground">Browse and filter all historical orders.</p>
             </div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Revenue</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalRevenue.toFixed(2)}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.totalOrders}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle><Percent className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.averageOrderValue.toFixed(2)}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Prep Time</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.averagePrepTime.toFixed(1)} min</div></CardContent></Card>
-            </div>
-            
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="lg:col-span-4">
-                    <CardHeader><CardTitle>Revenue Over Time</CardTitle><CardDescription>Showing revenue for the last 30 days.</CardDescription></CardHeader>
-                    <CardContent className="pl-2">
-                        <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                           <ResponsiveContainer>
-                                <BarChart data={reportData.dailyRevenueData}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => format(new Date(value), "MMM d")}/>
-                                    <YAxis tickFormatter={(value) => `$${value}`} />
-                                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                    <Bar dataKey="revenue" fill="var(--color-revenue)" radius={4} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-                <Card className="lg:col-span-3">
-                    <CardHeader><CardTitle>Order Types</CardTitle><CardDescription>Breakdown of orders by type.</CardDescription></CardHeader>
-                    <CardContent className="flex items-center justify-center">
-                        <ChartContainer config={chartConfig} className="h-[200px] w-full max-w-[300px]">
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                    <Pie data={reportData.orderTypeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="#8884d8">
-                                         {reportData.orderTypeData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </div>
-
             <Card>
                 <CardHeader>
-                    <CardTitle>Top Selling Items</CardTitle>
-                    <CardDescription>Your most popular menu items by quantity sold.</CardDescription>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <Input 
+                            placeholder="Filter by ID, check name, customer..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            className="max-w-sm"
+                        />
+                        <div className="flex gap-4">
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                    "w-[300px] justify-start text-left font-normal",
+                                    !dateRange && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>Pick a date range</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateRange?.from}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    numberOfMonths={2}
+                                />
+                                </PopoverContent>
+                            </Popover>
+                            <Select value={filterType} onValueChange={setFilterType}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Order Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Types</SelectItem>
+                                    <SelectItem value="Dine In">Dine In</SelectItem>
+                                    <SelectItem value="Take Away">Take Away</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {filterType === 'Dine In' && (
+                                <Select value={filterTable} onValueChange={setFilterTable}>
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Table" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Tables</SelectItem>
+                                        {tables.map(table => (
+                                            <SelectItem key={table.id} value={table.id}>{table.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                   <Table>
+                    <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Item Name</TableHead>
-                                <TableHead className="text-right">Quantity Sold</TableHead>
-                                <TableHead className="text-right">Total Revenue</TableHead>
+                                <TableHead className="w-[40px]"></TableHead>
+                                <TableHead>Order Details</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Total</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {reportData.sortedTopItems.map((item) => (
-                                <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell className="text-right">${item.revenue.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
-                             {reportData.sortedTopItems.length === 0 && (
+                            {filteredOrders.length > 0 ? filteredOrders.map(order => (
+                                <OrderRow key={order.id} order={order} />
+                            )) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center">No sales data available yet.</TableCell>
+                                    <TableCell colSpan={6} className="h-24 text-center">No matching orders found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
-
         </div>
     );
+}
+
+function OrderRow({ order }: { order: ActiveOrder }) {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <Collapsible asChild>
+            <>
+            <TableRow>
+                <TableCell>
+                     <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+                            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            <span className="sr-only">Toggle details</span>
+                        </Button>
+                    </CollapsibleTrigger>
+                </TableCell>
+                <TableCell>
+                    <div className="font-medium">{order.checkName} - #{order.id.slice(-6)}</div>
+                    <div className="text-sm text-muted-foreground">
+                        {order.orderType === 'Dine In' ? `Table: ${order.tableName}` : `Customer: ${order.customerName || 'N/A'}`}
+                    </div>
+                </TableCell>
+                <TableCell><Badge variant="outline">{order.orderType}</Badge></TableCell>
+                <TableCell>{format(new Date(order.createdAt), "PPpp")}</TableCell>
+                <TableCell><Badge>{order.status}</Badge></TableCell>
+                <TableCell className="text-right font-medium">${order.total.toFixed(2)}</TableCell>
+            </TableRow>
+            <CollapsibleContent asChild>
+                <TableRow>
+                    <TableCell colSpan={6}>
+                        <div className="p-4 bg-muted/50 rounded-md">
+                            <h4 className="font-semibold mb-2">Order Items:</h4>
+                            <ul className="space-y-1 text-sm">
+                                {order.items.map((item: OrderItem) => (
+                                    <li key={item.lineItemId} className="flex justify-between">
+                                        <span>{item.quantity} x {item.name}</span>
+                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            {order.discountApplied && order.discountApplied > 0 && (
+                                <>
+                                <div className="border-t my-2"></div>
+                                <div className="flex justify-between font-semibold text-green-600">
+                                    <span>Discount Applied</span>
+                                    <span>{order.discountApplied}%</span>
+                                </div>
+                                </>
+                            )}
+                        </div>
+                    </TableCell>
+                </TableRow>
+            </CollapsibleContent>
+            </>
+        </Collapsible>
+    )
 }
