@@ -35,6 +35,7 @@ import ItbIcon from '@/components/itb-icon';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import LanguageToggle from '@/components/language-toggle';
 
 export default function Home() {
   const router = useRouter();
@@ -125,7 +126,7 @@ export default function Home() {
       }
       fetchInitialData();
     }
-  }, [router, toast]);
+  }, [router]);
   
   useEffect(() => {
       const q = query(
@@ -512,6 +513,7 @@ export default function Home() {
 
               <div className="flex items-center gap-2">
                  <ThemeToggle />
+                 <LanguageToggle />
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-2">
