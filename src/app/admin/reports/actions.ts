@@ -1,12 +1,18 @@
-'use server';
+"use server";
 
-import { collection, getDocs, Timestamp, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { ActiveOrder } from '@/lib/types';
+import {
+  collection,
+  getDocs,
+  Timestamp,
+  query,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import type { ActiveOrder } from "@/lib/types";
 
 export async function getOrdersForReports(): Promise<ActiveOrder[]> {
   try {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const orders: ActiveOrder[] = [];
     querySnapshot.forEach((doc) => {
