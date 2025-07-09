@@ -122,8 +122,8 @@ export async function sendNewItemsToKitchen(checkId: string) {
             const priceLists: PriceList[] = settings.priceLists || [];
             
             const newSanitizedItems = newItemsToProcess.map(item => {
-                const { ingredients, cost, ...rest } = item;
-                return rest;
+                const { ingredients, ...rest } = item;
+                return { ...rest, cost: item.cost || 0 };
             });
 
             // Determine which check data to use for the new order (for pricing, customer name, etc.)
@@ -230,8 +230,8 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
     try {
         // Sanitize items before saving to prevent storing client-side fields
         const sanitizedItems = orderData.items.map(item => {
-            const { ingredients, cost, ...rest } = item;
-            return rest;
+            const { ingredients, ...rest } = item;
+            return { ...rest, cost: item.cost || 0 };
         });
 
         const dataToSave = {

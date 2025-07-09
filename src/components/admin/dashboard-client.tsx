@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -8,7 +9,7 @@ import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { DollarSign, ShoppingCart, Percent, Clock } from 'lucide-react';
+import { DollarSign, ShoppingCart, Percent, Clock, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function DashboardClient({ initialOrders }: { initialOrders: ActiveOrder[] }) {
@@ -39,6 +40,23 @@ export default function DashboardClient({ initialOrders }: { initialOrders: Acti
         const totalPrepTime = orders.reduce((acc, order) => acc + (order.totalPreparationTime || 0), 0);
         const averagePrepTime = totalOrders > 0 ? totalPrepTime / totalOrders : 0;
         
+        const totalProfit = orders.reduce((profitAcc, order) => {
+            const orderSubtotal = order.items.reduce((subtotalAcc, item) => {
+                const extrasPrice = item.customizations?.added?.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+                return subtotalAcc + (item.price + extrasPrice) * item.quantity;
+            }, 0);
+
+            const discountAmount = orderSubtotal * ((order.discountApplied || 0) / 100);
+            const orderRevenue = orderSubtotal - discountAmount;
+
+            const orderCost = order.items.reduce((costAcc, item) => {
+                return costAcc + (item.cost || 0) * item.quantity;
+            }, 0);
+            
+            const orderProfit = orderRevenue - orderCost;
+            return profitAcc + orderProfit;
+        }, 0);
+
         const orderTypeCounts = orders.reduce((acc, order) => {
             const type = order.orderType || 'Unknown';
             acc[type] = (acc[type] || 0) + 1;
@@ -86,7 +104,8 @@ export default function DashboardClient({ initialOrders }: { initialOrders: Acti
             averagePrepTime,
             orderTypeData,
             sortedTopItems,
-            dailyRevenueData
+            dailyRevenueData,
+            totalProfit,
         };
     }, [orders]);
     
@@ -106,8 +125,9 @@ export default function DashboardClient({ initialOrders }: { initialOrders: Acti
                 <p className="text-muted-foreground">A real-time overview of your restaurant's performance.</p>
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Revenue</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalRevenue.toFixed(2)}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Profit</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalProfit.toFixed(2)}</div></CardContent></Card>
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.totalOrders}</div></CardContent></Card>
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle><Percent className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.averageOrderValue.toFixed(2)}</div></CardContent></Card>
                 <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Prep Time</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.averagePrepTime.toFixed(1)} min</div></CardContent></Card>
