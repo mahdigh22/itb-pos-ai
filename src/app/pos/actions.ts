@@ -4,7 +4,7 @@
 import { revalidatePath } from 'next/cache';
 import { collection, addDoc, getDocs, doc, getDoc, Timestamp, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ActiveOrder, Check, OrderItem, OrderStatus } from '@/lib/types';
+import type { ActiveOrder, Check, OrderItem, OrderStatus, PriceList } from '@/lib/types';
 
 // Check Actions
 export async function getChecks(): Promise<Check[]> {
@@ -66,16 +66,38 @@ export async function sendNewItemsToKitchen(checkId: string) {
             return { success: false, error: 'Please select an order type first.' };
         }
 
-        const newItems = check.items.filter(item => item.status === 'new');
+        const newItemsToProcess = check.items.filter(item => item.status === 'new');
 
-        if (newItems.length === 0) {
+        if (newItemsToProcess.length === 0) {
             return { success: true, message: 'No new items to send.' };
         }
 
+        // Sanitize items for Firestore by removing client-side populated fields
+        const newItems = newItemsToProcess.map(item => {
+            const { ingredients, cost, ...rest } = item;
+            return rest;
+        });
+
         // Create a new order with only the new items
-        const subtotal = newItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-        const tax = subtotal * 0.08; // TODO: get from settings
-        const total = subtotal + tax;
+        const subtotal = newItems.reduce((acc, item) => {
+            const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+            const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+            return acc + totalItemPrice;
+        }, 0);
+
+        // Fetch settings to apply correct tax and discounts
+        const settingsDoc = await getDoc(doc(db, "settings", "main"));
+        const settings = settingsDoc.exists() ? settingsDoc.data() : { taxRate: 0, priceLists: [] };
+        const taxRate = settings.taxRate || 0;
+        const priceLists: PriceList[] = settings.priceLists || [];
+        
+        const selectedPriceList = priceLists.find(pl => pl.id === check.priceListId);
+        const discountPercentage = selectedPriceList?.discount || 0;
+        const discountAmount = subtotal * (discountPercentage / 100);
+        const discountedSubtotal = subtotal - discountAmount;
+        const tax = discountedSubtotal * (taxRate / 100);
+        const total = discountedSubtotal + tax;
+        
         const totalPreparationTime = newItems.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
 
         const newOrderData = {
@@ -88,6 +110,8 @@ export async function sendNewItemsToKitchen(checkId: string) {
             orderType: check.orderType,
             tableNumber: check.tableNumber,
             customerName: check.customerName,
+            priceListId: check.priceListId,
+            discountApplied: discountPercentage,
         };
         await addDoc(collection(db, 'orders'), newOrderData);
 
@@ -139,8 +163,15 @@ export async function getOrders(): Promise<ActiveOrder[]> {
 
 export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date }) {
     try {
+        // Sanitize items before saving to prevent storing client-side fields
+        const sanitizedItems = orderData.items.map(item => {
+            const { ingredients, cost, ...rest } = item;
+            return rest;
+        });
+
         await addDoc(collection(db, 'orders'), {
             ...orderData,
+            items: sanitizedItems,
             createdAt: Timestamp.fromDate(orderData.createdAt),
         });
         revalidatePath('/');
