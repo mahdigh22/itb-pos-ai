@@ -57,7 +57,6 @@ export default function KitchenPage() {
       const q = query(
           collection(db, 'orders'), 
           where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-          orderBy('status'),
           orderBy('createdAt', 'desc')
         );
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -71,11 +70,18 @@ export default function KitchenPage() {
               } as ActiveOrder);
           });
           setOrders(liveOrders);
+      }, (error) => {
+        console.error("Error in kitchen snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
       });
 
       return () => unsubscribe();
     }
-  }, [router]);
+  }, [router, toast]);
 
   const handleCompleteOrder = async (orderId: string) => {
     await updateOrderStatus(orderId, 'Completed');

@@ -10,7 +10,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, updateOrderStatus, sendNewItemsToKitchen, archiveOrder } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheck, deleteCheck, addOrder, updateOrderStatus, sendNewItemsToKitchen, archiveOrder } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -131,7 +131,6 @@ export default function Home() {
       const q = query(
           collection(db, 'orders'), 
           where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-          orderBy('status'),
           orderBy('createdAt', 'desc')
         );
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -145,11 +144,18 @@ export default function Home() {
               } as ActiveOrder);
           });
           setActiveOrders(liveOrders);
+      }, (error) => {
+        console.error("Error in orders snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
       });
 
       return () => unsubscribe();
     }
-  }, [router]);
+  }, [router, toast]);
 
   const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;

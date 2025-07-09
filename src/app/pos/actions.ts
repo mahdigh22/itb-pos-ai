@@ -201,7 +201,6 @@ export async function getOrders(): Promise<ActiveOrder[]> {
     const q = query(
         collection(db, 'orders'), 
         where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-        orderBy('status'),
         orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
