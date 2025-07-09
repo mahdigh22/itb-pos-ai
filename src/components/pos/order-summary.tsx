@@ -60,7 +60,7 @@ export default function OrderSummary({
     <Card className="flex flex-col h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
-            <CardTitle className="font-headline">Current Order</CardTitle>
+            <CardTitle className="font-headline">Current Check</CardTitle>
             {checks.length > 1 && (
                 <Select value={activeCheck.id ?? ''} onValueChange={onSwitchCheck}>
                     <SelectTrigger className="w-[180px] h-9">
@@ -77,7 +77,7 @@ export default function OrderSummary({
             )}
         </div>
         <CardDescription>
-            {activeCheck ? `Editing ${activeCheck.name}` : 'Review and manage the order items'}
+            {`Editing ${activeCheck.name}`}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
@@ -115,7 +115,7 @@ export default function OrderSummary({
         {order.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground flex-grow">
             <ShoppingCart className="w-16 h-16 mb-4"/>
-            <p className="font-semibold">Your order is empty</p>
+            <p className="font-semibold">Your check is empty</p>
             <p className="text-sm">Add items from the menu to get started.</p>
           </div>
         ) : (
