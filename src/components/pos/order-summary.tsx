@@ -82,12 +82,8 @@ export default function OrderSummary({
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
         <Tabs 
-            value={activeCheck.orderType} 
-            onValueChange={(value) => onUpdateDetails({ 
-                orderType: value as OrderType,
-                tableNumber: value === 'Dine In' ? activeCheck.tableNumber : '',
-                customerName: value === 'Take Away' ? activeCheck.customerName : '',
-            })}
+            value={activeCheck.orderType || ""} 
+            onValueChange={(value) => onUpdateDetails({ orderType: value as OrderType })}
             className="w-full"
         >
             <TabsList className="grid w-full grid-cols-2">
@@ -228,7 +224,7 @@ export default function OrderSummary({
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-2 pt-6 border-t">
-        {activeCheck.orderType === 'Dine In' ? (
+        {activeCheck.orderType === 'Dine In' && (
             <>
                 <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={!hasNewItems}>
                     <Send className="mr-2 h-4 w-4" /> Send New Items
@@ -237,9 +233,15 @@ export default function OrderSummary({
                     <CreditCard className="mr-2 h-4 w-4" /> Close & Pay Bill
                 </Button>
             </>
-        ) : (
+        )}
+        {activeCheck.orderType === 'Take Away' && (
              <Button className="w-full" size="lg" onClick={onCloseCheck} disabled={order.length === 0}>
                 <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
+            </Button>
+        )}
+        {!activeCheck.orderType && (
+            <Button className="w-full" size="lg" disabled>
+                Select an Order Type
             </Button>
         )}
         <Button variant="outline" className="w-full" onClick={onNewCheck}>

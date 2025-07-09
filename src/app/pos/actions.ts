@@ -61,6 +61,11 @@ export async function sendNewItemsToKitchen(checkId: string) {
         }
 
         const check = { id: checkSnap.id, ...checkSnap.data() } as Check;
+        
+        if (!check.orderType) {
+            return { success: false, error: 'Please select an order type first.' };
+        }
+
         const newItems = check.items.filter(item => item.status === 'new');
 
         if (newItems.length === 0) {

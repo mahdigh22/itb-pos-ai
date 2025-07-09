@@ -74,7 +74,7 @@ export default function Home() {
         setActiveOrders(fetchedOrders);
         
         if (fetchedChecks.length === 0) {
-            const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [], orderType: 'Dine In' };
+            const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
             const newCheck = await addCheck(newCheckData);
             setChecks([newCheck]);
             setActiveCheckId(newCheck.id);
@@ -163,7 +163,7 @@ export default function Home() {
 
   const handleNewCheck = async () => {
     const newCheckName = `Check ${checks.length + 1}`;
-    const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [], orderType: 'Dine In' };
+    const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [] };
     const newCheck = await addCheck(newCheckData);
     
     setChecks(prevChecks => [...prevChecks, newCheck]);
@@ -215,7 +215,7 @@ export default function Home() {
   };
 
   const handleFinalizeAndPay = async () => {
-    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0) return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType) return;
 
     const subtotal = activeCheck.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const tax = subtotal * 0.08; // TODO: Get from settings
@@ -247,7 +247,7 @@ export default function Home() {
     if (remainingChecks.length > 0) {
         setActiveCheckId(remainingChecks[0].id);
     } else {
-        const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [], orderType: 'Dine In' };
+        const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
         const newCheck = await addCheck(newCheckData);
         setChecks([newCheck]);
         setActiveCheckId(newCheck.id);
@@ -261,6 +261,14 @@ export default function Home() {
   }
 
   const handleCloseCheck = () => {
+    if (!activeCheck?.orderType) {
+        toast({
+            variant: "destructive",
+            title: "Order Type Required",
+            description: "Please select Dine In or Take Away before closing the check.",
+        });
+        return;
+    }
      setCloseCheckAlertOpen(true);
   }
 

@@ -59,7 +59,7 @@ export interface Check {
     id: string;
     name: string;
     items: OrderItem[];
-    orderType: OrderType;
+    orderType?: OrderType;
     tableNumber?: string;
     customerName?: string;
 }
