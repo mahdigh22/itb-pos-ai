@@ -7,14 +7,16 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
-import type { ActiveOrder, OrderStatus } from '@/lib/types';
+import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OrderProgressProps {
   orders: ActiveOrder[];
   onCompleteOrder: (orderId: string) => void;
   onClearOrder: (orderId: string) => void;
+  tables: RestaurantTable[];
 }
 
 const statusConfig: Record<OrderStatus, { icon: React.ElementType; label: string; badgeVariant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -104,13 +106,61 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     );
 }
 
-export default function OrderProgress({ orders, onCompleteOrder, onClearOrder }: OrderProgressProps) {
+export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+  const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
+  const [selectedTableId, setSelectedTableId] = useState<string>('all');
+
+  useEffect(() => {
+    // Reset table filter if main filter is not 'Dine In'
+    if (filter !== 'Dine In') {
+        setSelectedTableId('all');
+    }
+  }, [filter]);
+
+  const filteredOrders = orders.filter(order => {
+      if (filter !== 'all' && order.orderType !== filter) {
+          return false;
+      }
+      if (filter === 'Dine In' && selectedTableId !== 'all' && order.tableId !== selectedTableId) {
+          return false;
+      }
+      return true;
+  });
 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="font-headline">Order Progress</CardTitle>
-        <CardDescription>Track active and recently completed orders in real-time.</CardDescription>
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+            <div>
+                <CardTitle className="font-headline">Order Progress</CardTitle>
+                <CardDescription>Track active and recently completed orders in real-time.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+                <Select value={filter} onValueChange={(value) => setFilter(value as any)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Orders</SelectItem>
+                        <SelectItem value="Dine In">Dine In</SelectItem>
+                        <SelectItem value="Take Away">Take Away</SelectItem>
+                    </SelectContent>
+                </Select>
+                {filter === 'Dine In' && (
+                     <Select value={selectedTableId} onValueChange={setSelectedTableId}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Filter by table" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Tables</SelectItem>
+                            {tables.map(table => (
+                                <SelectItem key={table.id} value={table.id}>{table.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
+            </div>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
         {orders.length === 0 ? (
@@ -119,10 +169,16 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder }:
                 <p className="font-semibold">No active orders</p>
                 <p className="text-sm">Place a new order to see its progress here.</p>
             </div>
+        ) : filteredOrders.length === 0 ? (
+            <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
+                <ClipboardList className="w-16 h-16 mb-4"/>
+                <p className="font-semibold text-lg">No orders match filter</p>
+                <p className="text-sm">Try adjusting your filter settings.</p>
+            </div>
         ) : (
         <ScrollArea className="h-full w-full pr-4">
             <div className="space-y-4">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                     <OrderCard key={order.id} order={order} onCompleteOrder={onCompleteOrder} onClearOrder={onClearOrder} />
                 ))}
             </div>

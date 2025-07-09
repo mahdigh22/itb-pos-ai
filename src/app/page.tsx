@@ -509,7 +509,12 @@ export default function Home() {
         </TabsContent>
         
         <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
-          <OrderProgress orders={activeOrders} onCompleteOrder={handleCompleteOrder} onClearOrder={handleClearOrder} />
+          <OrderProgress 
+            orders={activeOrders} 
+            onCompleteOrder={handleCompleteOrder} 
+            onClearOrder={handleClearOrder} 
+            tables={tables}
+           />
         </TabsContent>
 
         <TabsContent value="members" className="h-full mt-0">
