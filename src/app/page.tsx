@@ -231,6 +231,31 @@ export default function Home() {
   const handleFinalizeAndPay = async () => {
     if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType || !settings) return;
 
+    // For Dine In, we just close the check. The individual orders are already tracked.
+    if (activeCheck.orderType === 'Dine In') {
+      await deleteCheck(activeCheckId);
+      
+      const remainingChecks = checks.filter(c => c.id !== activeCheckId);
+      setChecks(remainingChecks);
+
+      if (remainingChecks.length > 0) {
+          setActiveCheckId(remainingChecks[0].id);
+      } else {
+          const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
+          const newCheck = await addCheck(newCheckData);
+          setChecks([newCheck]);
+          setActiveCheckId(newCheck.id);
+      }
+
+      toast({
+          title: "Bill Closed",
+          description: `${activeCheck.name} has been paid and closed.`,
+      });
+      setCloseCheckAlertOpen(false);
+      return;
+    }
+
+    // This logic is for Take Away / Delivery where the entire check becomes one order.
     const subtotal = activeCheck.items.reduce((acc, item) => {
       const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
       const totalItemPrice = (item.price + extrasPrice) * item.quantity;
@@ -406,14 +431,14 @@ export default function Home() {
       <AlertDialog open={isCloseCheckAlertOpen} onOpenChange={setCloseCheckAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-headline">Confirm Close & Pay</AlertDialogTitle>
+            <AlertDialogTitle className="font-headline">Confirm Close &amp; Pay</AlertDialogTitle>
             <AlertDialogDescription>
                 This will finalize the entire check, send it as one order, and close it. This action is for final payment. Are you sure?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFinalizeAndPay}>Yes, Close & Pay</AlertDialogAction>
+            <AlertDialogAction onClick={handleFinalizeAndPay}>Yes, Close &amp; Pay</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
