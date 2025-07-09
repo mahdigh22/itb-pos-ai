@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles } from "lucide-react";
+import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square } from "lucide-react";
 import {
     Sidebar,
     SidebarHeader,
@@ -33,6 +33,7 @@ export default function AdminSidebar() {
         { href: '/admin/menu', label: 'Menu', icon: BookOpen },
         { href: '/admin/ingredients', label: 'Ingredients', icon: List },
         { href: '/admin/extras', label: 'Extras', icon: Sparkles },
+        { href: '/admin/tables', label: 'Tables', icon: Square },
         { href: '/admin/users', label: 'Users', icon: Users },
         { href: '/admin/employees', label: 'Employees', icon: Briefcase },
         { href: '/admin/settings', label: 'Settings', icon: Settings },

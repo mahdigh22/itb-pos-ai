@@ -77,10 +77,10 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="text-sm text-muted-foreground space-y-1">
-                               {check.orderType === 'Dine In' && check.tableNumber && (
+                               {check.orderType === 'Dine In' && check.tableName && (
                                    <div className="flex items-center gap-2">
                                        <Hash className="h-4 w-4" />
-                                       <span>Table {check.tableNumber}</span>
+                                       <span>{check.tableName}</span>
                                    </div>
                                )}
                                {check.orderType === 'Take Away' && check.customerName && (

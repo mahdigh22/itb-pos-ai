@@ -64,7 +64,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                         <p className="font-semibold">{order.checkName} - #{order.id.slice(-6)}</p>
                     </div>
                     <p className="text-sm text-muted-foreground pl-6">
-                        {order.orderType === 'Dine In' && `Table ${order.tableNumber || 'N/A'}`}
+                        {order.orderType === 'Dine In' && `Table ${order.tableName || 'N/A'}`}
                         {order.orderType === 'Take Away' && `For ${order.customerName || 'N/A'}`}
                         {order.orderType === 'Delivery' && `For ${order.customerName || 'N/A'}`}
                         {' · '}

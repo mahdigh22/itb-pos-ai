@@ -1,6 +1,11 @@
 
 export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
 
+export interface RestaurantTable {
+  id: string;
+  name: string;
+}
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -82,7 +87,8 @@ export interface ActiveOrder {
   checkName: string;
   totalPreparationTime: number; // in minutes
   orderType: OrderType;
-  tableNumber?: string;
+  tableId?: string;
+  tableName?: string;
   customerName?: string;
   priceListId?: string;
   discountApplied?: number; // as a percentage
@@ -94,7 +100,8 @@ export interface Check {
     name: string;
     items: OrderItem[];
     orderType?: OrderType;
-    tableNumber?: string;
+    tableId?: string;
+    tableName?: string;
     customerName?: string;
     priceListId?: string;
 }

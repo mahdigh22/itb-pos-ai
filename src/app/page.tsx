@@ -8,8 +8,9 @@ import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
+import { getTables } from '@/app/admin/tables/actions';
 import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
-import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -48,6 +49,7 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
+  const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[]; activePriceListId?: string; } | null>(null);
 
   const [activeTab, setActiveTab] = useState("pos");
@@ -69,6 +71,7 @@ export default function Home() {
           fetchedOrders,
           fetchedExtras,
           fetchedSettings,
+          fetchedTables,
         ] = await Promise.all([
             getUsers(),
             getMenuItems(),
@@ -77,6 +80,7 @@ export default function Home() {
             getOrders(),
             getExtras(),
             getSettings(),
+            getTables(),
         ]);
         setMembers(fetchedMembers);
         setMenuItems(fetchedMenuItems);
@@ -85,6 +89,7 @@ export default function Home() {
         setActiveOrders(fetchedOrders);
         setAvailableExtras(fetchedExtras);
         setSettings(fetchedSettings);
+        setTables(fetchedTables);
         
         if (fetchedChecks.length === 0) {
             const newCheckData: Omit<Check, 'id'> = { 
@@ -319,7 +324,8 @@ export default function Home() {
       checkName: activeCheck.name,
       totalPreparationTime,
       orderType: activeCheck.orderType,
-      tableNumber: activeCheck.tableNumber,
+      tableId: activeCheck.tableId,
+      tableName: activeCheck.tableName,
       customerName: activeCheck.customerName,
       priceListId: activeCheck.priceListId,
       discountApplied: discountPercentage,
@@ -465,6 +471,7 @@ export default function Home() {
                 onUpdateDetails={updateActiveCheck}
                 priceLists={settings.priceLists}
                 taxRate={settings.taxRate}
+                tables={tables}
               />
             </div>
           </div>
@@ -515,5 +522,3 @@ export default function Home() {
     </>
   );
 }
-
-    

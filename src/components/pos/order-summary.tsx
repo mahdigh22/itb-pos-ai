@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2, Send } from 'lucide-react';
-import type { OrderItem, Check, OrderType, PriceList } from '@/lib/types';
+import type { OrderItem, Check, OrderType, PriceList, RestaurantTable } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +30,7 @@ interface OrderSummaryProps {
   onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
   priceLists: PriceList[];
   taxRate: number;
+  tables: RestaurantTable[];
 }
 
 export default function OrderSummary({
@@ -46,6 +47,7 @@ export default function OrderSummary({
   onUpdateDetails,
   priceLists,
   taxRate,
+  tables,
 }: OrderSummaryProps) {
   const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
@@ -71,6 +73,13 @@ export default function OrderSummary({
   const handleConfirmClear = () => {
     onClearCheck();
     setClearAlertOpen(false);
+  };
+
+  const handleTableSelection = (tableId: string) => {
+    const selectedTable = tables.find(t => t.id === tableId);
+    if (selectedTable) {
+        onUpdateDetails({ tableId: selectedTable.id, tableName: selectedTable.name });
+    }
   };
 
   if (!activeCheck) {
@@ -125,14 +134,23 @@ export default function OrderSummary({
                 <TabsTrigger value="Dine In">Dine In</TabsTrigger>
                 <TabsTrigger value="Take Away">Take Away</TabsTrigger>
             </TabsList>
-            <TabsContent value="Dine In" className="mt-4">
-                <Label htmlFor="table-number">Table Number</Label>
-                <Input 
-                    id="table-number" 
-                    placeholder="e.g., 12" 
-                    value={activeCheck.tableNumber || ''}
-                    onChange={(e) => onUpdateDetails({ tableNumber: e.target.value })}
-                />
+            <TabsContent value="Dine In" className="mt-4 space-y-2">
+                <Label htmlFor="table-select">Table</Label>
+                <Select
+                    value={activeCheck.tableId || ''}
+                    onValueChange={handleTableSelection}
+                >
+                    <SelectTrigger id="table-select">
+                        <SelectValue placeholder="Select a table" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {tables.map(table => (
+                            <SelectItem key={table.id} value={table.id}>
+                                {table.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </TabsContent>
             <TabsContent value="Take Away" className="mt-4">
                 <Label htmlFor="customer-name">Customer Name</Label>
