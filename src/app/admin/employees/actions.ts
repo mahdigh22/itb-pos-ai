@@ -7,25 +7,32 @@ import { db } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
 
 export async function addEmployee(formData: FormData) {
-  const newEmployee: Omit<Employee, 'id'> = {
+  const newEmployeeData = {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
     password: formData.get('password') as string,
     role: formData.get('role') as 'Manager' | 'Server' | 'Chef',
-    startDate: new Date().toISOString(),
+    startDate: Timestamp.fromDate(new Date()), // Store as Timestamp
   };
 
-  if (!newEmployee.password) {
+  if (!newEmployeeData.password) {
     return { success: false, error: 'Password is required for new employees.' };
   }
 
   try {
-    await addDoc(collection(db, 'employees'), {
-      ...newEmployee,
-      startDate: Timestamp.fromDate(new Date(newEmployee.startDate)),
-    });
+    const docRef = await addDoc(collection(db, 'employees'), newEmployeeData);
     revalidatePath('/admin/employees');
-    return { success: true };
+    
+    // Return a plain object with a serialized date
+    const finalEmployee: Employee = {
+        id: docRef.id,
+        name: newEmployeeData.name,
+        email: newEmployeeData.email,
+        role: newEmployeeData.role,
+        startDate: newEmployeeData.startDate.toDate().toISOString()
+    };
+    
+    return { success: true, employee: finalEmployee };
   } catch (e) {
     console.error('Error adding document: ', e);
     if (e instanceof Error) {
