@@ -22,20 +22,17 @@ export default function LoginPage() {
       const result = await loginEmployee(formData);
 
       if (result.success && result.employee) {
-        if (result.employee.role === 'Chef') {
-            toast({
-                variant: 'destructive',
-                title: 'Access Denied',
-                description: 'Chefs do not have access to the POS system.',
-            });
-            return;
-        }
         localStorage.setItem('currentEmployee', JSON.stringify(result.employee));
         toast({
           title: 'Login Successful',
           description: `Welcome back, ${result.employee.name}!`,
         });
-        router.push('/');
+
+        if (result.employee.role === 'Chef') {
+            router.push('/kitchen');
+        } else {
+            router.push('/');
+        }
       } else {
         toast({
           variant: 'destructive',

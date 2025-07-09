@@ -72,6 +72,11 @@ export default function Home() {
     if (!employeeData?.id) {
       router.replace('/login');
     } else {
+      if (employeeData.role === 'Chef') {
+        router.replace('/kitchen');
+        return;
+      }
+
       setCurrentUser(employeeData);
       const fetchInitialData = async () => {
         setIsLoading(true);
@@ -269,10 +274,8 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
-      const [updatedChecks, newOrders] = await Promise.all([
-        getChecks(),
-        getOrders()
-      ]);
+      const updatedChecks = await getChecks();
+      const newOrders = await getOrders();
       
       setChecks(updatedChecks);
       setActiveOrders(newOrders);
