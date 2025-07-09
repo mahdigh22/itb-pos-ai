@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -14,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { addUser, updateUser, deleteUser } from '@/app/admin/users/actions';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription as AlertDialogDescriptionComponent } from "@/components/ui/alert-dialog";
 
 function UserForm({ user, onFormSubmit, onCancel }) {
     return (
@@ -195,7 +196,7 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This will permanently delete the user <span className="font-bold">{deletingUser?.name}</span>.</AlertDialogDescription>
+                        <AlertDialogDescriptionComponent>This will permanently delete the user <span className="font-bold">{deletingUser?.name}</span>.</AlertDialogDescriptionComponent>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
