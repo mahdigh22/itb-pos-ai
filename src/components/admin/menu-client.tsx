@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription as AlertDialogDescriptionComponent } from "@/components/ui/alert-dialog";
 import type { MenuItem, Category, Ingredient } from "@/lib/types";
 import { addMenuItem, addCategory, updateMenuItem, deleteMenuItem, updateCategory, deleteCategory } from '@/app/admin/menu/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +73,7 @@ function MenuItemFormDialog({ open, onOpenChange, categories, ingredients, onFor
                     <div className="space-y-2"><Label htmlFor="item-name">Item Name</Label><Input id="item-name" name="name" placeholder="e.g. Classic Burger" required defaultValue={initialData?.name} /></div>
                     <div className="space-y-2"><Label htmlFor="item-description">Description</Label><Textarea id="item-description" name="description" placeholder="A brief description of the item." defaultValue={initialData?.description}/></div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label htmlFor="item-price">Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required defaultValue={initialData?.price}/></div>
+                        <div className="space-y-2"><Label htmlFor="item-price">Sell Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required defaultValue={initialData?.price}/></div>
                         <div className="space-y-2">
                             <Label htmlFor="item-category">Category</Label>
                             <Select name="category" required defaultValue={initialData?.category}>
@@ -335,7 +335,7 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This will permanently delete the item: <span className="font-bold">{deletingItem?.name}</span>.</AlertDialogDescription>
+                        <AlertDialogDescriptionComponent>This will permanently delete the item: <span className="font-bold">{deletingItem?.name}</span>.</AlertDialogDescriptionComponent>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -367,7 +367,7 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>This will permanently delete the category: <span className="font-bold">{deletingCategory?.name}</span>.</AlertDialogDescription>
+                        <AlertDialogDescriptionComponent>This will permanently delete the category: <span className="font-bold">{deletingCategory?.name}</span>.</AlertDialogDescriptionComponent>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
