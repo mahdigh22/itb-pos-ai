@@ -197,6 +197,17 @@ export default function Home() {
   };
 
   const handleNewCheck = async () => {
+    const emptyCheck = checks.find(c => c.items.length === 0);
+
+    if (emptyCheck) {
+        setActiveCheckId(emptyCheck.id);
+        toast({
+            title: "Switched to Empty Check",
+            description: `Now editing ${emptyCheck.name}.`,
+        });
+        return;
+    }
+
     const newCheckName = `Check ${checks.length + 1}`;
     const newCheckData: Omit<Check, 'id'> = { 
       name: newCheckName, 
