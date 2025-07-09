@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square } from "lucide-react";
+import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square, BarChart } from "lucide-react";
 import {
     Sidebar,
     SidebarHeader,
@@ -30,6 +30,7 @@ export default function AdminSidebar() {
 
     const navLinks = [
         { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
+        { href: '/admin/reports', label: 'Reports', icon: BarChart },
         { href: '/admin/menu', label: 'Menu', icon: BookOpen },
         { href: '/admin/ingredients', label: 'Ingredients', icon: List },
         { href: '/admin/extras', label: 'Extras', icon: Sparkles },
