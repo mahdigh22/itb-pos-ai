@@ -15,6 +15,7 @@ import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
 import OrderProgress from '@/components/pos/order-progress';
 import CustomizeItemDialog from '@/components/pos/customize-item-dialog';
+import OpenChecksDisplay from '@/components/pos/open-checks-display';
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -27,7 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
@@ -48,6 +49,8 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
   const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[] } | null>(null);
+
+  const [activeTab, setActiveTab] = useState("pos");
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   
@@ -192,6 +195,11 @@ export default function Home() {
   const handleSwitchCheck = (checkId: string) => {
     setActiveCheckId(checkId);
   }
+
+  const handleSelectCheckAndSwitchTab = (checkId: string) => {
+    setActiveCheckId(checkId);
+    setActiveTab("pos");
+  };
 
   const handleSendToKitchen = async () => {
     if (!activeCheckId || !activeCheck) return;
@@ -353,7 +361,7 @@ export default function Home() {
 
   return (
     <>
-    <Tabs defaultValue="pos" className="w-full h-full flex flex-col">
+    <Tabs defaultValue="pos" value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
        <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16">
@@ -362,10 +370,14 @@ export default function Home() {
                 <span className="text-xl text-primary font-bold">ITB Members</span>
               </Link>
               
-              <TabsList className="inline-grid h-12 w-full max-w-lg grid-cols-3 bg-muted p-1 rounded-lg">
+              <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
                 <TabsTrigger value="pos" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
                   <LayoutDashboard className="h-5 w-5" />
                   Point of Sale
+                </TabsTrigger>
+                <TabsTrigger value="checks" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                  <ClipboardCheck className="h-5 w-5" />
+                  Open Checks
                 </TabsTrigger>
                 <TabsTrigger value="progress" className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
                   <ClipboardList className="h-5 w-5" />
@@ -416,6 +428,16 @@ export default function Home() {
               />
             </div>
           </div>
+        </TabsContent>
+        
+        <TabsContent value="checks" className="flex-grow min-h-0 h-full mt-0">
+            <OpenChecksDisplay 
+                checks={checks} 
+                activeCheckId={activeCheckId} 
+                onSelectCheck={handleSelectCheckAndSwitchTab}
+                priceLists={settings.priceLists}
+                taxRate={settings.taxRate}
+            />
         </TabsContent>
         
         <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
