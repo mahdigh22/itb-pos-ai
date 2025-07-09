@@ -35,7 +35,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export default function Home() {
@@ -128,6 +128,35 @@ export default function Home() {
       fetchInitialData();
     }
   }, [router, toast]);
+  
+  useEffect(() => {
+      const q = query(
+          collection(db, 'orders'), 
+          where('status', 'in', ['Preparing', 'Ready', 'Completed'])
+        );
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const liveOrders: ActiveOrder[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              liveOrders.push({
+                  id: doc.id,
+                  ...data,
+                  createdAt: (data.createdAt as Timestamp).toDate(),
+              } as ActiveOrder);
+          });
+          setActiveOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      }, (error) => {
+        console.error("Error in orders snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
+      });
+
+      return () => unsubscribe();
+  }, [toast]);
 
   const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;

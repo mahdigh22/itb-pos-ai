@@ -9,7 +9,7 @@ import { getTables } from '@/app/admin/tables/actions';
 import type { ActiveOrder, RestaurantTable, Employee } from '@/lib/types';
 import OrderProgress from '@/components/pos/order-progress';
 import { useToast } from "@/hooks/use-toast"
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2, LogOut, UserCircle } from 'lucide-react';
 import ItbIcon from '@/components/itb-icon';
@@ -56,8 +56,7 @@ export default function KitchenPage() {
       
       const q = query(
           collection(db, 'orders'), 
-          where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-          orderBy('createdAt', 'desc')
+          where('status', 'in', ['Preparing', 'Ready', 'Completed'])
         );
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const liveOrders: ActiveOrder[] = [];
@@ -69,7 +68,7 @@ export default function KitchenPage() {
                   createdAt: (data.createdAt as Timestamp).toDate(),
               } as ActiveOrder);
           });
-          setOrders(liveOrders);
+          setOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
       }, (error) => {
         console.error("Error in kitchen snapshot listener: ", error);
         toast({

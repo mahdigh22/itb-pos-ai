@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -120,8 +120,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
     useEffect(() => {
         const q = query(
           collection(db, 'orders'), 
-          where('status', 'in', ['Preparing', 'Ready', 'Completed']),
-          orderBy('createdAt', 'desc')
+          where('status', 'in', ['Preparing', 'Ready', 'Completed'])
         );
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
           const liveOrders: ActiveOrder[] = [];
@@ -133,7 +132,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
                   createdAt: (data.createdAt as Timestamp).toDate(),
               } as ActiveOrder);
           });
-          setOrders(liveOrders);
+          setOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
       }, (error) => {
         console.error("Error in orders snapshot listener: ", error);
         toast({
