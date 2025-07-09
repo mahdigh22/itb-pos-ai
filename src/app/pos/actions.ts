@@ -200,7 +200,7 @@ export async function getOrders(): Promise<ActiveOrder[]> {
   try {
     const q = query(
         collection(db, 'orders'), 
-        where('status', '!=', 'Archived'),
+        where('status', 'in', ['Preparing', 'Ready', 'Completed']),
         orderBy('status'),
         orderBy('createdAt', 'desc')
     );
