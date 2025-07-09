@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -8,6 +9,8 @@ import type { Ingredient } from '@/lib/types';
 export async function addIngredient(formData: FormData) {
   const newIngredient: Omit<Ingredient, 'id'> = {
     name: formData.get('name') as string,
+    stock: parseFloat(formData.get('stock') as string) || 0,
+    unit: formData.get('unit') as string || 'units',
   };
 
   try {
@@ -29,7 +32,13 @@ export async function getIngredients(): Promise<Ingredient[]> {
     const querySnapshot = await getDocs(collection(db, 'ingredients'));
     const ingredients: Ingredient[] = [];
     querySnapshot.forEach((doc) => {
-      ingredients.push({ id: doc.id, ...doc.data() } as Ingredient);
+      const data = doc.data();
+      ingredients.push({ 
+        id: doc.id,
+        name: data.name,
+        stock: data.stock || 0,
+        unit: data.unit || 'units',
+       } as Ingredient);
     });
     return ingredients.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {

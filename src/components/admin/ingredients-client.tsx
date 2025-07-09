@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useOptimistic } from 'react';
@@ -27,6 +28,8 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
         const newIngredient: Ingredient = {
             id: `optimistic-${Date.now()}`,
             name: formData.get('name') as string,
+            stock: parseFloat(formData.get('stock') as string) || 0,
+            unit: formData.get('unit') as string || 'units',
         };
         
         addOptimisticIngredient(newIngredient);
@@ -55,7 +58,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold font-headline">Ingredient Management</h1>
-                    <p className="text-muted-foreground">Manage your master list of ingredients.</p>
+                    <p className="text-muted-foreground">Manage your master list of ingredients and their stock levels.</p>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
                     <DialogTrigger asChild>
@@ -74,6 +77,16 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                                 <Label htmlFor="name">Ingredient Name</Label>
                                 <Input id="name" name="name" placeholder="e.g. Cherry Tomatoes" required />
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="stock">Initial Stock</Label>
+                                    <Input id="stock" name="stock" type="number" placeholder="1000" required defaultValue="0" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="unit">Unit of Measure</Label>
+                                    <Input id="unit" name="unit" placeholder="e.g., grams, pcs, ml" required defaultValue="pcs" />
+                                </div>
+                            </div>
                             <DialogFooter>
                                 <DialogClose asChild>
                                     <Button type="button" variant="outline">Cancel</Button>
@@ -87,13 +100,14 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
             <Card>
                 <CardHeader>
                     <CardTitle>All Ingredients</CardTitle>
-                    <CardDescription>A list of all available ingredients from the database.</CardDescription>
+                    <CardDescription>A list of all available ingredients and their stock levels.</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
+                                <TableHead>Stock Level</TableHead>
                                 <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -101,6 +115,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                             {optimisticIngredients.map((ingredient) => (
                                 <TableRow key={ingredient.id}>
                                     <TableCell className="font-medium">{ingredient.name}</TableCell>
+                                    <TableCell>{ingredient.stock} {ingredient.unit}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

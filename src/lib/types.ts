@@ -4,6 +4,8 @@ export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
 export interface Ingredient {
   id: string;
   name: string;
+  stock: number; // The current quantity in stock
+  unit: string; // e.g., 'grams', 'pcs', 'ml'
 }
 
 export interface MenuItem {
@@ -20,6 +22,7 @@ export interface MenuItem {
   ingredientLinks?: {
     ingredientId: string;
     isOptional: boolean;
+    quantity: number; // The amount of this ingredient used in the recipe
   }[];
 
   // Populated in getMenuItems for UI consumption
@@ -27,6 +30,9 @@ export interface MenuItem {
     id: string;
     name: string;
     isOptional: boolean;
+    quantity: number; // The amount of this ingredient used in the recipe
+    unit: string; // Unit for context, e.g. 'grams'
+    stock: number;
   }[];
 }
 

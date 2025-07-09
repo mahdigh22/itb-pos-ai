@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -41,7 +42,13 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 
     const ingredientsMap = new Map<string, Ingredient>();
     ingredientsSnapshot.forEach(doc => {
-        ingredientsMap.set(doc.id, { id: doc.id, ...doc.data() } as Ingredient);
+        const data = doc.data();
+        ingredientsMap.set(doc.id, { 
+          id: doc.id,
+          name: data.name,
+          stock: data.stock || 0,
+          unit: data.unit || 'units',
+        } as Ingredient);
     });
 
     const items: MenuItem[] = [];
@@ -54,9 +61,13 @@ export async function getMenuItems(): Promise<MenuItem[]> {
           menuItem.ingredients = menuItem.ingredientLinks
             .map(link => {
                 const ingredient = ingredientsMap.get(link.ingredientId);
-                return ingredient ? { ...ingredient, isOptional: link.isOptional } : null;
+                return ingredient ? { 
+                  ...ingredient, 
+                  isOptional: link.isOptional, 
+                  quantity: link.quantity || 1, // Default quantity to 1 if not specified
+                } : null;
             })
-            .filter(Boolean) as { id: string; name: string; isOptional: boolean }[];
+            .filter(Boolean) as MenuItem['ingredients'];
       }
 
       items.push(menuItem);
