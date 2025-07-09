@@ -11,6 +11,7 @@ export async function addIngredient(formData: FormData) {
     name: formData.get('name') as string,
     stock: parseFloat(formData.get('stock') as string) || 0,
     unit: formData.get('unit') as string || 'units',
+    cost: parseFloat(formData.get('cost') as string) || 0,
   };
 
   try {
@@ -32,6 +33,7 @@ export async function updateIngredient(id: string, formData: FormData) {
         name: formData.get('name') as string,
         stock: parseFloat(formData.get('stock') as string) || 0,
         unit: formData.get('unit') as string || 'units',
+        cost: parseFloat(formData.get('cost') as string) || 0,
     };
 
     try {
@@ -76,6 +78,7 @@ export async function getIngredients(): Promise<Ingredient[]> {
         name: data.name,
         stock: data.stock || 0,
         unit: data.unit || 'units',
+        cost: data.cost || 0,
        } as Ingredient);
     });
     return ingredients.sort((a, b) => a.name.localeCompare(b.name));

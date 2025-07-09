@@ -18,6 +18,7 @@ import type { MenuItem, Category, Ingredient } from "@/lib/types";
 import { addMenuItem, addCategory, updateMenuItem, deleteMenuItem, updateCategory, deleteCategory } from '@/app/admin/menu/actions';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface MenuClientProps {
     initialMenuItems: MenuItem[];
@@ -174,7 +175,8 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
     );
 
     const handleItemAddSubmit = async (formData: FormData) => {
-        // Optimistic update not easily possible due to computed fields. Let server action handle it.
+        // Optimistic update not easily possible due to computed fields (cost).
+        // Let server action handle it.
         setItemAddDialogOpen(false);
         const result = await addMenuItem(formData);
         if (!result.success) {
@@ -259,17 +261,26 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead className="hidden sm:table-cell">Category</TableHead>
-                                <TableHead>Price</TableHead>
+                                <TableHead>Sell Price</TableHead>
+                                <TableHead>Cost</TableHead>
+                                <TableHead>Margin</TableHead>
                                 <TableHead className="hidden md:table-cell">Prep Time</TableHead>
                                 <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {optimisticMenuItems.map((item) => (
+                            {optimisticMenuItems.map((item) => {
+                                const cost = item.cost || 0;
+                                const margin = item.price > 0 ? ((item.price - cost) / item.price) * 100 : 0;
+                                const marginColor = margin < 25 ? 'text-destructive' : margin < 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400';
+
+                                return (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{optimisticCategories.find(c => c.id === item.category)?.name}</TableCell>
                                     <TableCell>${item.price.toFixed(2)}</TableCell>
+                                    <TableCell>${cost.toFixed(2)}</TableCell>
+                                    <TableCell className={cn("font-medium", marginColor)}>{margin.toFixed(1)}%</TableCell>
                                     <TableCell className="hidden md:table-cell">{item.preparationTime} mins</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
@@ -281,7 +292,7 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )})}
                         </TableBody>
                     </Table>
                 </CardContent>

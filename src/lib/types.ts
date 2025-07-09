@@ -6,6 +6,7 @@ export interface Ingredient {
   name: string;
   stock: number; // The current quantity in stock
   unit: string; // e.g., 'grams', 'pcs', 'ml'
+  cost: number; // The cost per unit
 }
 
 export interface Extra {
@@ -18,7 +19,8 @@ export interface MenuItem {
   id: string;
   name: string;
   description: string;
-  price: number;
+  price: number; // This is the sell price (customer price)
+  cost?: number; // This is the calculated cost of goods sold
   category: string;
   imageUrl: string;
   imageHint: string;
@@ -39,6 +41,7 @@ export interface MenuItem {
     quantity: number; // The amount of this ingredient used in the recipe
     unit: string; // Unit for context, e.g. 'grams'
     stock: number;
+    cost: number;
   }[];
 }
 

@@ -11,7 +11,7 @@ export async function addMenuItem(formData: FormData) {
   const ingredientLinksString = formData.get('ingredientLinks') as string;
   const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
 
-  const newItemData: Omit<MenuItem, 'id'> = {
+  const newItemData: Omit<MenuItem, 'id' | 'cost'> = {
     name: formData.get('name') as string,
     description: formData.get('description') as string,
     price: parseFloat(formData.get('price') as string),
@@ -86,6 +86,7 @@ export async function getMenuItems(): Promise<MenuItem[]> {
           name: data.name,
           stock: data.stock || 0,
           unit: data.unit || 'units',
+          cost: data.cost || 0,
         } as Ingredient);
     });
 
@@ -93,21 +94,28 @@ export async function getMenuItems(): Promise<MenuItem[]> {
     menuItemsSnapshot.forEach((doc) => {
       const data = doc.data();
       const menuItem = { id: doc.id, ...data } as MenuItem;
+      
+      let calculatedCost = 0;
 
       // Resolve ingredient links
       if (menuItem.ingredientLinks) {
           menuItem.ingredients = menuItem.ingredientLinks
             .map(link => {
                 const ingredient = ingredientsMap.get(link.ingredientId);
-                return ingredient ? { 
-                  ...ingredient, 
-                  isOptional: link.isOptional, 
-                  quantity: link.quantity || 1, // Default quantity to 1 if not specified
-                } : null;
+                if (ingredient) {
+                    calculatedCost += (ingredient.cost || 0) * (link.quantity || 0);
+                    return { 
+                      ...ingredient, 
+                      isOptional: link.isOptional, 
+                      quantity: link.quantity || 1, // Default quantity to 1 if not specified
+                    };
+                }
+                return null;
             })
             .filter(Boolean) as MenuItem['ingredients'];
       }
-
+      
+      menuItem.cost = calculatedCost;
       items.push(menuItem);
     });
 

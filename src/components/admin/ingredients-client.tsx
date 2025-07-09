@@ -24,13 +24,13 @@ function IngredientForm({ ingredient, onFormSubmit, onCancel }) {
                 <Label htmlFor="name">Ingredient Name</Label>
                 <Input id="name" name="name" placeholder="e.g. Cherry Tomatoes" required defaultValue={ingredient?.name} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="stock">Initial Stock</Label>
                     <Input id="stock" name="stock" type="number" placeholder="1000" required defaultValue={ingredient?.stock || 0} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="unit">Unit of Measure</Label>
+                    <Label htmlFor="unit">Unit</Label>
                     <Select name="unit" required defaultValue={ingredient?.unit || "pcs"}>
                         <SelectTrigger id="unit">
                             <SelectValue placeholder="Select a unit" />
@@ -47,6 +47,10 @@ function IngredientForm({ ingredient, onFormSubmit, onCancel }) {
                             <SelectItem value="oz">ounce (oz)</SelectItem>
                         </SelectContent>
                     </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="cost">Cost per Unit</Label>
+                    <Input id="cost" name="cost" type="number" step="0.01" placeholder="0.50" required defaultValue={ingredient?.cost || 0} />
                 </div>
             </div>
             <DialogFooter>
@@ -84,6 +88,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
             name: formData.get('name') as string,
             stock: parseFloat(formData.get('stock') as string) || 0,
             unit: formData.get('unit') as string || 'units',
+            cost: parseFloat(formData.get('cost') as string) || 0,
         };
         
         setAddDialogOpen(false);
@@ -144,6 +149,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Stock Level</TableHead>
+                                <TableHead>Cost per Unit</TableHead>
                                 <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -152,6 +158,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                                 <TableRow key={ingredient.id}>
                                     <TableCell className="font-medium">{ingredient.name}</TableCell>
                                     <TableCell>{ingredient.stock} {ingredient.unit}</TableCell>
+                                    <TableCell>${ingredient.cost.toFixed(2)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
