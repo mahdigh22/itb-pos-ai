@@ -7,8 +7,9 @@ import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
+import { getSettings } from '@/app/admin/settings/actions';
 import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
-import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -46,6 +47,7 @@ export default function Home() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
+  const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[] } | null>(null);
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   
@@ -62,14 +64,16 @@ export default function Home() {
           fetchedCategories, 
           fetchedChecks, 
           fetchedOrders,
-          fetchedExtras
+          fetchedExtras,
+          fetchedSettings,
         ] = await Promise.all([
             getUsers(),
             getMenuItems(),
             getCategories(),
             getChecks(),
             getOrders(),
-            getExtras()
+            getExtras(),
+            getSettings(),
         ]);
         setMembers(fetchedMembers);
         setMenuItems(fetchedMenuItems);
@@ -77,6 +81,7 @@ export default function Home() {
         setChecks(fetchedChecks);
         setActiveOrders(fetchedOrders);
         setAvailableExtras(fetchedExtras);
+        setSettings(fetchedSettings);
         
         if (fetchedChecks.length === 0) {
             const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
@@ -224,15 +229,21 @@ export default function Home() {
   };
 
   const handleFinalizeAndPay = async () => {
-    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType) return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType || !settings) return;
 
     const subtotal = activeCheck.items.reduce((acc, item) => {
       const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
       const totalItemPrice = (item.price + extrasPrice) * item.quantity;
       return acc + totalItemPrice;
     }, 0);
-    const tax = subtotal * 0.08; // TODO: Get from settings
-    const total = subtotal + tax;
+
+    const selectedPriceList = settings.priceLists.find(pl => pl.id === activeCheck.priceListId);
+    const discountPercentage = selectedPriceList?.discount || 0;
+    const discountAmount = subtotal * (discountPercentage / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const tax = discountedSubtotal * (settings.taxRate / 100);
+    const total = discountedSubtotal + tax;
+    
     const totalPreparationTime = activeCheck.items.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
 
     const newOrderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date } = {
@@ -245,6 +256,8 @@ export default function Home() {
       orderType: activeCheck.orderType,
       tableNumber: activeCheck.tableNumber,
       customerName: activeCheck.customerName,
+      priceListId: activeCheck.priceListId,
+      discountApplied: discountPercentage,
     };
 
     await addOrder(newOrderData);
@@ -305,7 +318,7 @@ export default function Home() {
     router.push('/login');
   };
 
-  if (isLoading) {
+  if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -373,6 +386,8 @@ export default function Home() {
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
                 onUpdateDetails={updateActiveCheck}
+                priceLists={settings.priceLists}
+                taxRate={settings.taxRate}
               />
             </div>
           </div>

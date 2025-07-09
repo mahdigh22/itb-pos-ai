@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2, Send } from 'lucide-react';
-import type { OrderItem, Check, OrderType } from '@/lib/types';
+import type { OrderItem, Check, OrderType, PriceList } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,9 +28,9 @@ interface OrderSummaryProps {
   onCustomizeItem: (item: OrderItem) => void;
   onSwitchCheck: (checkId: string) => void;
   onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
+  priceLists: PriceList[];
+  taxRate: number;
 }
-
-const TAX_RATE = 0.08; // 8%
 
 export default function OrderSummary({
   activeCheck,
@@ -44,16 +44,25 @@ export default function OrderSummary({
   onCustomizeItem,
   onSwitchCheck,
   onUpdateDetails,
+  priceLists,
+  taxRate,
 }: OrderSummaryProps) {
   const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
+
   const subtotal = order.reduce((acc, item) => {
     const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
     const totalItemPrice = (item.price + extrasPrice) * item.quantity;
     return acc + totalItemPrice;
   }, 0);
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + tax;
+  
+  const selectedPriceList = priceLists.find(pl => pl.id === activeCheck?.priceListId);
+  const discountPercentage = selectedPriceList?.discount || 0;
+  const discountAmount = subtotal * (discountPercentage / 100);
+  const discountedSubtotal = subtotal - discountAmount;
+  const tax = discountedSubtotal * (taxRate / 100);
+  const total = discountedSubtotal + tax;
+
   const hasNewItems = activeCheck?.items.some(item => item.status === 'new') ?? false;
   
   const handleConfirmClear = () => {
@@ -132,6 +141,28 @@ export default function OrderSummary({
                 />
             </TabsContent>
         </Tabs>
+
+        <Separator className="my-4" />
+
+        <div className="space-y-1">
+            <Label htmlFor="price-list">Price List</Label>
+            <Select 
+                value={activeCheck.priceListId || 'none'} 
+                onValueChange={(value) => onUpdateDetails({ priceListId: value === 'none' ? undefined : value })}
+                name="price-list"
+            >
+                <SelectTrigger id="price-list">
+                    <SelectValue placeholder="Select a price list..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="none">None (Default)</SelectItem>
+                    {priceLists.map(pl => (
+                        <SelectItem key={pl.id} value={pl.id}>{pl.name} ({pl.discount}%)</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+
 
         <Separator className="my-4" />
 
@@ -232,8 +263,14 @@ export default function OrderSummary({
                   <span>Subtotal</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
+                 {discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                        <span>Discount ({discountPercentage}%)</span>
+                        <span>-${discountAmount.toFixed(2)}</span>
+                    </div>
+                )}
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Tax ({(TAX_RATE * 100).toFixed(0)}%)</span>
+                  <span>Tax ({taxRate.toFixed(1)}%)</span>
                   <span>${tax.toFixed(2)}</span>
                 </div>
                 <Separator className="my-2"/>

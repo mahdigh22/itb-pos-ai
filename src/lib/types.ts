@@ -84,6 +84,8 @@ export interface ActiveOrder {
   orderType: OrderType;
   tableNumber?: string;
   customerName?: string;
+  priceListId?: string;
+  discountApplied?: number; // as a percentage
 }
 
 // This is a "check" or "tab" that is currently being built
@@ -94,6 +96,7 @@ export interface Check {
     orderType?: OrderType;
     tableNumber?: string;
     customerName?: string;
+    priceListId?: string;
 }
 
 export interface Employee {

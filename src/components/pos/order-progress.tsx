@@ -69,6 +69,9 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                         {order.orderType === 'Delivery' && `For ${order.customerName || 'N/A'}`}
                         {' · '}
                         Total: ${order.total.toFixed(2)}
+                        {order.discountApplied && order.discountApplied > 0 && (
+                            <span className="text-green-600 dark:text-green-400 font-medium"> ({order.discountApplied}% off)</span>
+                        )}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
