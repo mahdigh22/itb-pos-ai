@@ -110,7 +110,7 @@ export default function Home() {
     }
   }, [router]);
 
-  const updateActiveCheck = async (updates: Partial<Omit<Check, 'id'>>) => {
+  const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;
     
     // Optimistically update the UI
@@ -121,6 +121,40 @@ export default function Home() {
     );
     
     await updateCheck(activeCheckId, updates);
+  };
+
+  const handleTableSelect = async (tableId: string) => {
+    const currentActiveCheckId = activeCheckId;
+    if (!currentActiveCheckId) return;
+
+    // Find if another check already has this tableId. Ignore the current active check.
+    const existingCheckForTable = checks.find(c => c.tableId === tableId && c.id !== currentActiveCheckId);
+
+    if (existingCheckForTable) {
+        const currentCheck = checks.find(c => c.id === currentActiveCheckId);
+        
+        // Switch to the existing check
+        setActiveCheckId(existingCheckForTable.id);
+        
+        toast({
+            title: "Switched to Existing Check",
+            description: `Table ${existingCheckForTable.tableName} already has an open check. Switched to it.`,
+        });
+
+        // If the check we are switching FROM is new and empty, delete it.
+        if (currentCheck && currentCheck.items.length === 0) {
+            // Optimistically remove from state
+            setChecks(prev => prev.filter(c => c.id !== currentActiveCheckId));
+            // Call server action to delete from DB
+            await deleteCheck(currentActiveCheckId);
+        }
+
+    } else {
+        const selectedTable = tables.find(t => t.id === tableId);
+        if (selectedTable) {
+            updateActiveCheckDetails({ tableId: selectedTable.id, tableName: selectedTable.name });
+        }
+    }
   };
 
 
@@ -142,7 +176,7 @@ export default function Home() {
       newItems = [...order, newOrderItem];
     }
 
-    updateActiveCheck({ items: newItems });
+    updateActiveCheckDetails({ items: newItems });
   };
 
   const handleUpdateQuantity = (lineItemId: string, quantity: number) => {
@@ -151,16 +185,16 @@ export default function Home() {
       return;
     }
     const newItems = (activeCheck?.items ?? []).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' } : item))
-    updateActiveCheck({ items: newItems });
+    updateActiveCheckDetails({ items: newItems });
   };
 
   const handleRemoveItem = (lineItemId: string) => {
     const newItems = (activeCheck?.items ?? []).filter((item) => item.lineItemId !== lineItemId);
-    updateActiveCheck({ items: newItems });
+    updateActiveCheckDetails({ items: newItems });
   };
   
   const handleClearCheck = () => {
-    updateActiveCheck({ items: [] });
+    updateActiveCheckDetails({ items: [] });
   };
   
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
@@ -170,7 +204,7 @@ export default function Home() {
       const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
       const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}`, status: 'new' as const };
       setCustomizingItem(newItemToCustomize);
-      updateActiveCheck({ items: [...otherItems, originalItem, newItemToCustomize] });
+      updateActiveCheckDetails({ items: [...otherItems, originalItem, newItemToCustomize] });
     } else {
       setCustomizingItem(itemToCustomize);
     }
@@ -183,7 +217,7 @@ export default function Home() {
     const newItems = (activeCheck?.items ?? []).map(item => 
         item.lineItemId === lineItemId ? { ...item, customizations, status: 'new' as const } : item
       );
-    updateActiveCheck({ items: newItems });
+    updateActiveCheckDetails({ items: newItems });
     setCustomizingItem(null);
   };
 
@@ -468,7 +502,8 @@ export default function Home() {
                 onClearCheck={handleClearCheck}
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
-                onUpdateDetails={updateActiveCheck}
+                onUpdateCheckDetails={updateActiveCheckDetails}
+                onTableSelect={handleTableSelect}
                 priceLists={settings.priceLists}
                 taxRate={settings.taxRate}
                 tables={tables}

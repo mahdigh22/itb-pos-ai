@@ -27,7 +27,8 @@ interface OrderSummaryProps {
   onClearCheck: () => void;
   onCustomizeItem: (item: OrderItem) => void;
   onSwitchCheck: (checkId: string) => void;
-  onUpdateDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
+  onUpdateCheckDetails: (updates: Partial<Omit<Check, 'id'>>) => void;
+  onTableSelect: (tableId: string) => void;
   priceLists: PriceList[];
   taxRate: number;
   tables: RestaurantTable[];
@@ -44,7 +45,8 @@ export default function OrderSummary({
   onClearCheck,
   onCustomizeItem,
   onSwitchCheck,
-  onUpdateDetails,
+  onUpdateCheckDetails,
+  onTableSelect,
   priceLists,
   taxRate,
   tables,
@@ -79,10 +81,7 @@ export default function OrderSummary({
   };
 
   const handleTableSelection = (tableId: string) => {
-    const selectedTable = tables.find(t => t.id === tableId);
-    if (selectedTable) {
-        onUpdateDetails({ tableId: selectedTable.id, tableName: selectedTable.name });
-    }
+    onTableSelect(tableId);
   };
 
   if (!activeCheck) {
@@ -130,7 +129,7 @@ export default function OrderSummary({
       <CardContent className="flex-grow flex flex-col min-h-0">
         <Tabs 
             value={activeCheck.orderType || ""} 
-            onValueChange={(value) => onUpdateDetails({ orderType: value as OrderType })}
+            onValueChange={(value) => onUpdateCheckDetails({ orderType: value as OrderType })}
             className="w-full"
         >
             <TabsList className="grid w-full grid-cols-2">
@@ -161,7 +160,7 @@ export default function OrderSummary({
                     id="customer-name" 
                     placeholder="e.g., John Doe" 
                     value={activeCheck.customerName || ''}
-                    onChange={(e) => onUpdateDetails({ customerName: e.target.value })}
+                    onChange={(e) => onUpdateCheckDetails({ customerName: e.target.value })}
                 />
             </TabsContent>
         </Tabs>
