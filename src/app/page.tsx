@@ -124,36 +124,11 @@ export default function Home() {
   };
 
   const handleTableSelect = async (tableId: string) => {
-    const currentActiveCheckId = activeCheckId;
-    if (!currentActiveCheckId) return;
+    if (!activeCheckId) return;
 
-    // Find if another check already has this tableId. Ignore the current active check.
-    const existingCheckForTable = checks.find(c => c.tableId === tableId && c.id !== currentActiveCheckId);
-
-    if (existingCheckForTable) {
-        const currentCheck = checks.find(c => c.id === currentActiveCheckId);
-        
-        // Switch to the existing check
-        setActiveCheckId(existingCheckForTable.id);
-        
-        toast({
-            title: "Switched to Existing Check",
-            description: `Table ${existingCheckForTable.tableName} already has an open check. Switched to it.`,
-        });
-
-        // If the check we are switching FROM is new and empty, delete it.
-        if (currentCheck && currentCheck.items.length === 0) {
-            // Optimistically remove from state
-            setChecks(prev => prev.filter(c => c.id !== currentActiveCheckId));
-            // Call server action to delete from DB
-            await deleteCheck(currentActiveCheckId);
-        }
-
-    } else {
-        const selectedTable = tables.find(t => t.id === tableId);
-        if (selectedTable) {
-            updateActiveCheckDetails({ tableId: selectedTable.id, tableName: selectedTable.name });
-        }
+    const selectedTable = tables.find(t => t.id === tableId);
+    if (selectedTable) {
+        updateActiveCheckDetails({ tableId: selectedTable.id, tableName: selectedTable.name });
     }
   };
 
