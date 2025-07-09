@@ -18,7 +18,6 @@ interface CustomizeItemDialogProps {
   onClose: () => void;
 }
 
-// Some example extras. In a real app this might come from an API.
 const availableExtras = ['Bacon', 'Extra Cheese', 'Avocado', 'Fried Egg'];
 
 export default function CustomizeItemDialog({ item, onSave, onClose }: CustomizeItemDialogProps) {
@@ -26,12 +25,13 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
   const [added, setAdded] = useState<string[]>([]);
   const [customExtra, setCustomExtra] = useState('');
 
+  const optionalIngredients = item?.ingredients?.filter(i => i.isOptional) ?? [];
+
   useEffect(() => {
     if (item) {
       setRemoved(item.customizations?.removed || []);
       setAdded(item.customizations?.added || []);
     } else {
-        // Reset when dialog is closed/item is null
         setRemoved([]);
         setAdded([]);
         setCustomExtra('');
@@ -40,11 +40,11 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
 
   if (!item) return null;
 
-  const handleIngredientToggle = (ingredient: string) => {
+  const handleIngredientToggle = (ingredientName: string) => {
     setRemoved(prev => 
-        prev.includes(ingredient) 
-        ? prev.filter(i => i !== ingredient) 
-        : [...prev, ingredient]
+        prev.includes(ingredientName) 
+        ? prev.filter(i => i !== ingredientName) 
+        : [...prev, ingredientName]
     );
   };
   
@@ -75,24 +75,24 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
           <DialogDescription>Add or remove ingredients to make it just right.</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-4">
-            {item.ingredients && item.ingredients.length > 0 && (
+            {optionalIngredients.length > 0 && (
                 <div className="space-y-3">
-                    <h4 className="font-semibold">Ingredients</h4>
+                    <h4 className="font-semibold">Optional Ingredients</h4>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {item.ingredients.map(ingredient => (
-                            <div key={ingredient} className="flex items-center space-x-2">
+                        {optionalIngredients.map(ingredient => (
+                            <div key={ingredient.id} className="flex items-center space-x-2">
                                 <Checkbox 
-                                    id={`ingredient-${ingredient.replace(/\s/g, '')}`} 
-                                    checked={!removed.includes(ingredient)}
-                                    onCheckedChange={() => handleIngredientToggle(ingredient)}
+                                    id={`ingredient-${ingredient.id}`} 
+                                    checked={!removed.includes(ingredient.name)}
+                                    onCheckedChange={() => handleIngredientToggle(ingredient.name)}
                                 />
-                                <Label htmlFor={`ingredient-${ingredient.replace(/\s/g, '')}`} className="capitalize cursor-pointer">{ingredient}</Label>
+                                <Label htmlFor={`ingredient-${ingredient.id}`} className="capitalize cursor-pointer">{ingredient.name}</Label>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
-             {(item.ingredients && item.ingredients.length > 0) && <Separator />}
+             {optionalIngredients.length > 0 && <Separator />}
             <div className="space-y-3">
                 <h4 className="font-semibold">Add Extras</h4>
                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">

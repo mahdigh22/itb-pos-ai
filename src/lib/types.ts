@@ -1,6 +1,11 @@
 
 export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
 
+export interface Ingredient {
+  id: string;
+  name: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -9,8 +14,20 @@ export interface MenuItem {
   category: string;
   imageUrl: string;
   imageHint: string;
-  ingredients?: string[];
   preparationTime: number; // in minutes
+  
+  // Stored in Firestore
+  ingredientLinks?: {
+    ingredientId: string;
+    isOptional: boolean;
+  }[];
+
+  // Populated in getMenuItems for UI consumption
+  ingredients?: {
+    id: string;
+    name: string;
+    isOptional: boolean;
+  }[];
 }
 
 export interface Category {

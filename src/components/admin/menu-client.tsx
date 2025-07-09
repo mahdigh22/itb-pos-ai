@@ -3,7 +3,7 @@
 import { useState, useRef, useOptimistic } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, Clock } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,38 +11,141 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import type { MenuItem, Category } from "@/lib/types";
+import { Checkbox } from '@/components/ui/checkbox';
+import type { MenuItem, Category, Ingredient } from "@/lib/types";
 import { addMenuItem, addCategory } from '@/app/admin/menu/actions';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface MenuClientProps {
     initialMenuItems: MenuItem[];
     initialCategories: Category[];
+    availableIngredients: Ingredient[];
 }
 
-export default function MenuClient({ initialMenuItems, initialCategories }: MenuClientProps) {
+type IngredientLink = {
+    id: string; // client-side unique id
+    ingredientId: string;
+    isOptional: boolean;
+}
+
+function AddMenuItemDialog({ open, onOpenChange, categories, ingredients, onFormSubmit }) {
+    const formRef = useRef<HTMLFormElement>(null);
+    const [ingredientLinks, setIngredientLinks] = useState<IngredientLink[]>([]);
+
+    const addIngredientLink = () => {
+        setIngredientLinks(prev => [...prev, { id: `link-${Date.now()}`, ingredientId: '', isOptional: false }]);
+    };
+    
+    const updateIngredientLink = (id: string, field: 'ingredientId' | 'isOptional', value: string | boolean) => {
+        setIngredientLinks(prev => prev.map(link => link.id === id ? { ...link, [field]: value } : link));
+    };
+
+    const removeIngredientLink = (id: string) => {
+        setIngredientLinks(prev => prev.filter(link => link.id !== id));
+    }
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const finalLinks = ingredientLinks
+            .filter(link => link.ingredientId)
+            .map(({id, ...rest}) => rest); // remove client-side id
+        formData.set('ingredientLinks', JSON.stringify(finalLinks));
+        onFormSubmit(formData);
+        formRef.current?.reset();
+        setIngredientLinks([]);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                setIngredientLinks([]);
+            }
+            onOpenChange(isOpen);
+        }}>
+            <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Item</Button></DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Add New Menu Item</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} ref={formRef} className="space-y-4">
+                    <ScrollArea className="max-h-[60vh] p-1">
+                        <div className="space-y-4 pr-6">
+                            <div className="space-y-2"><Label htmlFor="item-name">Item Name</Label><Input id="item-name" name="name" placeholder="e.g. Classic Burger" required /></div>
+                            <div className="space-y-2"><Label htmlFor="item-description">Description</Label><Textarea id="item-description" name="description" placeholder="A brief description of the item." /></div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label htmlFor="item-price">Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required /></div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="item-category">Category</Label>
+                                    <Select name="category" required>
+                                        <SelectTrigger id="item-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                                        <SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue="5" required /></div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <Label>Ingredients</Label>
+                                <div className="space-y-2 rounded-md border p-3">
+                                    {ingredientLinks.map(link => (
+                                        <div key={link.id} className="flex items-center gap-2">
+                                            <Select value={link.ingredientId} onValueChange={(val) => updateIngredientLink(link.id, 'ingredientId', val)}>
+                                                <SelectTrigger><SelectValue placeholder="Select Ingredient"/></SelectTrigger>
+                                                <SelectContent>
+                                                    {ingredients.map(ing => <SelectItem key={ing.id} value={ing.id}>{ing.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox id={`optional-${link.id}`} checked={link.isOptional} onCheckedChange={(val) => updateIngredientLink(link.id, 'isOptional', Boolean(val))} />
+                                                <Label htmlFor={`optional-${link.id}`}>Optional</Label>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeIngredientLink(link.id)}><X className="h-4 w-4"/></Button>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="outline" size="sm" className="w-full" onClick={addIngredientLink}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" /></div>
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit">Add Item</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export default function MenuClient({ initialMenuItems, initialCategories, availableIngredients }: MenuClientProps) {
     const { toast } = useToast();
     
-    // States for dialogs and forms
     const [isItemDialogOpen, setItemDialogOpen] = useState(false);
     const [isCategoryDialogOpen, setCategoryDialogOpen] = useState(false);
-    const itemFormRef = useRef<HTMLFormElement>(null);
     const categoryFormRef = useRef<HTMLFormElement>(null);
 
-    // Optimistic state for Menu Items
     const [optimisticMenuItems, addOptimisticMenuItem] = useOptimistic<MenuItem[], MenuItem>(
         initialMenuItems,
         (state, newItem) => [...state, newItem].sort((a,b) => a.name.localeCompare(b.name))
     );
 
-    // Optimistic state for Categories
     const [optimisticCategories, addOptimisticCategory] = useOptimistic<Category[], Category>(
         initialCategories,
         (state, newCategory) => [...state, newCategory].sort((a,b) => a.name.localeCompare(b.name))
     );
 
     const handleItemFormSubmit = async (formData: FormData) => {
-        const ingredientsString = formData.get('ingredients') as string | null;
+        const ingredientLinksString = formData.get('ingredientLinks') as string;
+        const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
+
         const newItem = {
             id: `optimistic-item-${Date.now()}`,
             name: formData.get('name') as string,
@@ -52,10 +155,14 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
             imageUrl: formData.get('imageUrl') as string || 'https://placehold.co/600x400.png',
             imageHint: 'food placeholder',
             preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
-            ingredients: ingredientsString ? ingredientsString.split(',').map(i => i.trim()).filter(Boolean) : [],
+            ingredientLinks: ingredientLinks,
+            ingredients: ingredientLinks.map(link => {
+                const ing = availableIngredients.find(i => i.id === link.ingredientId);
+                return ing ? { ...ing, isOptional: link.isOptional } : null;
+            }).filter(Boolean),
         };
-        addOptimisticMenuItem(newItem);
-        itemFormRef.current?.reset();
+
+        addOptimisticMenuItem(newItem as MenuItem);
         setItemDialogOpen(false);
         
         const result = await addMenuItem(formData);
@@ -90,40 +197,13 @@ export default function MenuClient({ initialMenuItems, initialCategories }: Menu
                     <h1 className="text-3xl font-bold font-headline">Menu Management</h1>
                     <p className="text-muted-foreground">Manage your categories and menu items from the database.</p>
                 </div>
-                 <Dialog open={isItemDialogOpen} onOpenChange={setItemDialogOpen}>
-                    <DialogTrigger asChild><Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Item</Button></DialogTrigger>
-                    <DialogContent className="sm:max-w-[480px]">
-                        <DialogHeader>
-                            <DialogTitle>Add New Menu Item</DialogTitle>
-                        </DialogHeader>
-                        <form action={handleItemFormSubmit} ref={itemFormRef} className="space-y-4">
-                            <div className="space-y-2"><Label htmlFor="item-name">Item Name</Label><Input id="item-name" name="name" placeholder="e.g. Classic Burger" required /></div>
-                            <div className="space-y-2"><Label htmlFor="item-description">Description</Label><Textarea id="item-description" name="description" placeholder="A brief description of the item." /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label htmlFor="item-price">Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required /></div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="item-category">Category</Label>
-                                    <Select name="category" required>
-                                        <SelectTrigger id="item-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                                        <SelectContent>{optimisticCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue="5" required /></div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="item-ingredients">Ingredients (comma-separated)</Label>
-                                <Input id="item-ingredients" name="ingredients" placeholder="e.g. beef patty, lettuce, tomato" />
-                            </div>
-                            <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" /></div>
-                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                <Button type="submit">Add Item</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                 <AddMenuItemDialog 
+                    open={isItemDialogOpen}
+                    onOpenChange={setItemDialogOpen}
+                    categories={optimisticCategories}
+                    ingredients={availableIngredients}
+                    onFormSubmit={handleItemFormSubmit}
+                 />
             </div>
             <Card>
                 <CardHeader><CardTitle>Menu Items</CardTitle><CardDescription>A list of all items on your menu.</CardDescription></CardHeader>
