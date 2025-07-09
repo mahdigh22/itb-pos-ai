@@ -1,4 +1,5 @@
 
+
 export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
 
 export interface RestaurantTable {
@@ -117,6 +118,13 @@ export interface Employee {
   password?: string;
   role: 'Manager' | 'Server' | 'Chef';
   startDate: string; // ISO date string
+}
+
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
 }
 
 export interface PriceList {

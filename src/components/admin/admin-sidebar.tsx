@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import Link from "next/link";
@@ -24,7 +25,7 @@ export default function AdminSidebar() {
     const router = useRouter();
 
     const handleLogout = () => {
-        localStorage.removeItem('currentEmployee');
+        localStorage.removeItem('currentAdmin');
         router.push('/admin/login');
     };
 

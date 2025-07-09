@@ -26,24 +26,24 @@ export default function AdminLayout({
       return;
     }
 
-    let employee = null;
+    let admin = null;
     try {
-        const storedEmployee = localStorage.getItem('currentEmployee');
-        if (storedEmployee) {
-            employee = JSON.parse(storedEmployee);
+        const storedAdmin = localStorage.getItem('currentAdmin');
+        if (storedAdmin) {
+            admin = JSON.parse(storedAdmin);
         }
     } catch (e) {
-        console.error("Failed to parse employee from localStorage");
-        employee = null;
+        console.error("Failed to parse admin from localStorage");
+        admin = null;
     }
 
-    if (employee?.role !== 'Manager') {
+    if (!admin?.id) {
       toast({
           variant: 'destructive',
           title: 'Access Denied',
-          description: 'You do not have permission to access the admin area.'
+          description: 'You must be logged in as an admin to access this area.'
       });
-      router.replace('/');
+      router.replace('/admin/login');
     } else {
       setIsCheckingAuth(false);
     }

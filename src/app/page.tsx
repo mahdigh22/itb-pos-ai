@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -496,13 +497,8 @@ export default function Home() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuLabel>My Account ({currentUser.role})</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                       {currentUser.role === 'Manager' && (
-                          <DropdownMenuItem asChild>
-                              <Link href="/admin"><Settings className="mr-2 h-4 w-4" /> Admin Portal</Link>
-                          </DropdownMenuItem>
-                       )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Log out</span>
