@@ -320,13 +320,13 @@ export default function OrderSummary({
                 <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={!hasNewItems}>
                     <Send className="mr-2 h-4 w-4" /> Send to Kitchen
                 </Button>
-                <Button className="w-full" variant="outline" onClick={onCloseCheck} disabled={order.length === 0}>
+                <Button className="w-full" variant="outline" onClick={onCloseCheck} disabled={order.length === 0 || hasNewItems}>
                     <CreditCard className="mr-2 h-4 w-4" /> Close & Pay Bill
                 </Button>
             </>
         )}
         {activeCheck.orderType === 'Take Away' && (
-             <Button className="w-full" size="lg" onClick={onCloseCheck} disabled={order.length === 0}>
+             <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={order.length === 0}>
                 <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
             </Button>
         )}
