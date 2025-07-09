@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -175,53 +176,53 @@ function OrderRow({ order }: { order: ActiveOrder }) {
     return (
         <Collapsible asChild>
             <>
-            <TableRow>
-                <TableCell>
-                     <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
-                            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            <span className="sr-only">Toggle details</span>
-                        </Button>
-                    </CollapsibleTrigger>
-                </TableCell>
-                <TableCell>
-                    <div className="font-medium">{order.checkName} - #{order.id.slice(-6)}</div>
-                    <div className="text-sm text-muted-foreground">
-                        {order.orderType === 'Dine In' ? `Table: ${order.tableName}` : `Customer: ${order.customerName || 'N/A'}`}
-                    </div>
-                </TableCell>
-                <TableCell><Badge variant="outline">{order.orderType}</Badge></TableCell>
-                <TableCell>{format(new Date(order.createdAt), "PPpp")}</TableCell>
-                <TableCell><Badge>{order.status}</Badge></TableCell>
-                <TableCell>{order.employeeName || 'N/A'}</TableCell>
-                <TableCell className="text-right font-medium">${order.total.toFixed(2)}</TableCell>
-            </TableRow>
-            <CollapsibleContent asChild>
                 <TableRow>
-                    <TableCell colSpan={7}>
-                        <div className="p-4 bg-muted/50 rounded-md">
-                            <h4 className="font-semibold mb-2">Order Items:</h4>
-                            <ul className="space-y-1 text-sm">
-                                {order.items.map((item: OrderItem) => (
-                                    <li key={item.lineItemId} className="flex justify-between">
-                                        <span>{item.quantity} x {item.name}</span>
-                                        <span>${(item.price * item.quantity).toFixed(2)}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            {order.discountApplied && order.discountApplied > 0 && (
-                                <>
-                                <div className="border-t my-2"></div>
-                                <div className="flex justify-between font-semibold text-green-600">
-                                    <span>Discount Applied</span>
-                                    <span>{order.discountApplied}%</span>
-                                </div>
-                                </>
-                            )}
+                    <TableCell>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+                                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                <span className="sr-only">Toggle details</span>
+                            </Button>
+                        </CollapsibleTrigger>
+                    </TableCell>
+                    <TableCell>
+                        <div className="font-medium">{order.checkName} - #{order.id.slice(-6)}</div>
+                        <div className="text-sm text-muted-foreground">
+                            {order.orderType === 'Dine In' ? `Table: ${order.tableName}` : `Customer: ${order.customerName || 'N/A'}`}
                         </div>
                     </TableCell>
+                    <TableCell><Badge variant="outline">{order.orderType}</Badge></TableCell>
+                    <TableCell>{format(new Date(order.createdAt), "PPpp")}</TableCell>
+                    <TableCell><Badge>{order.status}</Badge></TableCell>
+                    <TableCell>{order.employeeName || 'N/A'}</TableCell>
+                    <TableCell className="text-right font-medium">${order.total.toFixed(2)}</TableCell>
                 </TableRow>
-            </CollapsibleContent>
+                <CollapsibleContent asChild>
+                     <tr>
+                        <td colSpan={7}>
+                            <div className="p-4 bg-muted/50 rounded-md">
+                                <h4 className="font-semibold mb-2">Order Items:</h4>
+                                <ul className="space-y-1 text-sm">
+                                    {order.items.map((item: OrderItem) => (
+                                        <li key={item.lineItemId} className="flex justify-between">
+                                            <span>{item.quantity} x {item.name}</span>
+                                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                {order.discountApplied && order.discountApplied > 0 && (
+                                    <>
+                                    <div className="border-t my-2"></div>
+                                    <div className="flex justify-between font-semibold text-green-600">
+                                        <span>Discount Applied</span>
+                                        <span>{order.discountApplied}%</span>
+                                    </div>
+                                    </>
+                                )}
+                            </div>
+                        </td>
+                    </tr>
+                </CollapsibleContent>
             </>
         </Collapsible>
     )

@@ -35,6 +35,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { collection, onSnapshot, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Home() {
   const router = useRouter();
@@ -86,7 +88,6 @@ export default function Home() {
           fetchedMenuItems, 
           fetchedCategories, 
           fetchedChecks, 
-          fetchedOrders,
           fetchedExtras,
           fetchedSettings,
           fetchedTables,
@@ -95,7 +96,6 @@ export default function Home() {
             getMenuItems(),
             getCategories(),
             getChecks(),
-            getOrders(),
             getExtras(),
             getSettings(),
             getTables(),
@@ -104,7 +104,6 @@ export default function Home() {
         setMenuItems(fetchedMenuItems);
         setCategories(fetchedCategories);
         setChecks(fetchedChecks);
-        setActiveOrders(fetchedOrders);
         setAvailableExtras(fetchedExtras);
         setSettings(fetchedSettings);
         setTables(fetchedTables);
@@ -127,6 +126,28 @@ export default function Home() {
         setIsLoading(false);
       }
       fetchInitialData();
+
+      // Real-time listener for active orders
+      const q = query(
+          collection(db, 'orders'), 
+          where('status', 'in', ['Preparing', 'Ready', 'Completed']),
+          orderBy('status'),
+          orderBy('createdAt', 'desc')
+        );
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const liveOrders: ActiveOrder[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              liveOrders.push({
+                  id: doc.id,
+                  ...data,
+                  createdAt: (data.createdAt as Timestamp).toDate(),
+              } as ActiveOrder);
+          });
+          setActiveOrders(liveOrders);
+      });
+
+      return () => unsubscribe();
     }
   }, [router]);
 
@@ -276,10 +297,8 @@ export default function Home() {
       });
 
       const updatedChecks = await getChecks();
-      const newOrders = await getOrders();
       
       setChecks(updatedChecks);
-      setActiveOrders(newOrders);
 
       const emptyCheck = updatedChecks.find(c => c.items.length === 0);
 
@@ -385,9 +404,6 @@ export default function Home() {
     await addOrder(newOrderData);
     await deleteCheck(activeCheckId);
     
-    const newOrders = await getOrders();
-    setActiveOrders(newOrders);
-    
     const remainingChecks = checks.filter(c => c.id !== activeCheckId);
     setChecks(remainingChecks);
 
@@ -427,7 +443,6 @@ export default function Home() {
 
   const handleCompleteOrder = async (orderId: string) => {
     await updateOrderStatus(orderId, 'Completed');
-    setActiveOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Completed'} : o));
     toast({
         title: "Order Completed",
         description: "The order has been marked as complete.",
@@ -436,7 +451,6 @@ export default function Home() {
 
   const handleClearOrder = async (orderId: string) => {
     await archiveOrder(orderId);
-    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
      toast({
         title: "Order Cleared",
         description: "The completed order has been removed from the view.",
