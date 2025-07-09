@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useOptimistic } from 'react';
+import { useState, useOptimistic, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from "lucide-react";
@@ -35,11 +35,11 @@ type IngredientLink = {
 function MenuItemFormDialog({ open, onOpenChange, categories, ingredients, onFormSubmit, initialData }) {
     const [ingredientLinks, setIngredientLinks] = useState<IngredientLink[]>([]);
     
-    useState(() => {
-        if (initialData?.ingredientLinks) {
-            setIngredientLinks(initialData.ingredientLinks.map(link => ({...link, id: `link-${Date.now()}-${Math.random()}` })));
+    useEffect(() => {
+        if (open) {
+            setIngredientLinks(initialData?.ingredientLinks?.map(link => ({...link, id: `link-${Date.now()}-${Math.random()}` })) || []);
         }
-    });
+    }, [open, initialData]);
 
     const addIngredientLink = () => {
         setIngredientLinks(prev => [...prev, { id: `link-${Date.now()}`, ingredientId: '', isOptional: false, quantity: 1 }]);
@@ -62,88 +62,77 @@ function MenuItemFormDialog({ open, onOpenChange, categories, ingredients, onFor
         formData.set('ingredientLinks', JSON.stringify(finalLinks));
         onFormSubmit(formData);
     };
-    
-    const handleOpenChange = (isOpen: boolean) => {
-        if (!isOpen) {
-            setIngredientLinks(initialData?.ingredientLinks?.map(link => ({...link, id: `link-${Date.now()}-${Math.random()}` })) || []);
-        }
-        onOpenChange(isOpen);
-    }
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent className="sm:max-w-lg">
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{initialData ? 'Edit Menu Item' : 'Add New Menu Item'}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <ScrollArea className="max-h-[60vh] p-1">
-                        <div className="space-y-4 pr-6">
-                            <div className="space-y-2"><Label htmlFor="item-name">Item Name</Label><Input id="item-name" name="name" placeholder="e.g. Classic Burger" required defaultValue={initialData?.name} /></div>
-                            <div className="space-y-2"><Label htmlFor="item-description">Description</Label><Textarea id="item-description" name="description" placeholder="A brief description of the item." defaultValue={initialData?.description}/></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label htmlFor="item-price">Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required defaultValue={initialData?.price}/></div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="item-category">Category</Label>
-                                    <Select name="category" required defaultValue={initialData?.category}>
-                                        <SelectTrigger id="item-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                                        <SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue={initialData?.preparationTime || 5} required /></div>
-                            </div>
-                            
-                            <div className="space-y-3">
-                                <Label>Recipe Ingredients</Label>
-                                <div className="space-y-2 rounded-md border p-3">
-                                    {ingredientLinks.map(link => {
-                                        const selectedIngredient = ingredients.find(ing => ing.id === link.ingredientId);
-                                        return (
-                                        <div key={link.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2">
-                                            <Select value={link.ingredientId} onValueChange={(val) => updateIngredientLink(link.id, 'ingredientId', val)}>
-                                                <SelectTrigger><SelectValue placeholder="Select Ingredient"/></SelectTrigger>
-                                                <SelectContent>
-                                                    {ingredients.map(ing => <SelectItem key={ing.id} value={ing.id}>{ing.name}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <div className="flex items-center">
-                                                <Input 
-                                                    type="number"
-                                                    placeholder="Qty" 
-                                                    className="w-20 h-9"
-                                                    value={link.quantity}
-                                                    onChange={e => updateIngredientLink(link.id, 'quantity', parseFloat(e.target.value) || 0)}
-                                                    min="0"
-                                                    step="any"
-                                                />
-                                                {selectedIngredient && <span className="text-sm text-muted-foreground ml-2">{selectedIngredient.unit}</span>}
-                                            </div>
-
-                                            <div className="flex items-center space-x-2">
-                                                <Checkbox id={`optional-${link.id}`} checked={link.isOptional} onCheckedChange={(val) => updateIngredientLink(link.id, 'isOptional', Boolean(val))} />
-                                                <Label htmlFor={`optional-${link.id}`} className="cursor-pointer">Optional</Label>
-                                            </div>
-
-                                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeIngredientLink(link.id)}><X className="h-4 w-4"/></Button>
-                                        </div>
-                                    )})}
-                                    <Button type="button" variant="outline" size="sm" className="w-full" onClick={addIngredientLink}>
-                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" defaultValue={initialData?.imageUrl}/></div>
+                <form id="menu-item-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto -mr-6 pr-6 space-y-4">
+                    <div className="space-y-2"><Label htmlFor="item-name">Item Name</Label><Input id="item-name" name="name" placeholder="e.g. Classic Burger" required defaultValue={initialData?.name} /></div>
+                    <div className="space-y-2"><Label htmlFor="item-description">Description</Label><Textarea id="item-description" name="description" placeholder="A brief description of the item." defaultValue={initialData?.description}/></div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label htmlFor="item-price">Price</Label><Input id="item-price" name="price" type="number" step="0.01" placeholder="12.99" required defaultValue={initialData?.price}/></div>
+                        <div className="space-y-2">
+                            <Label htmlFor="item-category">Category</Label>
+                            <Select name="category" required defaultValue={initialData?.category}>
+                                <SelectTrigger id="item-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                                <SelectContent>{categories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}</SelectContent>
+                            </Select>
                         </div>
-                    </ScrollArea>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit">{initialData ? 'Save Changes' : 'Add Item'}</Button>
-                    </DialogFooter>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2"><Label htmlFor="item-prep-time">Prep Time (mins)</Label><Input id="item-prep-time" name="preparationTime" type="number" placeholder="15" defaultValue={initialData?.preparationTime || 5} required /></div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <Label>Recipe Ingredients</Label>
+                        <div className="space-y-2 rounded-md border p-3">
+                            {ingredientLinks.map(link => {
+                                const selectedIngredient = ingredients.find(ing => ing.id === link.ingredientId);
+                                return (
+                                <div key={link.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2">
+                                    <Select value={link.ingredientId} onValueChange={(val) => updateIngredientLink(link.id, 'ingredientId', val)}>
+                                        <SelectTrigger><SelectValue placeholder="Select Ingredient"/></SelectTrigger>
+                                        <SelectContent>
+                                            {ingredients.map(ing => <SelectItem key={ing.id} value={ing.id}>{ing.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <div className="flex items-center">
+                                        <Input 
+                                            type="number"
+                                            placeholder="Qty" 
+                                            className="w-20 h-9"
+                                            value={link.quantity}
+                                            onChange={e => updateIngredientLink(link.id, 'quantity', parseFloat(e.target.value) || 0)}
+                                            min="0"
+                                            step="any"
+                                        />
+                                        {selectedIngredient && <span className="text-sm text-muted-foreground ml-2">{selectedIngredient.unit}</span>}
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id={`optional-${link.id}`} checked={link.isOptional} onCheckedChange={(val) => updateIngredientLink(link.id, 'isOptional', Boolean(val))} />
+                                        <Label htmlFor={`optional-${link.id}`} className="cursor-pointer">Optional</Label>
+                                    </div>
+
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeIngredientLink(link.id)}><X className="h-4 w-4"/></Button>
+                                </div>
+                            )})}
+                            <Button type="button" variant="outline" size="sm" className="w-full" onClick={addIngredientLink}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2"><Label htmlFor="item-image">Image URL</Label><Input id="item-image" name="imageUrl" placeholder="https://placehold.co/600x400.png" defaultValue={initialData?.imageUrl}/></div>
                 </form>
+                <DialogFooter className="pt-4 border-t">
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button type="submit" form="menu-item-form">{initialData ? 'Save Changes' : 'Add Item'}</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
@@ -266,14 +255,22 @@ export default function MenuClient({ initialMenuItems, initialCategories, availa
                 <CardHeader><CardTitle>Menu Items</CardTitle><CardDescription>A list of all items on your menu.</CardDescription></CardHeader>
                 <CardContent>
                    <Table>
-                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Price</TableHead><TableHead>Prep Time</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead className="hidden sm:table-cell">Category</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead className="hidden md:table-cell">Prep Time</TableHead>
+                                <TableHead><span className="sr-only">Actions</span></TableHead>
+                            </TableRow>
+                        </TableHeader>
                         <TableBody>
                             {optimisticMenuItems.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell>{optimisticCategories.find(c => c.id === item.category)?.name}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{optimisticCategories.find(c => c.id === item.category)?.name}</TableCell>
                                     <TableCell>${item.price.toFixed(2)}</TableCell>
-                                    <TableCell>{item.preparationTime} mins</TableCell>
+                                    <TableCell className="hidden md:table-cell">{item.preparationTime} mins</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>

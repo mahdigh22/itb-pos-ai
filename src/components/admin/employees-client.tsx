@@ -140,9 +140,9 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
+                                <TableHead className="hidden lg:table-cell">Email</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead>Start Date</TableHead>
+                                <TableHead className="hidden md:table-cell">Start Date</TableHead>
                                 <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -150,9 +150,9 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                             {optimisticEmployees.map((employee) => (
                                 <TableRow key={employee.id}>
                                     <TableCell className="font-medium">{employee.name}</TableCell>
-                                    <TableCell>{employee.email}</TableCell>
+                                    <TableCell className="hidden lg:table-cell">{employee.email}</TableCell>
                                     <TableCell>{employee.role}</TableCell>
-                                    <TableCell>{format(new Date(employee.startDate), 'PPP')}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{format(new Date(employee.startDate), 'PPP')}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

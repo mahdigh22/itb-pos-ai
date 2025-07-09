@@ -128,8 +128,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Member</TableHead>
-                                <TableHead>Phone</TableHead>
-                                <TableHead>Joined Date</TableHead>
+                                <TableHead className="hidden sm:table-cell">Phone</TableHead>
+                                <TableHead className="hidden md:table-cell">Joined Date</TableHead>
                                 <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -148,8 +148,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{member.phone}</TableCell>
-                                    <TableCell>{format(new Date(member.joined), 'PPP')}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{member.phone}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{format(new Date(member.joined), 'PPP')}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
