@@ -10,7 +10,7 @@ import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
 import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
-import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -29,10 +29,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function Home() {
   const router = useRouter();
@@ -52,15 +53,26 @@ export default function Home() {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [settings, setSettings] = useState<{ taxRate: number; priceLists: PriceList[]; activePriceListId?: string; } | null>(null);
 
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState("pos");
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   
   useEffect(() => {
-    const isLoggedIn = typeof window !== 'undefined' ? localStorage.getItem('isLoggedIn') : null;
-    if (isLoggedIn !== 'true') {
+    let employeeData = null;
+    try {
+        const storedEmployee = localStorage.getItem('currentEmployee');
+        if (storedEmployee) {
+            employeeData = JSON.parse(storedEmployee);
+        }
+    } catch (e) {
+        console.error("Failed to parse employee data from localStorage", e);
+    }
+    
+    if (!employeeData?.id) {
       router.replace('/login');
     } else {
+      setCurrentUser(employeeData);
       const fetchInitialData = async () => {
         setIsLoading(true);
         const [
@@ -96,6 +108,8 @@ export default function Home() {
               name: 'Check 1', 
               items: [],
               priceListId: fetchedSettings.activePriceListId,
+              employeeId: employeeData.id,
+              employeeName: employeeData.name,
             };
             const newCheck = await addCheck(newCheckData);
             setChecks([newCheck]);
@@ -113,7 +127,6 @@ export default function Home() {
   const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;
     
-    // Optimistically update the UI
     setChecks(prevChecks => 
       prevChecks.map(c => 
         c.id === activeCheckId ? { ...c, ...updates } : c
@@ -197,6 +210,7 @@ export default function Home() {
   };
 
   const handleNewCheck = async () => {
+    if (!currentUser) return;
     const emptyCheck = checks.find(c => c.items.length === 0);
 
     if (emptyCheck) {
@@ -213,6 +227,8 @@ export default function Home() {
       name: newCheckName, 
       items: [],
       priceListId: settings?.activePriceListId,
+      employeeId: currentUser.id,
+      employeeName: currentUser.name,
     };
     const newCheck = await addCheck(newCheckData);
     
@@ -235,14 +251,13 @@ export default function Home() {
   };
 
   const handleSendToKitchen = async () => {
-    if (!activeCheckId || !activeCheck) return;
+    if (!activeCheckId || !activeCheck || !currentUser) return;
 
     if (activeCheck.orderType === 'Take Away') {
       await handleFinalizeAndPay();
       return;
     }
 
-    // This logic is now only for "Dine In" orders
     const originalCheckId = activeCheckId;
     const originalCheckName = activeCheck.name;
 
@@ -254,7 +269,6 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
-      // Fetch the updated list of checks and orders
       const [updatedChecks, newOrders] = await Promise.all([
         getChecks(),
         getOrders()
@@ -263,7 +277,6 @@ export default function Home() {
       setChecks(updatedChecks);
       setActiveOrders(newOrders);
 
-      // After sending, find an existing empty check or create a new one.
       const emptyCheck = updatedChecks.find(c => c.items.length === 0);
 
       if (emptyCheck) {
@@ -278,6 +291,8 @@ export default function Home() {
               name: newCheckName,
               items: [],
               priceListId: settings?.activePriceListId,
+              employeeId: currentUser.id,
+              employeeName: currentUser.name,
           };
           const newCheck = await addCheck(newCheckData);
           setChecks(prev => [...prev, newCheck]);
@@ -300,9 +315,8 @@ export default function Home() {
   };
 
   const handleFinalizeAndPay = async () => {
-    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType || !settings) return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType || !settings || !currentUser) return;
 
-    // For Dine In, we just close the check. The individual orders are already tracked.
     if (activeCheck.orderType === 'Dine In') {
       await deleteCheck(activeCheckId);
       
@@ -316,6 +330,8 @@ export default function Home() {
             name: 'Check 1', 
             items: [],
             priceListId: settings.activePriceListId,
+            employeeId: currentUser.id,
+            employeeName: currentUser.name,
           };
           const newCheck = await addCheck(newCheckData);
           setChecks([newCheck]);
@@ -330,7 +346,6 @@ export default function Home() {
       return;
     }
 
-    // This logic is for Take Away / Delivery where the entire check becomes one order.
     const subtotal = activeCheck.items.reduce((acc, item) => {
       const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
       const totalItemPrice = (item.price + extrasPrice) * item.quantity;
@@ -359,12 +374,13 @@ export default function Home() {
       customerName: activeCheck.customerName,
       priceListId: activeCheck.priceListId,
       discountApplied: discountPercentage,
+      employeeId: currentUser.id,
+      employeeName: currentUser.name,
     };
 
     await addOrder(newOrderData);
     await deleteCheck(activeCheckId);
     
-    // Refetch orders and update checks state
     const newOrders = await getOrders();
     setActiveOrders(newOrders);
     
@@ -378,6 +394,8 @@ export default function Home() {
           name: 'Check 1', 
           items: [],
           priceListId: settings.activePriceListId,
+          employeeId: currentUser.id,
+          employeeName: currentUser.name,
         };
         const newCheck = await addCheck(newCheckData);
         setChecks([newCheck]);
@@ -419,11 +437,11 @@ export default function Home() {
 
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentEmployee');
     router.push('/login');
   };
 
-  if (isLoading || !settings) {
+  if (isLoading || !settings || !currentUser) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -466,15 +484,28 @@ export default function Home() {
               </TabsList>
 
               <div className="flex items-center gap-2">
-                 <Button variant="ghost" size="icon" asChild>
-                    <Link href="/admin" aria-label="Admin Portal">
-                        <Settings className="h-5 w-5" />
-                    </Link>
-                </Button>
-                <ThemeToggle />
-                <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log Out">
-                  <LogOut className="h-5 w-5" />
-                </Button>
+                 <ThemeToggle />
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2">
+                        <UserCircle className="h-5 w-5" />
+                        <span className="hidden md:inline">{currentUser.name}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                       {currentUser.role === 'Manager' && (
+                          <DropdownMenuItem asChild>
+                              <Link href="/admin"><Settings className="mr-2 h-4 w-4" /> Admin Portal</Link>
+                          </DropdownMenuItem>
+                       )}
+                      <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
               </div>
             </div>
           </div>

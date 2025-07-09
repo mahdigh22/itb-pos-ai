@@ -1,14 +1,15 @@
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
 import type { Employee } from "@/lib/types";
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,7 +17,7 @@ import { addEmployee, updateEmployee, deleteEmployee } from '@/app/admin/employe
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 
-function EmployeeForm({ employee, onFormSubmit, onCancel }) {
+function EmployeeForm({ employee, onFormSubmit, onCancel }: { employee?: Employee | null, onFormSubmit: (data: FormData) => Promise<void>, onCancel: () => void }) {
     return (
         <form action={onFormSubmit} className="space-y-4">
             <input type="hidden" name="id" value={employee?.id || ''} />
@@ -27,6 +28,10 @@ function EmployeeForm({ employee, onFormSubmit, onCancel }) {
             <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" name="email" type="email" placeholder="name@example.com" required defaultValue={employee?.email} />
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" name="password" type="password" placeholder={employee ? "Leave blank to keep current password" : "••••••••"} required={!employee} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
@@ -123,7 +128,7 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold font-headline">Employee Management</h1>
-                    <p className="text-muted-foreground">Manage your staff and their roles.</p>
+                    <p className="text-muted-foreground">Manage your staff, passwords, and roles.</p>
                 </div>
                 <Button onClick={() => setAddDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />

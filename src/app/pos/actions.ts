@@ -18,7 +18,7 @@ import {
     documentId
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ActiveOrder, Check, OrderItem, OrderStatus, PriceList } from '@/lib/types';
+import type { ActiveOrder, Check, Employee, OrderItem, OrderStatus, PriceList } from '@/lib/types';
 
 // Check Actions
 export async function getChecks(): Promise<Check[]> {
@@ -158,6 +158,8 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 customerName: finalCheckDataForOrder.customerName || null,
                 priceListId: finalCheckDataForOrder.priceListId || null,
                 discountApplied: discountPercentage,
+                employeeId: finalCheckDataForOrder.employeeId || null,
+                employeeName: finalCheckDataForOrder.employeeName || null,
             };
 
             const newOrderRef = doc(collection(db, 'orders'));
@@ -216,6 +218,8 @@ export async function getOrders(): Promise<ActiveOrder[]> {
         customerName: data.customerName,
         priceListId: data.priceListId,
         discountApplied: data.discountApplied,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
       });
     });
     return orders;
@@ -242,6 +246,8 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
             tableName: orderData.tableName || null,
             customerName: orderData.customerName || null,
             priceListId: orderData.priceListId || null,
+            employeeId: orderData.employeeId || null,
+            employeeName: orderData.employeeName || null,
         };
 
         await addDoc(collection(db, 'orders'), dataToSave);

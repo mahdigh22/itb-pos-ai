@@ -1,119 +1,89 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import ItbIcon from '@/components/itb-icon';
-import { Delete } from 'lucide-react';
-
-const CORRECT_PIN = '1234';
+import { loginEmployee } from './actions';
+import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const [pin, setPin] = useState('');
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleKeyPress = (key: string) => {
-    if (pin.length < 4) {
-      setPin(pin + key);
-    }
-  };
+  const handleLogin = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await loginEmployee(formData);
 
-  const handleDelete = () => {
-    setPin(pin.slice(0, -1));
+      if (result.success && result.employee) {
+        if (result.employee.role === 'Chef') {
+            toast({
+                variant: 'destructive',
+                title: 'Access Denied',
+                description: 'Chefs do not have access to the POS system.',
+            });
+            return;
+        }
+        localStorage.setItem('currentEmployee', JSON.stringify(result.employee));
+        toast({
+          title: 'Login Successful',
+          description: `Welcome back, ${result.employee.name}!`,
+        });
+        router.push('/');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: result.error || 'An unknown error occurred.',
+        });
+      }
+    });
   };
-
-  const handleClear = () => {
-    setPin('');
-  };
-
-  const handleLogin = () => {
-    if (pin === CORRECT_PIN) {
-      // In a real app, you'd use a more secure method like httpOnly cookies
-      localStorage.setItem('isLoggedIn', 'true');
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back!',
-      });
-      router.push('/');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Incorrect PIN. Please try again.',
-      });
-      setPin('');
-    }
-  };
-
-  const numpadKeys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-  ];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full bg-background p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-sm mx-auto shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
             <ItbIcon className="h-10 w-10" />
-            <CardTitle className="text-3xl font-headline text-primary">Members</CardTitle>
+            <CardTitle className="text-3xl font-headline text-primary">ITB Members</CardTitle>
           </div>
-          <CardDescription>Enter your PIN to unlock</CardDescription>
+          <CardDescription>Enter your credentials to access the system.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex justify-center mb-6">
-            <Input
-              type="password"
-              value={pin}
-              readOnly
-              className="w-48 h-14 text-center text-4xl tracking-[0.5em] font-mono bg-muted"
-              placeholder="----"
-              aria-label="PIN code display"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {numpadKeys.map((key) => (
-              <Button
-                key={key}
-                variant="outline"
-                className="h-20 text-2xl font-bold"
-                onClick={() => handleKeyPress(key)}
-              >
-                {key}
-              </Button>
-            ))}
-             <Button
-                variant="outline"
-                className="h-20 text-2xl font-bold"
-                onClick={handleClear}
-                aria-label="Clear PIN"
-              >
-                C
-              </Button>
-               <Button
-                variant="outline"
-                className="h-20 text-2xl font-bold"
-                onClick={() => handleKeyPress('0')}
-              >
-                0
-              </Button>
-              <Button
-                variant="outline"
-                className="h-20 text-2xl font-bold"
-                onClick={handleDelete}
-                aria-label="Delete last digit"
-              >
-                <Delete className="h-8 w-8" />
-              </Button>
-          </div>
-          <Button className="w-full mt-6 h-16 text-xl" onClick={handleLogin}>
-            Login
-          </Button>
+          <form action={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                required
+                disabled={isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                disabled={isPending}
+              />
+            </div>
+            <Button type="submit" className="w-full h-12 text-lg mt-4" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              Login
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

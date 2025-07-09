@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/admin/admin-sidebar';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminLayout({
   children,
@@ -15,25 +16,39 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const { toast } = useToast();
   
   const isLoginPage = pathname === '/admin/login';
 
   useEffect(() => {
     if (isLoginPage) {
-      // No auth check needed on the login page itself.
       setIsCheckingAuth(false);
       return;
     }
 
-    const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
-    if (!isAdminLoggedIn) {
-      router.replace('/admin/login');
+    let employee = null;
+    try {
+        const storedEmployee = localStorage.getItem('currentEmployee');
+        if (storedEmployee) {
+            employee = JSON.parse(storedEmployee);
+        }
+    } catch (e) {
+        console.error("Failed to parse employee from localStorage");
+        employee = null;
+    }
+
+    if (employee?.role !== 'Manager') {
+      toast({
+          variant: 'destructive',
+          title: 'Access Denied',
+          description: 'You do not have permission to access the admin area.'
+      });
+      router.replace('/');
     } else {
       setIsCheckingAuth(false);
     }
-  }, [router, pathname, isLoginPage]);
+  }, [router, pathname, isLoginPage, toast]);
 
-  // While checking auth on a protected page, show a loader.
   if (isCheckingAuth && !isLoginPage) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -42,12 +57,10 @@ export default function AdminLayout({
     );
   }
 
-  // If it's the login page, just render the page content without the admin layout.
   if (isLoginPage) {
     return <>{children}</>;
   }
 
-  // If auth check is complete and user is logged in, render the admin layout.
   return (
     <SidebarProvider>
       <AdminSidebar />

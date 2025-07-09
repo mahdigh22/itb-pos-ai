@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -9,9 +10,14 @@ export async function addEmployee(formData: FormData) {
   const newEmployee: Omit<Employee, 'id'> = {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
+    password: formData.get('password') as string,
     role: formData.get('role') as 'Manager' | 'Server' | 'Chef',
     startDate: new Date().toISOString(),
   };
+
+  if (!newEmployee.password) {
+    return { success: false, error: 'Password is required for new employees.' };
+  }
 
   try {
     await addDoc(collection(db, 'employees'), {
@@ -30,11 +36,16 @@ export async function addEmployee(formData: FormData) {
 }
 
 export async function updateEmployee(id: string, formData: FormData) {
-  const employeeUpdates = {
+  const employeeUpdates: Partial<Omit<Employee, 'id' | 'startDate'>> = {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
     role: formData.get('role') as 'Manager' | 'Server' | 'Chef',
   };
+
+  const password = formData.get('password') as string;
+  if (password) {
+    employeeUpdates.password = password;
+  }
 
   try {
     const employeeRef = doc(db, 'employees', id);
@@ -77,6 +88,7 @@ export async function getEmployees(): Promise<Employee[]> {
         email: data.email,
         role: data.role,
         startDate: (data.startDate as Timestamp).toDate().toISOString(),
+        // Password is intentionally omitted
       });
     });
     return employees.sort((a, b) => a.name.localeCompare(b.name));

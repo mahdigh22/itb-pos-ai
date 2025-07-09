@@ -92,6 +92,8 @@ export interface ActiveOrder {
   customerName?: string;
   priceListId?: string;
   discountApplied?: number; // as a percentage
+  employeeId?: string;
+  employeeName?: string;
 }
 
 // This is a "check" or "tab" that is currently being built
@@ -104,12 +106,15 @@ export interface Check {
     tableName?: string;
     customerName?: string;
     priceListId?: string;
+    employeeId?: string;
+    employeeName?: string;
 }
 
 export interface Employee {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: 'Manager' | 'Server' | 'Chef';
   startDate: string; // ISO date string
 }

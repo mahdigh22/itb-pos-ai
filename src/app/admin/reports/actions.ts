@@ -1,3 +1,4 @@
+
 "use server";
 
 import {
@@ -31,6 +32,8 @@ export async function getOrdersForReports(): Promise<ActiveOrder[]> {
         customerName: data.customerName,
         priceListId: data.priceListId,
         discountApplied: data.discountApplied,
+        employeeId: data.employeeId,
+        employeeName: data.employeeName,
       });
     });
     return orders;

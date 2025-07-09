@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -58,7 +59,8 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
                 const matchesId = order.id.toLowerCase().includes(searchText);
                 const matchesCheckName = order.checkName.toLowerCase().includes(searchText);
                 const matchesCustomerName = order.customerName?.toLowerCase().includes(searchText);
-                return matchesId || matchesCheckName || (matchesCustomerName || false);
+                const matchesEmployeeName = order.employeeName?.toLowerCase().includes(searchText);
+                return matchesId || matchesCheckName || (matchesCustomerName || false) || (matchesEmployeeName || false);
             }
             return true;
         });
@@ -74,7 +76,7 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
                 <CardHeader>
                     <div className="flex flex-wrap items-center gap-4">
                         <Input 
-                            placeholder="Filter by ID, check name, customer..."
+                            placeholder="Filter by ID, name, employee..."
                             value={filterText}
                             onChange={(e) => setFilterText(e.target.value)}
                             className="max-w-sm"
@@ -148,6 +150,7 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
                                 <TableHead>Type</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Server</TableHead>
                                 <TableHead className="text-right">Total</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -156,7 +159,7 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
                                 <OrderRow key={order.id} order={order} />
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">No matching orders found.</TableCell>
+                                    <TableCell colSpan={7} className="h-24 text-center">No matching orders found.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -190,11 +193,12 @@ function OrderRow({ order }: { order: ActiveOrder }) {
                 <TableCell><Badge variant="outline">{order.orderType}</Badge></TableCell>
                 <TableCell>{format(new Date(order.createdAt), "PPpp")}</TableCell>
                 <TableCell><Badge>{order.status}</Badge></TableCell>
+                <TableCell>{order.employeeName || 'N/A'}</TableCell>
                 <TableCell className="text-right font-medium">${order.total.toFixed(2)}</TableCell>
             </TableRow>
             <CollapsibleContent asChild>
                 <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                         <div className="p-4 bg-muted/50 rounded-md">
                             <h4 className="font-semibold mb-2">Order Items:</h4>
                             <ul className="space-y-1 text-sm">
