@@ -254,15 +254,6 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
-      // After sending, immediately create a new check.
-      const newCheckName = `Check ${checks.length + 1}`;
-      const newCheckData: Omit<Check, 'id'> = {
-        name: newCheckName,
-        items: [],
-        priceListId: settings?.activePriceListId,
-      };
-      const newCheck = await addCheck(newCheckData);
-
       // Fetch the updated list of checks and orders
       const [updatedChecks, newOrders] = await Promise.all([
         getChecks(),
@@ -271,12 +262,31 @@ export default function Home() {
       
       setChecks(updatedChecks);
       setActiveOrders(newOrders);
-      setActiveCheckId(newCheck.id); // Set the new, empty check as active.
 
-      toast({
-        title: "New Check Started",
-        description: `The previous check is available in 'Open Checks'.`,
-      });
+      // After sending, find an existing empty check or create a new one.
+      const emptyCheck = updatedChecks.find(c => c.items.length === 0);
+
+      if (emptyCheck) {
+          setActiveCheckId(emptyCheck.id);
+          toast({
+              title: "Switched to Empty Check",
+              description: `The previous check is available in 'Open Checks'.`,
+          });
+      } else {
+          const newCheckName = `Check ${updatedChecks.length + 1}`;
+          const newCheckData: Omit<Check, 'id'> = {
+              name: newCheckName,
+              items: [],
+              priceListId: settings?.activePriceListId,
+          };
+          const newCheck = await addCheck(newCheckData);
+          setChecks(prev => [...prev, newCheck]);
+          setActiveCheckId(newCheck.id);
+          toast({
+              title: "New Check Started",
+              description: `The previous check is available in 'Open Checks'.`,
+          });
+      }
 
     } else {
       toast({
