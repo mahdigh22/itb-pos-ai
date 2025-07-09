@@ -16,32 +16,36 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { addUser, updateUser, deleteUser } from '@/app/admin/users/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription as AlertDialogDescriptionComponent } from "@/components/ui/alert-dialog";
+import { useTranslations } from 'next-intl';
 
 function UserForm({ user, onFormSubmit, onCancel }) {
+    const t = useTranslations('AdminUsers.form');
     return (
         <form action={onFormSubmit} className="space-y-4">
              <input type="hidden" name="id" value={user?.id || ''} />
             <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" placeholder="John Doe" required defaultValue={user?.name} />
+                <Label htmlFor="name">{t('nameLabel')}</Label>
+                <Input id="name" name="name" placeholder={t('namePlaceholder')} required defaultValue={user?.name} />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" name="email" type="email" placeholder="name@example.com" required defaultValue={user?.email}/>
+                <Label htmlFor="email">{t('emailLabel')}</Label>
+                <Input id="email" name="email" type="email" placeholder={t('emailPlaceholder')} required defaultValue={user?.email}/>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" name="phone" type="tel" placeholder="555-0101" defaultValue={user?.phone}/>
+                <Label htmlFor="phone">{t('phoneLabel')}</Label>
+                <Input id="phone" name="phone" type="tel" placeholder={t('phonePlaceholder')} defaultValue={user?.phone}/>
             </div>
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button type="submit">{user ? 'Save Changes' : 'Add User'}</Button>
+                <Button type="button" variant="outline" onClick={onCancel}>{t('cancel')}</Button>
+                <Button type="submit">{user ? t('save') : t('add')}</Button>
             </DialogFooter>
         </form>
     );
 }
 
 export default function UsersClient({ initialMembers }: { initialMembers: Member[] }) {
+    const t = useTranslations('AdminUsers');
+    const tAlerts = useTranslations('Alerts');
     const { toast } = useToast();
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<Member | null>(null);
@@ -78,9 +82,9 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
         const result = await addUser(formData);
 
         if (result.success) {
-            toast({ title: 'User Added' });
+            toast({ title: tAlerts('userAdded') });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
         }
     };
     
@@ -89,9 +93,9 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
         setEditingUser(null);
         const result = await updateUser(editingUser.id, formData);
         if (result.success) {
-            toast({ title: 'User Updated' });
+            toast({ title: tAlerts('userUpdated') });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
         }
     };
 
@@ -101,9 +105,9 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
         setDeletingUser(null);
         const result = await deleteUser(deletingUser.id);
         if (result.success) {
-            toast({ title: 'User Deleted' });
+            toast({ title: tAlerts('userDeleted') });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
         }
     };
 
@@ -111,27 +115,27 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold font-headline">User Management</h1>
-                    <p className="text-muted-foreground">Manage your members and customers.</p>
+                    <h1 className="text-3xl font-bold font-headline">{t('title')}</h1>
+                    <p className="text-muted-foreground">{t('description')}</p>
                 </div>
                 <Button onClick={() => setAddDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add New User
+                    {t('addNew')}
                 </Button>
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>All Users</CardTitle>
-                    <CardDescription>A list of all registered members from the database.</CardDescription>
+                    <CardTitle>{t('allUsersTitle')}</CardTitle>
+                    <CardDescription>{t('allUsersDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Member</TableHead>
-                                <TableHead className="hidden sm:table-cell">Phone</TableHead>
-                                <TableHead className="hidden md:table-cell">Joined Date</TableHead>
-                                <TableHead><span className="sr-only">Actions</span></TableHead>
+                                <TableHead>{t('columns.member')}</TableHead>
+                                <TableHead className="hidden sm:table-cell">{t('columns.phone')}</TableHead>
+                                <TableHead className="hidden md:table-cell">{t('columns.joinedDate')}</TableHead>
+                                <TableHead><span className="sr-only">{t('columns.actions')}</span></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -155,13 +159,13 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
+                                                    <span className="sr-only">{t('openMenu')}</span>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setEditingUser(member)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingUser(member)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingUser(member)}><Edit className="mr-2 h-4 w-4"/>{t('actions.edit')}</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingUser(member)}><Trash2 className="mr-2 h-4 w-4"/>{t('actions.delete')}</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -175,8 +179,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
             <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add New User</DialogTitle>
-                        <DialogDescription>Fill in the details for the new user.</DialogDescription>
+                        <DialogTitle>{t('dialogs.add.title')}</DialogTitle>
+                        <DialogDescription>{t('dialogs.add.description')}</DialogDescription>
                     </DialogHeader>
                     <UserForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
                 </DialogContent>
@@ -185,8 +189,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
             <Dialog open={!!editingUser} onOpenChange={(isOpen) => !isOpen && setEditingUser(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit User</DialogTitle>
-                        <DialogDescription>Update the details for this user.</DialogDescription>
+                        <DialogTitle>{t('dialogs.edit.title')}</DialogTitle>
+                        <DialogDescription>{t('dialogs.edit.description')}</DialogDescription>
                     </DialogHeader>
                     <UserForm user={editingUser} onFormSubmit={handleEditSubmit} onCancel={() => setEditingUser(null)} />
                 </DialogContent>
@@ -195,12 +199,12 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
             <AlertDialog open={!!deletingUser} onOpenChange={(isOpen) => !isOpen && setDeletingUser(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescriptionComponent>This will permanently delete the user <span className="font-bold">{deletingUser?.name}</span>.</AlertDialogDescriptionComponent>
+                        <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
+                        <AlertDialogDescriptionComponent>{t('dialogs.delete.description', {name: deletingUser?.name})}</AlertDialogDescriptionComponent>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>{t('dialogs.delete.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>{t('dialogs.delete.confirm')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

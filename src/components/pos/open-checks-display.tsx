@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Package, Users, Utensils, Hash, ShoppingBag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface OpenChecksDisplayProps {
   checks: Check[];
@@ -36,13 +37,15 @@ function calculateTotal(check: Check, priceLists: PriceList[], taxRate: number) 
 
 
 export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck, priceLists, taxRate }: OpenChecksDisplayProps) {
+  const t = useTranslations('OpenChecksDisplay');
+
   if (checks.length === 0) {
     return (
         <Card className="h-full flex flex-col items-center justify-center">
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center h-full">
                 <Package className="w-16 h-16 mb-4" />
-                <p className="font-semibold text-lg">No Open Checks</p>
-                <p className="text-sm">Create a new check in the Point of Sale tab.</p>
+                <p className="font-semibold text-lg">{t('noOpenChecks')}</p>
+                <p className="text-sm">{t('noOpenChecksDescription')}</p>
             </div>
       </Card>
     );
@@ -51,8 +54,8 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
   return (
     <Card className="h-full flex flex-col">
         <CardHeader>
-            <CardTitle className="font-headline">Open Checks</CardTitle>
-            <CardDescription>Select a check to view or add items.</CardDescription>
+            <CardTitle className="font-headline">{t('title')}</CardTitle>
+            <CardDescription>{t('description')}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow min-h-0">
             <ScrollArea className="h-full pr-4">
@@ -90,7 +93,7 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                                    </div>
                                )}
                                 <div>
-                                    <span>{check.items.length} item{check.items.length !== 1 ? 's' : ''}</span>
+                                    <span>{t('itemCount', {count: check.items.length})}</span>
                                 </div>
                             </CardContent>
                             <CardFooter>

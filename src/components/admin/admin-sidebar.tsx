@@ -20,10 +20,12 @@ import { ThemeToggle } from "../theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Button } from "../ui/button";
 import LanguageToggle from "../language-toggle";
+import { useTranslations } from "next-intl";
 
 export default function AdminSidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const t = useTranslations('AdminSidebar');
 
     const handleLogout = () => {
         localStorage.removeItem('currentAdmin');
@@ -31,15 +33,15 @@ export default function AdminSidebar() {
     };
 
     const navLinks = [
-        { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
-        { href: '/admin/reports', label: 'Reports', icon: BarChart },
-        { href: '/admin/menu', label: 'Menu', icon: BookOpen },
-        { href: '/admin/ingredients', label: 'Ingredients', icon: List },
-        { href: '/admin/extras', label: 'Extras', icon: Sparkles },
-        { href: '/admin/tables', label: 'Tables', icon: Square },
-        { href: '/admin/users', label: 'Users', icon: Users },
-        { href: '/admin/employees', label: 'Employees', icon: Briefcase },
-        { href: '/admin/settings', label: 'Settings', icon: Settings },
+        { href: '/admin', label: t('dashboard'), icon: LayoutGrid },
+        { href: '/admin/reports', label: t('reports'), icon: BarChart },
+        { href: '/admin/menu', label: t('menu'), icon: BookOpen },
+        { href: '/admin/ingredients', label: t('ingredients'), icon: List },
+        { href: '/admin/extras', label: t('extras'), icon: Sparkles },
+        { href: '/admin/tables', label: t('tables'), icon: Square },
+        { href: '/admin/users', label: t('users'), icon: Users },
+        { href: '/admin/employees', label: t('employees'), icon: Briefcase },
+        { href: '/admin/settings', label: t('settings'), icon: Settings },
     ];
 
     return (
@@ -48,7 +50,7 @@ export default function AdminSidebar() {
                  <div className="flex items-center gap-2 p-2">
                     <ItbIcon className="h-8 w-8 flex-shrink-0" />
                     <div className="group-data-[collapsible=icon]:hidden group-data-[collapsible=offcanvas]:hidden">
-                        <h1 className="text-lg font-headline font-semibold text-sidebar-primary">Backoffice</h1>
+                        <h1 className="text-lg font-headline font-semibold text-sidebar-primary">{t('header')}</h1>
                     </div>
                 </div>
             </SidebarHeader>
@@ -58,7 +60,7 @@ export default function AdminSidebar() {
                         <SidebarMenuItem key={link.href}>
                             <SidebarMenuButton
                                 asChild
-                                isActive={pathname === link.href || (pathname.startsWith(link.href) && link.href !== '/admin')}
+                                isActive={pathname.endsWith(link.href)}
                                 tooltip={{ children: link.label }}
                             >
                                 <Link href={link.href}>
@@ -76,11 +78,11 @@ export default function AdminSidebar() {
                     <LanguageToggle />
                     <Tooltip>
                         <TooltipTrigger asChild>
-                             <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Log Out">
+                             <Button variant="ghost" size="icon" onClick={handleLogout} aria-label={t('logout')}>
                                 <LogOut className="h-5 w-5" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="right" align="center">Log Out</TooltipContent>
+                        <TooltipContent side="right" align="center">{t('logout')}</TooltipContent>
                     </Tooltip>
                  </div>
                 <SidebarTrigger />

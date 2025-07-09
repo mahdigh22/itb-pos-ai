@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useTranslations } from 'next-intl';
 
 interface CustomizeItemDialogProps {
   item: OrderItem | null;
@@ -17,6 +18,7 @@ interface CustomizeItemDialogProps {
 }
 
 export default function CustomizeItemDialog({ item, availableExtras, onSave, onClose }: CustomizeItemDialogProps) {
+  const t = useTranslations('CustomizeItemDialog');
   const [removed, setRemoved] = useState<string[]>([]);
   const [added, setAdded] = useState<Extra[]>([]);
   
@@ -58,13 +60,13 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
     <Dialog open={!!item} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">Customize: {item.name}</DialogTitle>
-          <DialogDescription>Add or remove ingredients to make it just right.</DialogDescription>
+          <DialogTitle className="font-headline">{t('title', {itemName: item.name})}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-4">
             {optionalIngredients.length > 0 && (
                 <div className="space-y-3">
-                    <h4 className="font-semibold">Optional Ingredients</h4>
+                    <h4 className="font-semibold">{t('optionalIngredients')}</h4>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         {optionalIngredients.map(ingredient => (
                             <div key={ingredient.id} className="flex items-center space-x-2">
@@ -81,7 +83,7 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
             )}
              {optionalIngredients.length > 0 && <Separator />}
             <div className="space-y-3">
-                <h4 className="font-semibold">Add Extras</h4>
+                <h4 className="font-semibold">{t('addExtras')}</h4>
                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {availableExtras.map(extra => (
                        <div key={extra.id} className="flex items-center space-x-2">
@@ -93,7 +95,7 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
                             <Label htmlFor={`extra-${extra.id}`} className="cursor-pointer">
                                 {extra.name}
                                 {extra.price > 0 && (
-                                    <span className="text-muted-foreground ml-1.5">
+                                    <span className="text-muted-foreground ltr:ml-1.5 rtl:mr-1.5">
                                         (+${extra.price.toFixed(2)})
                                     </span>
                                 )}
@@ -104,8 +106,8 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
             </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="button" onClick={handleSave}>Save Changes</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t('cancel')}</Button>
+          <Button type="button" onClick={handleSave}>{t('saveChanges')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
