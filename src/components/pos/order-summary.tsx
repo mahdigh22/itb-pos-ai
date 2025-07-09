@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -147,22 +148,11 @@ export default function OrderSummary({
         <Separator className="my-4" />
 
         <div className="space-y-1">
-            <Label htmlFor="price-list">Price List</Label>
-            <Select 
-                value={activeCheck.priceListId || 'none'} 
-                onValueChange={(value) => onUpdateDetails({ priceListId: value === 'none' ? undefined : value })}
-                name="price-list"
-            >
-                <SelectTrigger id="price-list">
-                    <SelectValue placeholder="Select a price list..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="none">None (Default)</SelectItem>
-                    {priceLists.map(pl => (
-                        <SelectItem key={pl.id} value={pl.id}>{pl.name} ({pl.discount}%)</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            <Label>Applied Discount</Label>
+            <div className="flex items-center justify-between rounded-md border bg-muted px-3 py-2 text-sm">
+                <span className="font-medium text-muted-foreground">{selectedPriceList ? selectedPriceList.name : 'Default Pricing'}</span>
+                <span className="font-bold text-primary">{discountPercentage > 0 ? `${discountPercentage}% off` : 'No discount'}</span>
+            </div>
         </div>
 
 
