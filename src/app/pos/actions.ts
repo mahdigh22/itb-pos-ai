@@ -64,70 +64,11 @@ export async function deleteCheck(checkId: string) {
     }
 }
 
-// Helper function for creating an order and updating a check within a transaction
-async function processAndSendItems(transaction: any, checkRef: any, checkData: Check) {
-    const newItemsToProcess = checkData.items.filter(item => item.status === 'new');
-    if (newItemsToProcess.length === 0) {
-        return; // Nothing to do
-    }
-
-    // Sanitize items for Firestore by removing client-side populated fields
-    const newItems = newItemsToProcess.map(item => {
-        const { ingredients, cost, ...rest } = item;
-        return rest;
-    });
-
-    // Fetch settings to apply correct tax and discounts
-    const settingsDocRef = doc(db, "settings", "main");
-    const settingsDoc = await transaction.get(settingsDocRef);
-    const settings = settingsDoc.exists() ? settingsDoc.data() : { taxRate: 0, priceLists: [] };
-    const taxRate = settings.taxRate || 0;
-    const priceLists: PriceList[] = settings.priceLists || [];
-    
-    const subtotal = newItems.reduce((acc, item) => {
-        const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
-        const totalItemPrice = (item.price + extrasPrice) * item.quantity;
-        return acc + totalItemPrice;
-    }, 0);
-    
-    const selectedPriceList = priceLists.find(pl => pl.id === checkData.priceListId);
-    const discountPercentage = selectedPriceList?.discount || 0;
-    const discountAmount = subtotal * (discountPercentage / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const tax = discountedSubtotal * (taxRate / 100);
-    const total = discountedSubtotal + tax;
-    
-    const totalPreparationTime = newItems.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
-
-    const newOrderData = {
-        items: newItems,
-        status: 'Preparing' as OrderStatus,
-        total: total,
-        createdAt: Timestamp.now(),
-        checkName: `${checkData.name} (Batch)`,
-        totalPreparationTime,
-        orderType: checkData.orderType,
-        tableId: checkData.tableId || null,
-        tableName: checkData.tableName || null,
-        customerName: checkData.customerName || null,
-        priceListId: checkData.priceListId || null,
-        discountApplied: discountPercentage,
-    };
-
-    const newOrderRef = doc(collection(db, 'orders'));
-    transaction.set(newOrderRef, newOrderData);
-
-    const updatedItems = checkData.items.map(item => 
-        item.status === 'new' ? { ...item, status: 'sent' as const } : item
-    );
-    transaction.update(checkRef, { items: updatedItems });
-}
-
-
 // Order Actions
 export async function sendNewItemsToKitchen(checkId: string) {
-    // Phase 1: Read data outside transaction to find if a merge is needed
     const sourceCheckRef = doc(db, 'checks', checkId);
+
+    // Phase 1: Read data outside transaction to find if a merge is needed
     const sourceCheckSnap = await getDoc(sourceCheckRef);
 
     if (!sourceCheckSnap.exists()) {
@@ -135,7 +76,7 @@ export async function sendNewItemsToKitchen(checkId: string) {
     }
     const sourceCheck = { id: sourceCheckSnap.id, ...sourceCheckSnap.data() } as Check;
     
-    let targetCheckDoc = null;
+    let targetCheckId: string | null = null;
     // Merge logic only applies to dine-in orders with a specified table
     if (sourceCheck.orderType === 'Dine In' && sourceCheck.tableId) {
         const q = query(
@@ -145,39 +86,100 @@ export async function sendNewItemsToKitchen(checkId: string) {
         );
         const existingChecksSnap = await getDocs(q);
         if (existingChecksSnap.docs.length > 0) {
-            targetCheckDoc = existingChecksSnap.docs[0];
+            targetCheckId = existingChecksSnap.docs[0].id;
         }
     }
 
     // Phase 2: Perform atomic write operations in a transaction
     try {
         await runTransaction(db, async (transaction) => {
-            // Re-read source check inside transaction for consistency
+            // ----- ALL READS FIRST -----
+            const settingsDocRef = doc(db, "settings", "main");
             const freshSourceSnap = await transaction.get(sourceCheckRef);
-            if (!freshSourceSnap.exists()) throw new Error("Source check was deleted during operation.");
+            const settingsDoc = await transaction.get(settingsDocRef);
             
+            let freshTargetSnap: any = null;
+            let targetCheckRef: any = null;
+            if (targetCheckId) {
+                targetCheckRef = doc(db, 'checks', targetCheckId);
+                freshTargetSnap = await transaction.get(targetCheckRef);
+            }
+            
+            if (!freshSourceSnap.exists()) {
+                throw new Error("Source check was deleted during operation.");
+            }
+            
+            // ----- LOGIC AND PREPARATION -----
             const freshSourceCheck = { id: freshSourceSnap.id, ...freshSourceSnap.data() } as Check;
-            const newItemsFromSource = freshSourceCheck.items.filter(item => item.status === 'new');
+            const newItemsToProcess = freshSourceCheck.items.filter(item => item.status === 'new');
 
-            if (newItemsFromSource.length === 0) return; // Nothing to send
+            if (newItemsToProcess.length === 0) {
+                return; // Nothing to send, exit transaction.
+            }
 
-            if (targetCheckDoc) {
-                // MERGE case: An existing check for this table was found
-                const targetCheckRef = doc(db, 'checks', targetCheckDoc.id);
-                const freshTargetSnap = await transaction.get(targetCheckRef);
+            const settings = settingsDoc.exists() ? settingsDoc.data()! : { taxRate: 0, priceLists: [] };
+            const taxRate = settings.taxRate || 0;
+            const priceLists: PriceList[] = settings.priceLists || [];
+            
+            const newSanitizedItems = newItemsToProcess.map(item => {
+                const { ingredients, cost, ...rest } = item;
+                return rest;
+            });
+
+            // Determine which check data to use for the new order (for pricing, customer name, etc.)
+            const finalCheckDataForOrder = freshTargetSnap?.exists() 
+                ? { ...freshTargetSnap.data(), id: freshTargetSnap.id } as Check 
+                : freshSourceCheck;
+
+            const subtotal = newSanitizedItems.reduce((acc, item) => {
+                const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+                const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+                return acc + totalItemPrice;
+            }, 0);
+            
+            const selectedPriceList = priceLists.find(pl => pl.id === finalCheckDataForOrder.priceListId);
+            const discountPercentage = selectedPriceList?.discount || 0;
+            const discountAmount = subtotal * (discountPercentage / 100);
+            const discountedSubtotal = subtotal - discountAmount;
+            const tax = discountedSubtotal * (taxRate / 100);
+            const total = discountedSubtotal + tax;
+            const totalPreparationTime = newSanitizedItems.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
+
+            const newOrderData = {
+                items: newSanitizedItems,
+                status: 'Preparing' as OrderStatus,
+                total: total,
+                createdAt: Timestamp.now(),
+                checkName: `${finalCheckDataForOrder.name} (Batch)`,
+                totalPreparationTime,
+                orderType: finalCheckDataForOrder.orderType,
+                tableId: finalCheckDataForOrder.tableId || null,
+                tableName: finalCheckDataForOrder.tableName || null,
+                customerName: finalCheckDataForOrder.customerName || null,
+                priceListId: finalCheckDataForOrder.priceListId || null,
+                discountApplied: discountPercentage,
+            };
+
+            const newOrderRef = doc(collection(db, 'orders'));
+
+            // ----- ALL WRITES LAST -----
+            transaction.set(newOrderRef, newOrderData);
+
+            if (targetCheckRef && freshTargetSnap?.exists()) {
+                // MERGE case
                 if (!freshTargetSnap.exists()) throw new Error("Target check was deleted during operation.");
+                const targetCheck = { id: freshTargetSnap.id, ...freshTargetSnap.data() } as Check;
+                const itemsToMerge = newItemsToProcess.map(item => ({...item, status: 'sent' as const}));
+                const mergedItems = [...targetCheck.items, ...itemsToMerge];
                 
-                const freshTargetCheck = { id: freshTargetSnap.id, ...freshTargetSnap.data() } as Check;
-                const updatedTargetItems = [...freshTargetCheck.items, ...newItemsFromSource];
-
-                transaction.update(targetCheckRef, { items: updatedTargetItems });
+                transaction.update(targetCheckRef, { items: mergedItems });
                 transaction.delete(sourceCheckRef);
-
-                const checkToProcess = { ...freshTargetCheck, items: updatedTargetItems };
-                await processAndSendItems(transaction, targetCheckRef, checkToProcess);
             } else {
-                // NO MERGE case: This is the first/only check for this table
-                await processAndSendItems(transaction, sourceCheckRef, freshSourceCheck);
+                // NO MERGE case
+                const updatedItems = freshSourceCheck.items.map(item => 
+                    item.status === 'new' ? { ...item, status: 'sent' as const } : item
+                );
+                transaction.update(sourceCheckRef, { items: updatedItems });
             }
         });
 
