@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -21,7 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from '@/lib/utils';
 
 
-export default function ReportsClient({ initialOrders, tables }: { initialOrders: ActiveOrder[], tables: RestaurantTable[] }) {
+export default function ReportsClient({ initialOrders, tables }: { initialOrders: RestaurantTable[], tables: RestaurantTable[] }) {
     const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
     const [filterText, setFilterText] = useState('');
     const [filterType, setFilterType] = useState('all');
@@ -155,15 +154,15 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
                                 <TableHead className="text-right">Total</TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody>
                             {filteredOrders.length > 0 ? filteredOrders.map(order => (
                                 <OrderRow key={order.id} order={order} />
                             )) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">No matching orders found.</TableCell>
-                                </TableRow>
+                                <TableBody>
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="h-24 text-center">No matching orders found.</TableCell>
+                                    </TableRow>
+                                </TableBody>
                             )}
-                        </TableBody>
                     </Table>
                 </CardContent>
             </Card>
@@ -174,12 +173,12 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
 function OrderRow({ order }: { order: ActiveOrder }) {
     const [isOpen, setIsOpen] = useState(false);
     return (
-        <Collapsible asChild>
-            <>
+        <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+            <TableBody>
                 <TableRow>
                     <TableCell>
                         <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+                            <Button variant="ghost" size="icon">
                                 {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 <span className="sr-only">Toggle details</span>
                             </Button>
@@ -223,7 +222,7 @@ function OrderRow({ order }: { order: ActiveOrder }) {
                         </td>
                     </tr>
                 </CollapsibleContent>
-            </>
+            </TableBody>
         </Collapsible>
     )
 }
