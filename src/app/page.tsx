@@ -5,9 +5,10 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
+import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
-import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType } from '@/lib/types';
+import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
 import MembersList from '@/components/members/members-list';
@@ -44,6 +45,7 @@ export default function Home() {
   
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
 
   const activeCheck = useMemo(() => checks.find(c => c.id === activeCheckId), [checks, activeCheckId]);
   
@@ -59,19 +61,22 @@ export default function Home() {
           fetchedMenuItems, 
           fetchedCategories, 
           fetchedChecks, 
-          fetchedOrders
+          fetchedOrders,
+          fetchedExtras
         ] = await Promise.all([
             getUsers(),
             getMenuItems(),
             getCategories(),
             getChecks(),
-            getOrders()
+            getOrders(),
+            getExtras()
         ]);
         setMembers(fetchedMembers);
         setMenuItems(fetchedMenuItems);
         setCategories(fetchedCategories);
         setChecks(fetchedChecks);
         setActiveOrders(fetchedOrders);
+        setAvailableExtras(fetchedExtras);
         
         if (fetchedChecks.length === 0) {
             const newCheckData: Omit<Check, 'id'> = { name: 'Check 1', items: [] };
@@ -152,7 +157,7 @@ export default function Home() {
 
   const handleUpdateCustomization = (
     lineItemId: string, 
-    customizations: { added: string[], removed: string[] }
+    customizations: { added: Extra[], removed: string[] }
   ) => {
     const newItems = (activeCheck?.items ?? []).map(item => 
         item.lineItemId === lineItemId ? { ...item, customizations, status: 'new' as const } : item
@@ -217,7 +222,11 @@ export default function Home() {
   const handleFinalizeAndPay = async () => {
     if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType) return;
 
-    const subtotal = activeCheck.items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const subtotal = activeCheck.items.reduce((acc, item) => {
+      const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+      const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+      return acc + totalItemPrice;
+    }, 0);
     const tax = subtotal * 0.08; // TODO: Get from settings
     const total = subtotal + tax;
     const totalPreparationTime = activeCheck.items.reduce((acc, item) => acc + (item.preparationTime || 5) * item.quantity, 0);
@@ -392,6 +401,7 @@ export default function Home() {
     </Tabs>
     <CustomizeItemDialog 
         item={customizingItem}
+        availableExtras={availableExtras}
         onClose={() => setCustomizingItem(null)}
         onSave={handleUpdateCustomization}
     />

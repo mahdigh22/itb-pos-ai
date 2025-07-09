@@ -42,7 +42,11 @@ export default function OrderSummary({
   onUpdateDetails,
 }: OrderSummaryProps) {
   const order = activeCheck?.items ?? [];
-  const subtotal = order.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = order.reduce((acc, item) => {
+    const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+    const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+    return acc + totalItemPrice;
+  }, 0);
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
   const hasNewItems = activeCheck?.items.some(item => item.status === 'new') ?? false;
@@ -183,8 +187,8 @@ export default function OrderSummary({
                                 </Badge>
                             ))}
                             {item.customizations?.added?.map(a => (
-                                <Badge key={a} variant="secondary" className="font-normal capitalize shadow-sm">
-                                    + {a}
+                                <Badge key={a.id} variant="secondary" className="font-normal capitalize shadow-sm">
+                                    + {a.name}{a.price > 0 ? ` (+$${a.price.toFixed(2)})` : ''}
                                 </Badge>
                             ))}
                             </div>

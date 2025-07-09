@@ -8,6 +8,12 @@ export interface Ingredient {
   unit: string; // e.g., 'grams', 'pcs', 'ml'
 }
 
+export interface Extra {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -45,7 +51,7 @@ export interface OrderItem extends MenuItem {
   lineItemId: string; // Unique ID for this line in the order
   quantity: number;
   customizations?: {
-    added: string[];
+    added: Extra[];
     removed: string[];
   };
   status: 'new' | 'sent';

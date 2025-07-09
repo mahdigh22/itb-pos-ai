@@ -2,29 +2,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { OrderItem } from '@/lib/types';
+import type { OrderItem, Extra } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { PlusCircle, X } from 'lucide-react';
 
 interface CustomizeItemDialogProps {
   item: OrderItem | null;
-  onSave: (lineItemId: string, customizations: { added: string[], removed: string[] }) => void;
+  availableExtras: Extra[];
+  onSave: (lineItemId: string, customizations: { added: Extra[], removed: string[] }) => void;
   onClose: () => void;
 }
 
-const availableExtras = ['Bacon', 'Extra Cheese', 'Avocado', 'Fried Egg'];
-
-export default function CustomizeItemDialog({ item, onSave, onClose }: CustomizeItemDialogProps) {
+export default function CustomizeItemDialog({ item, availableExtras, onSave, onClose }: CustomizeItemDialogProps) {
   const [removed, setRemoved] = useState<string[]>([]);
-  const [added, setAdded] = useState<string[]>([]);
-  const [customExtra, setCustomExtra] = useState('');
-
+  const [added, setAdded] = useState<Extra[]>([]);
+  
   const optionalIngredients = item?.ingredients?.filter(i => i.isOptional) ?? [];
 
   useEffect(() => {
@@ -34,7 +29,6 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
     } else {
         setRemoved([]);
         setAdded([]);
-        setCustomExtra('');
     }
   }, [item]);
 
@@ -48,19 +42,12 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
     );
   };
   
-  const handleExtraToggle = (extra: string) => {
+  const handleExtraToggle = (extra: Extra) => {
     setAdded(prev => 
-        prev.includes(extra)
-        ? prev.filter(i => i !== extra)
+        prev.some(e => e.id === extra.id)
+        ? prev.filter(e => e.id !== extra.id)
         : [...prev, extra]
     );
-  };
-
-  const handleAddCustomExtra = () => {
-    if (customExtra.trim() && !added.includes(customExtra.trim())) {
-        setAdded(prev => [...prev, customExtra.trim()]);
-        setCustomExtra('');
-    }
   };
 
   const handleSave = () => {
@@ -97,35 +84,21 @@ export default function CustomizeItemDialog({ item, onSave, onClose }: Customize
                 <h4 className="font-semibold">Add Extras</h4>
                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {availableExtras.map(extra => (
-                       <div key={extra} className="flex items-center space-x-2">
+                       <div key={extra.id} className="flex items-center space-x-2">
                             <Checkbox 
-                                id={`extra-${extra.replace(/\s/g, '')}`} 
-                                checked={added.includes(extra)}
+                                id={`extra-${extra.id}`} 
+                                checked={added.some(e => e.id === extra.id)}
                                 onCheckedChange={() => handleExtraToggle(extra)}
                             />
-                            <Label htmlFor={`extra-${extra.replace(/\s/g, '')}`} className="cursor-pointer">{extra}</Label>
+                            <Label htmlFor={`extra-${extra.id}`} className="cursor-pointer">
+                                {extra.name}
+                                {extra.price > 0 && (
+                                    <span className="text-muted-foreground ml-1.5">
+                                        (+${extra.price.toFixed(2)})
+                                    </span>
+                                )}
+                            </Label>
                        </div>
-                    ))}
-                </div>
-                <div className="flex gap-2 pt-2">
-                    <Input 
-                        placeholder="Type a custom extra..." 
-                        value={customExtra} 
-                        onChange={(e) => setCustomExtra(e.target.value)}
-                        onKeyDown={(e) => {if(e.key === 'Enter'){ e.preventDefault(); handleAddCustomExtra();}}}
-                    />
-                    <Button variant="outline" size="icon" onClick={handleAddCustomExtra}>
-                        <PlusCircle className="h-4 w-4" />
-                    </Button>
-                </div>
-                <div className="flex flex-wrap gap-1 pt-2">
-                    {added.filter(e => !availableExtras.includes(e)).map(extra => (
-                        <Badge key={extra} variant="secondary" className="capitalize">
-                            {extra}
-                            <button onClick={() => handleExtraToggle(extra)} className="ml-1.5 rounded-full hover:bg-background/50">
-                                <X className="h-3 w-3" />
-                            </button>
-                        </Badge>
                     ))}
                 </div>
             </div>
