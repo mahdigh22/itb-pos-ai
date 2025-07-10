@@ -190,13 +190,8 @@ export default function Home() {
 
     const newItems = [...order, newOrderItem];
 
-    // Sanitize items before sending to Firestore
-    const sanitizedItems = newItems.map(i => {
-        const { ingredients, ...rest } = i;
-        return rest;
-    });
-
-    await updateCheck(activeCheck.id, { items: sanitizedItems });
+    // The entire OrderItem is now assignable to what `updateCheck` expects.
+    await updateCheck(activeCheck.id, { items: newItems });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
