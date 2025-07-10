@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -14,28 +15,24 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { addTable, updateTable, deleteTable } from '@/app/admin/tables/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
-import { useTranslations } from 'next-intl';
 
 function TableForm({ table, onFormSubmit, onCancel }) {
-    const t = useTranslations('AdminTables.form');
     return (
         <form action={onFormSubmit} className="space-y-4">
             <input type="hidden" name="id" value={table?.id || ''} />
             <div className="space-y-2">
-                <Label htmlFor="name">{t('nameLabel')}</Label>
-                <Input id="name" name="name" placeholder={t('namePlaceholder')} required defaultValue={table?.name} />
+                <Label htmlFor="name">Table Name / Number</Label>
+                <Input id="name" name="name" placeholder="e.g. Table 5 or Patio 2" required defaultValue={table?.name} />
             </div>
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={onCancel}>{t('cancel')}</Button>
-                <Button type="submit">{table ? t('save') : t('add')}</Button>
+                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+                <Button type="submit">{table ? 'Save Changes' : 'Add Table'}</Button>
             </DialogFooter>
         </form>
     );
 }
 
 export default function TablesClient({ initialTables }: { initialTables: RestaurantTable[] }) {
-    const t = useTranslations('AdminTables');
-    const tAlerts = useTranslations('Alerts');
     const { toast } = useToast();
     const [editingTable, setEditingTable] = useState<RestaurantTable | null>(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -67,9 +64,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         const result = await addTable(formData);
 
         if (result.success) {
-            toast({ title: tAlerts('tableAdded') });
+            toast({ title: "Table Added" });
         } else {
-            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
@@ -78,9 +75,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         setEditingTable(null);
         const result = await updateTable(editingTable.id, formData);
         if (result.success) {
-            toast({ title: tAlerts('tableUpdated') });
+            toast({ title: "Table Updated" });
         } else {
-            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -90,9 +87,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         setDeletingTable(null);
         const result = await deleteTable(deletingTable.id);
         if (result.success) {
-            toast({ title: tAlerts('tableDeleted') });
+            toast({ title: "Table Deleted" });
         } else {
-            toast({ variant: 'destructive', title: tAlerts('error'), description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -100,25 +97,25 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold font-headline">{t('title')}</h1>
-                    <p className="text-muted-foreground">{t('description')}</p>
+                    <h1 className="text-3xl font-bold font-headline">Table Management</h1>
+                    <p className="text-muted-foreground">Define the tables available in your restaurant.</p>
                 </div>
                 <Button onClick={() => setAddDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    {t('addNew')}
+                    Add New Table
                 </Button>
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('allTablesTitle')}</CardTitle>
-                    <CardDescription>{t('allTablesDescription')}</CardDescription>
+                    <CardTitle>All Tables</CardTitle>
+                    <CardDescription>A list of all tables for dine-in orders.</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>{t('columns.name')}</TableHead>
-                                <TableHead><span className="sr-only">{t('columns.actions')}</span></TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead><span className="sr-only">Actions</span></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -129,13 +126,13 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">{t('openMenu')}</span>
+                                                    <span className="sr-only">Open menu</span>
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setEditingTable(table)}><Edit className="mr-2 h-4 w-4"/> {t('actions.edit')}</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingTable(table)}><Trash2 className="mr-2 h-4 w-4"/> {t('actions.delete')}</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingTable(table)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingTable(table)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -149,8 +146,8 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
             <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{t('dialogs.add.title')}</DialogTitle>
-                        <DialogDescription>{t('dialogs.add.description')}</DialogDescription>
+                        <DialogTitle>Add New Table</DialogTitle>
+                        <DialogDescription>Add a new table available for seating.</DialogDescription>
                     </DialogHeader>
                     <TableForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
                 </DialogContent>
@@ -159,7 +156,7 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
             <Dialog open={!!editingTable} onOpenChange={(isOpen) => !isOpen && setEditingTable(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{t('dialogs.edit.title')}</DialogTitle>
+                        <DialogTitle>Edit Table</DialogTitle>
                     </DialogHeader>
                     <TableForm table={editingTable} onFormSubmit={handleEditSubmit} onCancel={() => setEditingTable(null)} />
                 </DialogContent>
@@ -168,14 +165,14 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
             <AlertDialog open={!!deletingTable} onOpenChange={(isOpen) => !isOpen && setDeletingTable(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>{t('dialogs.delete.title')}</AlertDialogTitle>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                           {t('dialogs.delete.description', {name: deletingTable?.name})}
+                            This will permanently delete the table: {deletingTable?.name}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>{t('dialogs.delete.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>{t('dialogs.delete.confirm')}</AlertDialogAction>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

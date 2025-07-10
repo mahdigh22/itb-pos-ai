@@ -9,33 +9,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import ItbIcon from '@/components/itb-icon';
-import { loginAdmin } from './actions';
+import { loginEmployee } from './actions';
 import { Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
-export default function AdminLoginPage() {
+export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
-  const t = useTranslations('AdminLoginPage');
 
   const handleLogin = (formData: FormData) => {
     startTransition(async () => {
-      const result = await loginAdmin(formData);
-      
-      if (result.success && result.admin) {
-        localStorage.setItem('currentAdmin', JSON.stringify(result.admin));
-        
+      const result = await loginEmployee(formData);
+
+      if (result.success && result.employee) {
+        localStorage.setItem('currentEmployee', JSON.stringify(result.employee));
         toast({
-          title: t('loginSuccessTitle'),
-          description: t('loginSuccessDescription', {name: result.admin.name}),
+          title: 'Login Successful',
+          description: `Welcome back, ${result.employee.name}!`,
         });
-        router.push('/admin');
+
+        if (result.employee.role === 'Chef') {
+            router.push('/kitchen');
+        } else {
+            router.push('/');
+        }
       } else {
         toast({
           variant: 'destructive',
-          title: t('loginFailedTitle'),
-          description: result.error || t('loginFailedDescription'),
+          title: 'Login Failed',
+          description: result.error || 'Incorrect email or password.',
         });
       }
     });
@@ -47,25 +49,25 @@ export default function AdminLoginPage() {
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
             <ItbIcon className="h-10 w-10" />
-            <CardTitle className="text-3xl font-headline text-primary">{t('title')}</CardTitle>
+            <CardTitle className="text-3xl font-headline text-primary">ITB Members</CardTitle>
           </div>
-          <CardDescription>{t('description')}</CardDescription>
+          <CardDescription>Enter your credentials to access the system.</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">{t('emailLabel')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder={t('emailPlaceholder')}
+                placeholder="name@example.com"
                 required
                 disabled={isPending}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{t('passwordLabel')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -76,7 +78,7 @@ export default function AdminLoginPage() {
             </div>
             <Button type="submit" className="w-full h-12 text-lg mt-4" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {t('loginButton')}
+              Login
             </Button>
           </form>
         </CardContent>
