@@ -179,7 +179,7 @@ export default function Home() {
   const handleAddItem = async (item: MenuItem) => {
     if (!activeCheck) return;
     const order = activeCheck.items;
-    let newItems: OrderItem[];
+    
     const newOrderItem: OrderItem = { 
         ...item, 
         quantity: 1, 
@@ -187,7 +187,7 @@ export default function Home() {
         status: 'new',
         customizations: { added: [], removed: [] },
     };
-    newItems = [...order, newOrderItem];
+    const newItems = [...order, newOrderItem];
 
     await updateCheck(activeCheck.id, { items: newItems });
   };
