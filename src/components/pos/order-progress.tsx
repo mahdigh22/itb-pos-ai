@@ -22,7 +22,6 @@ import { editOrderItem, cancelOrderItem } from '@/app/pos/actions';
 import { getExtras } from '@/app/admin/extras/actions';
 
 interface OrderProgressProps {
-  orders: ActiveOrder[];
   onCompleteOrder: (orderId: string) => void;
   onClearOrder: (orderId: string) => void;
   tables: RestaurantTable[];
@@ -155,8 +154,8 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
     );
 }
 
-export default function OrderProgress({ orders: initialOrders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
-  const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
+export default function OrderProgress({ onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+  const [orders, setOrders] = useState<ActiveOrder[]>([]);
   const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
   const [selectedTableId, setSelectedTableId] = useState<string>('all');
   const { toast } = useToast();
@@ -214,7 +213,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
             return;
         }
         const fullMenuItemData = menuItemDoc.data() as MenuItem;
-        const itemWithFullDetails = {
+        const itemWithFullDetails: OrderItem = {
             ...item,
             ingredients: fullMenuItemData.ingredients,
         };

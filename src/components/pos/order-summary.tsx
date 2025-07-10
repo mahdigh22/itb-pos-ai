@@ -51,7 +51,6 @@ export default function OrderSummary({
   priceLists,
   taxRate,
   tables,
-  availableExtras,
 }: OrderSummaryProps) {
   const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
@@ -292,7 +291,7 @@ export default function OrderSummary({
                                         </Badge>
                                     ))}
                                     </div>
-                                    {(item.ingredients?.some(i => i.isOptional) || availableExtras.length > 0) && (
+                                    {(item.ingredients?.some(i => i.isOptional) || (availableExtras && availableExtras.length > 0)) && (
                                     <div className="flex-shrink-0">
                                         <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => onCustomizeItem(item)}>
                                         <Settings2 className="h-3 w-3 mr-1.5"/>

@@ -10,7 +10,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder, cancelOrderItem, editOrderItem } from '@/app/pos/actions';
+import { sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder, addCheck, updateCheck, deleteCheck } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -180,20 +180,14 @@ export default function Home() {
     if (!activeCheck) return;
     const order = activeCheck.items;
     let newItems: OrderItem[];
-    const existingNewItem = order.find(
-      (orderItem) => orderItem.id === item.id && !orderItem.customizations && orderItem.status === 'new'
-    );
-
-    if (existingNewItem) {
-      newItems = order.map((orderItem) =>
-        orderItem.lineItemId === existingNewItem.lineItemId
-          ? { ...orderItem, quantity: orderItem.quantity + 1 }
-          : orderItem
-      );
-    } else {
-      const newOrderItem: OrderItem = { ...item, quantity: 1, lineItemId: `${item.id}-${Date.now()}`, status: 'new' };
-      newItems = [...order, newOrderItem];
-    }
+    const newOrderItem: OrderItem = { 
+        ...item, 
+        quantity: 1, 
+        lineItemId: `${item.id}-${Date.now()}`, 
+        status: 'new',
+        customizations: { added: [], removed: [] },
+    };
+    newItems = [...order, newOrderItem];
 
     await updateCheck(activeCheck.id, { items: newItems });
   };
@@ -547,7 +541,6 @@ export default function Home() {
         
         <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
           <OrderProgress 
-            orders={[]} 
             onCompleteOrder={handleCompleteOrder} 
             onClearOrder={handleClearOrder} 
             tables={tables}
