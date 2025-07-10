@@ -107,12 +107,12 @@ export async function getMenuItems(): Promise<MenuItem[]> {
                     return { 
                       ...ingredient, 
                       isOptional: link.isOptional, 
-                      quantity: link.quantity || 1, // Default quantity to 1 if not specified
+                      quantity: link.quantity || 1,
                     };
                 }
                 return null;
             })
-            .filter(Boolean) as MenuItem['ingredients'];
+            .filter((i): i is NonNullable<typeof i> => i !== null);
       }
       
       menuItem.cost = calculatedCost;

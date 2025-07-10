@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
+import { getCategories, getMenuItems as fetchMenuItems } from '@/app/admin/menu/actions';
 import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
@@ -96,7 +96,7 @@ export default function Home() {
         fetchedTables,
       ] = await Promise.all([
           getUsers(),
-          getMenuItems(),
+          fetchMenuItems(),
           getCategories(),
           getExtras(),
           getSettings(),
