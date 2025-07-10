@@ -207,13 +207,11 @@ function OrderCard({
               >
                 <span className="font-medium">{item.quantity}x</span>
                 <span>{item.name}</span>
-                {item.status === "edited" && (
-                  <Badge
-                    variant="outline"
-                    className="h-5 text-xs font-normal border-amber-500 text-amber-500"
-                  >
-                    Edited
-                  </Badge>
+                {item.status === 'edited' && (
+                  <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>
+                )}
+                {item.status === 'cancelled' && (
+                  <Badge variant="outline" className="h-5 text-xs font-normal border-red-500 text-red-500">Cancelled</Badge>
                 )}
               </div>
               <div className="flex-grow flex flex-wrap gap-1 mt-1">
