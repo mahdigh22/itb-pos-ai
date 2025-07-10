@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -61,6 +62,7 @@ import { cn } from "@/lib/utils";
 import CustomizeItemDialog from "./customize-item-dialog";
 import { editOrderItem, cancelOrderItem } from "@/app/pos/actions";
 import { getExtras } from "@/app/admin/extras/actions";
+import { getMenuItems } from "@/app/admin/menu/actions";
 
 interface OrderProgressProps {
   onCompleteOrder: (orderId: string) => void;
@@ -213,11 +215,11 @@ function OrderCard({
                     Edited
                   </Badge>
                 )}
-              </div>{" "}
-              <div className="flex-grow flex flex-wrap gap-1">
-                {item.customizations?.removed?.map((r) => (
+              </div>
+              <div className="flex-grow flex flex-wrap gap-1 mt-1">
+                {item.customizations?.removed?.map((r, index) => (
                   <Badge
-                    key={r.id}
+                    key={`${r.id}-${index}`}
                     variant="destructive"
                     className="font-normal capitalize shadow-sm"
                   >
@@ -295,13 +297,20 @@ export default function OrderProgress({
     item: OrderItem;
   } | null>(null);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
+  const [menuItemsMap, setMenuItemsMap] = useState<Map<string, MenuItem>>(
+    new Map()
+  );
 
   useEffect(() => {
-    const fetchExtrasData = async () => {
+    const fetchInitialData = async () => {
       const extras = await getExtras();
       setAvailableExtras(extras);
+      const menuItems = await getMenuItems();
+      const map = new Map<string, MenuItem>();
+      menuItems.forEach((item) => map.set(item.id, item));
+      setMenuItemsMap(map);
     };
-    fetchExtrasData();
+    fetchInitialData();
 
     const q = query(
       collection(db, "orders"),
@@ -340,39 +349,27 @@ export default function OrderProgress({
   }, [toast]);
 
   useEffect(() => {
-    // Reset table filter if main filter is not 'Dine In'
     if (filter !== "Dine In") {
       setSelectedTableId("all");
     }
   }, [filter]);
 
   const handleEditItem = async (orderId: string, item: OrderItem) => {
-    try {
-      const menuItemDoc = await getDoc(firestoreDoc(db, "menuItems", item.id));
-      if (!menuItemDoc.exists()) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not find original menu item to edit.",
-        });
-        return;
-      }
-      const fullMenuItemData = menuItemDoc.data() as MenuItem;
-      console.log("Full menu item data for edit:", fullMenuItemData);
-      const itemWithFullDetails: OrderItem = {
-        ...item,
-        ingredients: fullMenuItemData.ingredients,
-      };
-
-      setCustomizingItem({ orderId, item: itemWithFullDetails });
-    } catch (error) {
-      console.error("Error fetching menu item for edit:", error);
+    const fullMenuItemData = menuItemsMap.get(item.id);
+    if (!fullMenuItemData) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fetch item details for editing.",
+        description: "Could not find original menu item details to edit.",
       });
+      return;
     }
+    const itemWithFullDetails: OrderItem = {
+      ...item,
+      ingredients: fullMenuItemData.ingredients,
+    };
+
+    setCustomizingItem({ orderId, item: itemWithFullDetails });
   };
 
   const handleCancelItem = async (orderId: string, item: OrderItem) => {
@@ -402,8 +399,8 @@ export default function OrderProgress({
     const updatedItem: OrderItem = {
       ...item,
       customizations,
-      status: "sent", // New customized item is marked as 'sent'
-      lineItemId: `${item.id}-${Date.now()}`, // a new line item id to signify it's a new item
+      status: "sent",
+      lineItemId: `${item.id}-${Date.now()}`,
     };
 
     const result = await editOrderItem(orderId, item.lineItemId, updatedItem);
@@ -424,7 +421,7 @@ export default function OrderProgress({
   };
 
   const filteredOrders = orders.filter((order) => {
-    if (order.status === "Archived") return false; // Always hide archived orders
+    if (order.status === "Archived") return false;
 
     if (filter !== "all" && order.orderType !== filter) {
       return false;
