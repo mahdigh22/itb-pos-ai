@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import Link from 'next-intl/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getExtras } from '@/app/admin/extras/actions';
@@ -561,11 +561,11 @@ export default function Home() {
               <OrderSummary
                 activeCheck={activeCheck}
                 checks={checks}
-                onUpdateQuantity={handleUpdateQuantity}
-                onRemoveItem={handleRemoveItem}
-                onNewCheck={handleNewCheck}
-                onSendToKitchen={handleSendToKitchen}
-                onCloseCheck={handleCloseCheck}
+                onUpdateQuantity={onUpdateQuantity}
+                onRemoveItem={onRemoveItem}
+                onNewCheck={onNewCheck}
+                onSendToKitchen={onSendToKitchen}
+                onCloseCheck={onCloseCheck}
                 onClearCheck={handleClearCheck}
                 onCustomizeItem={handleStartCustomization}
                 onSwitchCheck={handleSwitchCheck}
