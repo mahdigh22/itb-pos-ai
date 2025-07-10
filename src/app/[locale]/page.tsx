@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle, LayoutGrid } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
@@ -77,13 +77,13 @@ export default function Home() {
     }
     
     if (!employeeData?.id) {
-      router.replace('/login');
       setIsLoading(false); // Ensure loading is stopped before redirect
+      router.replace('/login');
       return;
     } else {
       if (employeeData.role === 'Chef') {
-        router.replace('/kitchen');
         setIsLoading(false); // Ensure loading is stopped before redirect
+        router.replace('/kitchen');
         return;
       }
 
@@ -532,6 +532,14 @@ export default function Home() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>{t('myAccountLabel')} ({currentUser.role})</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      {currentUser.role === 'Manager' && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin">
+                            <LayoutGrid className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                            <span>Go to Admin</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="ltr:mr-2 rtl:ml-2 h-4 w-4" />
                         <span>{t('logout')}</span>
