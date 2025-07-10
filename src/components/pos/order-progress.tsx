@@ -195,24 +195,48 @@ function OrderCard({
             key={item.lineItemId}
             className="flex items-center justify-between text-sm"
           >
-            <div
-              className={cn(
-                "flex items-center gap-2",
-                item.status === "cancelled" && "text-red-500 line-through",
-                item.status === "edited" && "text-amber-500 line-through"
-              )}
-            >
-              <span className="font-medium">{item.quantity}x</span>
-              <span>{item.name}</span>
-              {item.status === "edited" && (
-                <Badge
-                  variant="outline"
-                  className="h-5 text-xs font-normal border-amber-500 text-amber-500"
-                >
-                  Edited
-                </Badge>
-              )}
+            <div>
+              <div
+                className={cn(
+                  "flex items-center gap-2",
+                  item.status === "cancelled" && "text-red-500 line-through",
+                  item.status === "edited" && "text-amber-500 line-through"
+                )}
+              >
+                <span className="font-medium">{item.quantity}x</span>
+                <span>{item.name}</span>
+                {item.status === "edited" && (
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-xs font-normal border-amber-500 text-amber-500"
+                  >
+                    Edited
+                  </Badge>
+                )}
+              </div>{" "}
+              <div className="flex-grow flex flex-wrap gap-1">
+                {item.customizations?.removed?.map((r) => (
+                  <Badge
+                    key={r.id}
+                    variant="destructive"
+                    className="font-normal capitalize shadow-sm"
+                  >
+                    - {r.name}
+                  </Badge>
+                ))}
+                {item.customizations?.added?.map((a) => (
+                  <Badge
+                    key={a.id}
+                    variant="secondary"
+                    className="font-normal capitalize shadow-sm"
+                  >
+                    + {a.name}
+                    {a.price > 0 ? ` (+$${a.price.toFixed(2)})` : ""}
+                  </Badge>
+                ))}
+              </div>
             </div>
+
             {order.status === "Preparing" &&
               item.status !== "cancelled" &&
               item.status !== "edited" && (
