@@ -79,7 +79,7 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
                     </div>
                 </div>
             )}
-             {optionalIngredients.length > 0 && <Separator />}
+             {(optionalIngredients.length > 0 && availableExtras.length > 0) && <Separator />}
             {availableExtras.length > 0 && (
               <div className="space-y-3">
                   <h4 className="font-semibold">Add Extras</h4>
