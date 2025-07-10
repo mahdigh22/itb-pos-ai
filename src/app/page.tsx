@@ -573,12 +573,14 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
     </Tabs>
-    <CustomizeItemDialog 
-        item={customizingItem}
-        availableExtras={availableExtras}
-        onClose={() => setCustomizingItem(null)}
-        onSave={handleUpdateCustomization}
-    />
+    {customizingItem && (
+      <CustomizeItemDialog 
+          item={customizingItem}
+          availableExtras={availableExtras}
+          onClose={() => setCustomizingItem(null)}
+          onSave={handleUpdateCustomization}
+      />
+    )}
     </>
   );
 }
