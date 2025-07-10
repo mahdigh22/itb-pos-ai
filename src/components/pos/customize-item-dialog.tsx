@@ -80,28 +80,30 @@ export default function CustomizeItemDialog({ item, availableExtras, onSave, onC
                 </div>
             )}
              {optionalIngredients.length > 0 && <Separator />}
-            <div className="space-y-3">
-                <h4 className="font-semibold">Add Extras</h4>
-                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    {availableExtras.map(extra => (
-                       <div key={extra.id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={`extra-${extra.id}`} 
-                                checked={added.some(e => e.id === extra.id)}
-                                onCheckedChange={() => handleExtraToggle(extra)}
-                            />
-                            <Label htmlFor={`extra-${extra.id}`} className="cursor-pointer">
-                                {extra.name}
-                                {extra.price > 0 && (
-                                    <span className="text-muted-foreground ml-1.5">
-                                        (+${extra.price.toFixed(2)})
-                                    </span>
-                                )}
-                            </Label>
-                       </div>
-                    ))}
-                </div>
-            </div>
+            {availableExtras.length > 0 && (
+              <div className="space-y-3">
+                  <h4 className="font-semibold">Add Extras</h4>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {availableExtras.map(extra => (
+                        <div key={extra.id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                  id={`extra-${extra.id}`} 
+                                  checked={added.some(e => e.id === extra.id)}
+                                  onCheckedChange={() => handleExtraToggle(extra)}
+                              />
+                              <Label htmlFor={`extra-${extra.id}`} className="cursor-pointer">
+                                  {extra.name}
+                                  {extra.price > 0 && (
+                                      <span className="text-muted-foreground ml-1.5">
+                                          (+${extra.price.toFixed(2)})
+                                      </span>
+                                  )}
+                              </Label>
+                        </div>
+                      ))}
+                  </div>
+              </div>
+            )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

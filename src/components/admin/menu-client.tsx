@@ -15,11 +15,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription as AlertDialogDescriptionComponent } from "@/components/ui/alert-dialog";
-import type { MenuItem, Category, Ingredient } from "@/lib/types";
+import type { MenuItem, Category, Ingredient, Extra } from "@/lib/types";
 import { addMenuItem, addCategory, updateMenuItem, deleteMenuItem, updateCategory, deleteCategory } from '@/app/admin/menu/actions';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { getExtras } from '@/app/admin/extras/actions';
+
 
 interface MenuClientProps {
     initialMenuItems: MenuItem[];

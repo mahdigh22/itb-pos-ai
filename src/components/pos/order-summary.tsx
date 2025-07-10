@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -222,7 +223,11 @@ export default function OrderSummary({
                   <div>
                     {sentItems.length > 0 && <h4 className="text-sm font-medium text-muted-foreground mb-2">New Items</h4>}
                     <div className="space-y-2">
-                        {newItems.map((item) => (
+                        {newItems.map((item) => {
+                          const extrasPrice = item.customizations?.added.reduce((acc, extra) => acc + extra.price, 0) || 0;
+                          const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+                        
+                          return (
                         <div key={item.lineItemId} className="flex items-start py-3 border-b last:border-b-0 gap-4">
                             <Avatar className="w-14 h-14 rounded-md border">
                                 <AvatarImage src={item.imageUrl} alt={item.name} />
@@ -258,7 +263,7 @@ export default function OrderSummary({
                                         </Button>
                                         </div>
                                         <p className="w-20 text-right font-semibold text-base">
-                                        ${(item.price * item.quantity).toFixed(2)}
+                                          ${totalItemPrice.toFixed(2)}
                                         </p>
                                         <Button
                                         variant="ghost"
@@ -271,7 +276,6 @@ export default function OrderSummary({
                                     </div>
                                 </div>
                                 
-                                {( (item.customizations?.added?.length || 0) > 0 || (item.customizations?.removed?.length || 0) > 0 || (item.ingredients && item.ingredients.length > 0) ) && (
                                 <div className="mt-2 flex items-center gap-4 flex-wrap">
                                     <div className="flex-grow flex flex-wrap gap-1">
                                     {item.customizations?.removed?.map(r => (
@@ -285,7 +289,7 @@ export default function OrderSummary({
                                         </Badge>
                                     ))}
                                     </div>
-                                    {item.ingredients && item.ingredients.some(i => i.isOptional) && (
+                                    {(item.ingredients?.some(i => i.isOptional) || availableExtras.length > 0) && (
                                     <div className="flex-shrink-0">
                                         <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => onCustomizeItem(item)}>
                                         <Settings2 className="h-3 w-3 mr-1.5"/>
@@ -294,10 +298,9 @@ export default function OrderSummary({
                                     </div>
                                     )}
                                 </div>
-                                )}
                             </div>
                         </div>
-                        ))}
+                        )})}
                     </div>
                   </div>
                 )}
