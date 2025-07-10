@@ -8,11 +8,11 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag, MoreVertical, Edit, Ban } from 'lucide-react';
-import type { ActiveOrder, OrderItem, OrderStatus, RestaurantTable, Extra } from '@/lib/types';
+import type { ActiveOrder, OrderItem, OrderStatus, RestaurantTable, Extra, MenuItem } from '@/lib/types';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp, getDoc, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -206,8 +206,24 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
     }
   }, [filter]);
 
-  const handleEditItem = (orderId: string, item: OrderItem) => {
-    setCustomizingItem({ orderId, item });
+  const handleEditItem = async (orderId: string, item: OrderItem) => {
+    try {
+        const menuItemDoc = await getDoc(firestoreDoc(db, 'menuItems', item.id));
+        if (!menuItemDoc.exists()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find original menu item to edit.' });
+            return;
+        }
+        const fullMenuItemData = menuItemDoc.data() as MenuItem;
+        const itemWithFullDetails = {
+            ...item,
+            ingredients: fullMenuItemData.ingredients,
+        };
+
+        setCustomizingItem({ orderId, item: itemWithFullDetails });
+    } catch (error) {
+        console.error("Error fetching menu item for edit:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch item details for editing.' });
+    }
   }
 
   const handleCancelItem = async (orderId: string, item: OrderItem) => {
