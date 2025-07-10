@@ -284,7 +284,7 @@ export default function OrderSummary({
                                         </Badge>
                                     ))}
                                     </div>
-                                    {item.ingredients && item.ingredients.length > 0 && (
+                                    {item.ingredients && item.ingredients.some(i => i.isOptional) && (
                                     <div className="flex-shrink-0">
                                         <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => onCustomizeItem(item)}>
                                         <Settings2 className="h-3 w-3 mr-1.5"/>

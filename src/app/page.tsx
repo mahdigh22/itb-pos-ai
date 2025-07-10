@@ -9,7 +9,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder } from '@/app/pos/actions';
+import { addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -91,7 +91,6 @@ export default function Home() {
         fetchedMembers, 
         fetchedMenuItems, 
         fetchedCategories, 
-        fetchedChecks, 
         fetchedExtras,
         fetchedSettings,
         fetchedTables,
@@ -99,7 +98,6 @@ export default function Home() {
           getUsers(),
           getMenuItems(),
           getCategories(),
-          getChecks(),
           getExtras(),
           getSettings(),
           getTables(),
@@ -107,25 +105,9 @@ export default function Home() {
       setMembers(fetchedMembers);
       setMenuItems(fetchedMenuItems);
       setCategories(fetchedCategories);
-      setChecks(fetchedChecks);
       setAvailableExtras(fetchedExtras);
       setSettings(fetchedSettings);
       setTables(fetchedTables);
-      
-      if (fetchedChecks.length === 0) {
-          const newCheckData: Omit<Check, 'id'> = { 
-            name: `Check 1`, 
-            items: [],
-            priceListId: fetchedSettings.activePriceListId,
-            employeeId: employeeData.id,
-            employeeName: employeeData.name,
-          };
-          const newCheck = await addCheck(newCheckData);
-          setChecks([newCheck]);
-          setActiveCheckId(newCheck.id);
-      } else {
-          setActiveCheckId(fetchedChecks[0].id);
-      }
 
       setIsLoading(false);
     }
@@ -134,9 +116,9 @@ export default function Home() {
   }, [router]);
   
   useEffect(() => {
-      const q = query(collection(db, 'orders'), where('status', 'in', ['Preparing', 'Ready', 'Completed']));
-
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      // Listener for active kitchen orders
+      const ordersQuery = query(collection(db, 'orders'), where('status', 'in', ['Preparing', 'Ready', 'Completed']));
+      const unsubscribeOrders = onSnapshot(ordersQuery, (querySnapshot) => {
           const liveOrders: ActiveOrder[] = [];
           querySnapshot.forEach((doc) => {
               const data = doc.data();
@@ -151,23 +133,58 @@ export default function Home() {
         console.error("Error in orders snapshot listener: ", error);
         toast({
           variant: "destructive",
-          title: "Real-time Update Error",
-          description: "Could not fetch live order updates. Please check console for details."
+          title: "Real-time Error",
+          description: "Could not fetch live order updates."
         })
       });
 
-      return () => unsubscribe();
-  }, [toast]);
+      // Listener for open checks
+      const checksQuery = query(collection(db, 'checks'));
+      const unsubscribeChecks = onSnapshot(checksQuery, async (querySnapshot) => {
+        const liveChecks: Check[] = [];
+        querySnapshot.forEach((doc) => {
+          liveChecks.push({ id: doc.id, ...doc.data() } as Check);
+        });
+        setChecks(liveChecks.sort((a, b) => a.name.localeCompare(b.name)));
+
+        // If no active check is set, or the active check no longer exists, set one.
+        if (!activeCheckId || !liveChecks.some(c => c.id === activeCheckId)) {
+            if (liveChecks.length > 0) {
+                setActiveCheckId(liveChecks[0].id);
+            } else if (currentUser) { // Only create a new check if there are none and user is loaded
+                 const newCheckData: Omit<Check, 'id'> = { 
+                    name: `Check 1`, 
+                    items: [],
+                    priceListId: settings?.activePriceListId,
+                    employeeId: currentUser.id,
+                    employeeName: currentUser.name,
+                };
+                const newCheck = await addCheck(newCheckData);
+                // The listener will pick this up and set state, no need to do it twice.
+                setActiveCheckId(newCheck.id);
+            }
+        }
+      }, (error) => {
+        console.error("Error in checks snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Error",
+          description: "Could not fetch live check updates."
+        })
+      });
+
+
+      return () => {
+        unsubscribeOrders();
+        unsubscribeChecks();
+      };
+  }, [toast, activeCheckId, currentUser, settings]);
+
 
   const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;
     
-    setChecks(prevChecks => 
-      prevChecks.map(c => 
-        c.id === activeCheckId ? { ...c, ...updates } : c
-      )
-    );
-    
+    // The real-time listener will handle the UI update.
     await updateCheck(activeCheckId, updates);
   };
 
@@ -181,8 +198,9 @@ export default function Home() {
   };
 
 
-  const handleAddItem = (item: MenuItem) => {
-    const order = activeCheck?.items ?? [];
+  const handleAddItem = async (item: MenuItem) => {
+    if (!activeCheck) return;
+    const order = activeCheck.items;
     let newItems: OrderItem[];
     const existingNewItem = order.find(
       (orderItem) => orderItem.id === item.id && !orderItem.customizations && orderItem.status === 'new'
@@ -199,48 +217,53 @@ export default function Home() {
       newItems = [...order, newOrderItem];
     }
 
-    updateActiveCheckDetails({ items: newItems });
+    await updateCheck(activeCheck.id, { items: newItems });
   };
 
-  const handleUpdateQuantity = (lineItemId: string, quantity: number) => {
+  const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
+    if (!activeCheck) return;
     if (quantity < 1) {
-      handleRemoveItem(lineItemId);
+      await handleRemoveItem(lineItemId);
       return;
     }
-    const newItems = (activeCheck?.items ?? []).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' } : item))
-    updateActiveCheckDetails({ items: newItems });
+    const newItems = (activeCheck.items).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' } : item))
+    await updateCheck(activeCheck.id, { items: newItems });
   };
 
-  const handleRemoveItem = (lineItemId: string) => {
-    const newItems = (activeCheck?.items ?? []).filter((item) => item.lineItemId !== lineItemId);
-    updateActiveCheckDetails({ items: newItems });
+  const handleRemoveItem = async (lineItemId: string) => {
+    if (!activeCheck) return;
+    const newItems = (activeCheck.items).filter((item) => item.lineItemId !== lineItemId);
+    await updateCheck(activeCheck.id, { items: newItems });
   };
   
-  const handleClearCheck = () => {
-    updateActiveCheckDetails({ items: [] });
+  const handleClearCheck = async () => {
+    if (!activeCheck) return;
+    await updateCheck(activeCheck.id, { items: [] });
   };
   
-  const handleStartCustomization = (itemToCustomize: OrderItem) => {
-    const order = activeCheck?.items ?? [];
+  const handleStartCustomization = async (itemToCustomize: OrderItem) => {
+    if (!activeCheck) return;
+    const order = activeCheck.items;
     if (itemToCustomize.quantity > 1) {
       const otherItems = order.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
       const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
-      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}`, status: 'new' as const };
+      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${item.id}-${Date.now()}`, status: 'new' as const };
       setCustomizingItem(newItemToCustomize);
-      updateActiveCheckDetails({ items: [...otherItems, originalItem, newItemToCustomize] });
+      await updateCheck(activeCheck.id, { items: [...otherItems, originalItem, newItemToCustomize] });
     } else {
       setCustomizingItem(itemToCustomize);
     }
   };
 
-  const handleUpdateCustomization = (
+  const handleUpdateCustomization = async (
     lineItemId: string, 
     customizations: { added: Extra[], removed: string[] }
   ) => {
-    const newItems = (activeCheck?.items ?? []).map(item => 
+    if (!activeCheck) return;
+    const newItems = (activeCheck.items).map(item => 
         item.lineItemId === lineItemId ? { ...item, customizations, status: 'new' as const } : item
       );
-    updateActiveCheckDetails({ items: newItems });
+    await updateCheck(activeCheck.id, { items: newItems });
     setCustomizingItem(null);
   };
 
@@ -267,7 +290,7 @@ export default function Home() {
     };
     const newCheck = await addCheck(newCheckData);
     
-    setChecks(prevChecks => [...prevChecks, newCheck]);
+    // The listener will add the check to state, just need to switch to it.
     setActiveCheckId(newCheck.id);
 
     toast({
@@ -293,10 +316,9 @@ export default function Home() {
       return;
     }
 
-    const originalCheckId = activeCheckId;
     const originalCheckName = activeCheck.name;
 
-    const result = await sendNewItemsToKitchen(originalCheckId);
+    const result = await sendNewItemsToKitchen(activeCheckId);
 
     if (result.success) {
       toast({
@@ -304,11 +326,10 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
-      const updatedChecks = await getChecks();
-      
-      setChecks(updatedChecks);
-
-      const emptyCheck = updatedChecks.find(c => c.items.length === 0);
+      // The check listener will update the checks state automatically.
+      // Now, we need to decide which check to switch to.
+      const currentChecks = checks;
+      const emptyCheck = currentChecks.find(c => c.items.length === 0 && c.id !== activeCheckId);
 
       if (emptyCheck) {
           setActiveCheckId(emptyCheck.id);
@@ -317,7 +338,7 @@ export default function Home() {
               description: "The previous check is available in 'Open Checks'.",
           });
       } else {
-          const newCheckName = `Check ${updatedChecks.length + 1}`;
+          const newCheckName = `Check ${currentChecks.length + 1}`;
           const newCheckData: Omit<Check, 'id'> = {
               name: newCheckName,
               items: [],
@@ -326,7 +347,6 @@ export default function Home() {
               employeeName: currentUser.name,
           };
           const newCheck = await addCheck(newCheckData);
-          setChecks(prev => [...prev, newCheck]);
           setActiveCheckId(newCheck.id);
           toast({
               title: "New Check Started",
@@ -340,38 +360,20 @@ export default function Home() {
         title: "Error",
         description: result.error || "Could not send items to kitchen.",
       });
-      const updatedChecks = await getChecks();
-      setChecks(updatedChecks);
     }
   };
 
   const handleFinalizeAndPay = async () => {
     if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !activeCheck.orderType || !settings || !currentUser) return;
 
+    const originalCheckName = activeCheck.name;
+
     if (activeCheck.orderType === 'Dine In') {
       await deleteCheck(activeCheckId);
-      
-      const remainingChecks = checks.filter(c => c.id !== activeCheckId);
-      setChecks(remainingChecks);
-
-      if (remainingChecks.length > 0) {
-          setActiveCheckId(remainingChecks[0].id);
-      } else {
-          const newCheckData: Omit<Check, 'id'> = { 
-            name: 'Check 1',
-            items: [],
-            priceListId: settings.activePriceListId,
-            employeeId: currentUser.id,
-            employeeName: currentUser.name,
-          };
-          const newCheck = await addCheck(newCheckData);
-          setChecks([newCheck]);
-          setActiveCheckId(newCheck.id);
-      }
-
+      // The listener will automatically remove the check from state and select a new one.
       toast({
           title: "Bill Closed",
-          description: `${activeCheck.name}'s bill has been paid and closed.`,
+          description: `${originalCheckName}'s bill has been paid and closed.`,
       });
       setCloseCheckAlertOpen(false);
       return;
@@ -412,27 +414,9 @@ export default function Home() {
     await addOrder(newOrderData);
     await deleteCheck(activeCheckId);
     
-    const remainingChecks = checks.filter(c => c.id !== activeCheckId);
-    setChecks(remainingChecks);
-
-    if (remainingChecks.length > 0) {
-        setActiveCheckId(remainingChecks[0].id);
-    } else {
-        const newCheckData: Omit<Check, 'id'> = { 
-          name: 'Check 1',
-          items: [],
-          priceListId: settings.activePriceListId,
-          employeeId: currentUser.id,
-          employeeName: currentUser.name,
-        };
-        const newCheck = await addCheck(newCheckData);
-        setChecks([newCheck]);
-        setActiveCheckId(newCheck.id);
-    }
-
     toast({
         title: "Order Sent & Closed!",
-        description: `${activeCheck.name}'s order sent and check is closed.`,
+        description: `${originalCheckName}'s order sent and check is closed.`,
     });
     setCloseCheckAlertOpen(false);
   }
