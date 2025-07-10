@@ -55,10 +55,12 @@ export default function OrderSummary({
   const isCheckPristine = !activeCheck?.items.some(item => item.status === 'sent');
   const pristineChecks = checks.filter(c => !c.items.some(item => item.status === 'sent'));
 
-  const sentItems = order.filter((item) => item.status === 'sent');
-  const newItems = order.filter((item) => item.status === 'new');
+  const activeItems = order.filter(item => item.status !== 'cancelled');
+  const sentItems = activeItems.filter((item) => item.status === 'sent');
+  const newItems = activeItems.filter((item) => item.status === 'new');
+  const cancelledItems = order.filter(item => item.status === 'cancelled');
 
-  const subtotal = order.reduce((acc, item) => {
+  const subtotal = activeItems.reduce((acc, item) => {
     const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
     const totalItemPrice = (item.price + extrasPrice) * item.quantity;
     return acc + totalItemPrice;
@@ -213,7 +215,7 @@ export default function OrderSummary({
                     </div>
                 )}
                 
-                {sentItems.length > 0 && newItems.length > 0 && <Separator />}
+                {(sentItems.length > 0 || cancelledItems.length > 0) && newItems.length > 0 && <Separator />}
 
                 {newItems.length > 0 && (
                   <div>
@@ -298,12 +300,29 @@ export default function OrderSummary({
                     </div>
                   </div>
                 )}
-                 {newItems.length === 0 && sentItems.length > 0 && (
+                 {newItems.length === 0 && sentItems.length > 0 && cancelledItems.length === 0 && (
                     <div className="text-center text-muted-foreground py-6">
                         <p className="font-medium">No new items to send.</p>
                         <p className="text-xs">Add more items from the menu.</p>
                     </div>
                 )}
+
+                 {cancelledItems.length > 0 && <Separator />}
+
+                {cancelledItems.length > 0 && (
+                    <div>
+                        <h4 className="text-sm font-medium text-destructive mb-2">Cancelled Items</h4>
+                         <div className="space-y-2 text-sm pl-1">
+                        {cancelledItems.map(item => (
+                            <div key={item.lineItemId} className="flex justify-between items-center text-muted-foreground line-through">
+                                <span>{item.quantity} x {item.name}</span>
+                                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                )}
+
               </div>
             </ScrollArea>
             <div className="mt-auto pt-4 border-t">
@@ -344,7 +363,7 @@ export default function OrderSummary({
             </>
         )}
         {activeCheck.orderType === 'Take Away' && (
-             <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={order.length === 0}>
+             <Button className="w-full" size="lg" onClick={onCloseCheck} disabled={order.length === 0}>
                 <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
             </Button>
         )}

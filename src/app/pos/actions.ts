@@ -149,6 +149,7 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 status: 'Preparing' as OrderStatus,
                 total: total,
                 createdAt: Timestamp.now(),
+                sourceCheckId: finalCheckDataForOrder.id,
                 checkName: `${finalCheckDataForOrder.name} (Batch)`,
                 totalPreparationTime,
                 orderType: finalCheckDataForOrder.orderType,
@@ -213,6 +214,7 @@ export async function getOrders(): Promise<ActiveOrder[]> {
         status: data.status,
         total: data.total,
         checkName: data.checkName,
+        sourceCheckId: data.sourceCheckId,
         createdAt: (data.createdAt as Timestamp).toDate(),
         totalPreparationTime: data.totalPreparationTime,
         orderType: data.orderType,
@@ -303,11 +305,21 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
                 }
                 return item;
             });
-
-            // Recalculate total
-            const { total } = await calculateOrderTotal(updatedItems.filter(i => i.status !== 'cancelled'), orderData.discountApplied || 0);
             
-            transaction.update(orderRef, { items: updatedItems, total });
+            // Sync change with the source check if it exists
+            if (orderData.sourceCheckId) {
+                const checkRef = doc(db, "checks", orderData.sourceCheckId);
+                const checkDoc = await transaction.get(checkRef);
+                if (checkDoc.exists()) {
+                    const checkData = checkDoc.data() as Check;
+                    const updatedCheckItems = checkData.items.map(item => 
+                        item.lineItemId === lineItemId ? { ...item, status: 'cancelled' as const } : item
+                    );
+                    transaction.update(checkRef, { items: updatedCheckItems });
+                }
+            }
+
+            transaction.update(orderRef, { items: updatedItems });
         });
         revalidatePath('/');
         return { success: true };
@@ -332,10 +344,21 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
             );
             const updatedItems = [...itemsWithoutOld, newItem];
 
-            // Recalculate total
-            const { total } = await calculateOrderTotal(updatedItems.filter(i => i.status !== 'cancelled'), orderData.discountApplied || 0);
+            // Sync with check
+            if (orderData.sourceCheckId) {
+                const checkRef = doc(db, "checks", orderData.sourceCheckId);
+                const checkDoc = await transaction.get(checkRef);
+                if (checkDoc.exists()) {
+                    const checkData = checkDoc.data() as Check;
+                    const updatedCheckItems = checkData.items.map(item => 
+                        item.lineItemId === oldLineItemId ? { ...item, status: 'cancelled' as const } : item
+                    );
+                    const finalCheckItems = [...updatedCheckItems, newItem];
+                    transaction.update(checkRef, { items: finalCheckItems });
+                }
+            }
 
-            transaction.update(orderRef, { items: updatedItems, total });
+            transaction.update(orderRef, { items: updatedItems });
         });
         revalidatePath('/');
         return { success: true };

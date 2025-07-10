@@ -86,6 +86,7 @@ export interface ActiveOrder {
   total: number;
   createdAt: Date;
   checkName: string;
+  sourceCheckId?: string; // Link back to the original check
   totalPreparationTime: number; // in minutes
   orderType: OrderType;
   tableId?: string;

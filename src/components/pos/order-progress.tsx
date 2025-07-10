@@ -53,6 +53,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
     const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
     const endTime = startTime + totalDuration;
     const elapsedTime = currentTime.getTime() - startTime;
+    const activeItems = order.items.filter(i => i.status !== 'cancelled');
 
     let currentStatus: OrderStatus;
     let progress = 0;
@@ -138,6 +139,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
                     </div>
                  ))}
             </div>
+            {activeItems.length > 0 && (
             <div>
                  <Progress value={progress} className="h-2" />
                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
@@ -146,6 +148,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
                     {currentStatus === 'Completed' && 'Order collected.'}
                  </p>
             </div>
+            )}
         </div>
     );
 }
@@ -222,7 +225,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
     const updatedItem: OrderItem = {
       ...item,
       customizations,
-      status: 'new', // New customized item is marked as 'new'
+      status: 'sent', // New customized item is marked as 'sent'
       lineItemId: `${item.id}-${Date.now()}` // a new line item id to signify it's a new item
     };
 
