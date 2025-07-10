@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
+import { Link } from "next-intl"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { Member } from "@/lib/types"

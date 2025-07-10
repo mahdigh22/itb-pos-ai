@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlusCircle, BookOpen } from 'lucide-react';
 import type { Category, MenuItem } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
-import Link from 'next/link';
+import { Link } from 'next-intl';
 import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 
