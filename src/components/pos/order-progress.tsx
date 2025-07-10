@@ -1,25 +1,66 @@
+"use client";
 
-
-'use client';
-
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag, MoreVertical, Edit, Ban } from 'lucide-react';
-import type { ActiveOrder, OrderItem, OrderStatus, RestaurantTable, Extra, MenuItem } from '@/lib/types';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, onSnapshot, query, where, Timestamp, getDoc, doc as firestoreDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import CustomizeItemDialog from './customize-item-dialog';
-import { editOrderItem, cancelOrderItem } from '@/app/pos/actions';
-import { getExtras } from '@/app/admin/extras/actions';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  X,
+  CheckCircle,
+  Package,
+  Soup,
+  ClipboardList,
+  UtensilsCrossed,
+  ShoppingBag,
+  MoreVertical,
+  Edit,
+  Ban,
+} from "lucide-react";
+import type {
+  ActiveOrder,
+  OrderItem,
+  OrderStatus,
+  RestaurantTable,
+  Extra,
+  MenuItem,
+} from "@/lib/types";
+import { formatDistanceToNowStrict } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  Timestamp,
+  getDoc,
+  doc as firestoreDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import CustomizeItemDialog from "./customize-item-dialog";
+import { editOrderItem, cancelOrderItem } from "@/app/pos/actions";
+import { getExtras } from "@/app/admin/extras/actions";
 
 interface OrderProgressProps {
   onCompleteOrder: (orderId: string) => void;
@@ -27,323 +68,441 @@ interface OrderProgressProps {
   tables: RestaurantTable[];
 }
 
-const statusConfig: Record<OrderStatus, { text: string; icon: React.ElementType; badgeVariant: "default" | "secondary" | "outline" | "destructive" }> = {
-    Preparing: { text: "Preparing", icon: Soup, badgeVariant: "secondary" },
-    Ready: { text: "Ready", icon: Package, badgeVariant: "outline" },
-    Completed: { text: "Completed", icon: CheckCircle, badgeVariant: "default" },
-    Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
+const statusConfig: Record<
+  OrderStatus,
+  {
+    text: string;
+    icon: React.ElementType;
+    badgeVariant: "default" | "secondary" | "outline" | "destructive";
+  }
+> = {
+  Preparing: { text: "Preparing", icon: Soup, badgeVariant: "secondary" },
+  Ready: { text: "Ready", icon: Package, badgeVariant: "outline" },
+  Completed: { text: "Completed", icon: CheckCircle, badgeVariant: "default" },
+  Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
 
-function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelItem }: { 
-    order: ActiveOrder, 
-    onCompleteOrder: (id: string) => void, 
-    onClearOrder: (id: string) => void,
-    onEditItem: (orderId: string, item: OrderItem) => void,
-    onCancelItem: (orderId: string, item: OrderItem) => void,
+function OrderCard({
+  order,
+  onCompleteOrder,
+  onClearOrder,
+  onEditItem,
+  onCancelItem,
+}: {
+  order: ActiveOrder;
+  onCompleteOrder: (id: string) => void;
+  onClearOrder: (id: string) => void;
+  onEditItem: (orderId: string, item: OrderItem) => void;
+  onCancelItem: (orderId: string, item: OrderItem) => void;
 }) {
-    const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-    const startTime = new Date(order.createdAt).getTime();
-    const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
-    const endTime = startTime + totalDuration;
-    const elapsedTime = currentTime.getTime() - startTime;
-    const activeItems = order.items.filter(i => i.status !== 'cancelled' && i.status !== 'edited');
+  const startTime = new Date(order.createdAt).getTime();
+  const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
+  const endTime = startTime + totalDuration;
+  const elapsedTime = currentTime.getTime() - startTime;
+  const activeItems = order.items.filter(
+    (i) => i.status !== "cancelled" && i.status !== "edited"
+  );
 
-    let currentStatus: OrderStatus;
-    let progress = 0;
-    
-    if (order.status === 'Completed' || order.status === 'Archived') {
-        currentStatus = 'Completed';
-        progress = 100;
+  let currentStatus: OrderStatus;
+  let progress = 0;
+
+  if (order.status === "Completed" || order.status === "Archived") {
+    currentStatus = "Completed";
+    progress = 100;
+  } else {
+    progress = Math.min(100, (elapsedTime / totalDuration) * 100);
+    if (progress >= 100) {
+      currentStatus = "Ready";
     } else {
-        progress = Math.min(100, (elapsedTime / totalDuration) * 100);
-        if (progress >= 100) {
-            currentStatus = 'Ready';
-        } else {
-            currentStatus = 'Preparing';
-        }
+      currentStatus = "Preparing";
     }
+  }
 
-    const config = statusConfig[currentStatus];
+  const config = statusConfig[currentStatus];
 
-    return (
-        <div className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
-            <div className="flex justify-between items-start">
-                <div>
-                    <div className="flex items-center gap-2">
-                        {order.orderType === 'Dine In' && <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />}
-                        {order.orderType === 'Take Away' && <ShoppingBag className="h-4 w-4 text-muted-foreground" />}
-                        <p className="font-semibold">{order.checkName} - #{order.id.slice(-6)}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground pl-6">
-                        {order.orderType === 'Dine In' && `Table: ${order.tableName || 'N/A'}`}
-                        {order.orderType === 'Take Away' && `For ${order.customerName || 'N/A'}`}
-                        {' · '}
-                        Total: ${order.total.toFixed(2)}
-                        {order.discountApplied && order.discountApplied > 0 && (
-                            <span className="text-green-600 dark:text-green-400 font-medium"> ({order.discountApplied}% off)</span>
-                        )}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Badge variant={config.badgeVariant} className={cn(currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : '', currentStatus === 'Ready' && 'bg-blue-600 text-white border-transparent hover:bg-blue-700' )}>
-                        <config.icon className="h-3 w-3 mr-1.5" />
-                        {config.text}
-                    </Badge>
-                     {currentStatus === 'Ready' && (
-                        <Button size="sm" onClick={() => onCompleteOrder(order.id)}>
-                            <CheckCircle className="h-4 w-4 mr-2" /> Mark Completed
-                        </Button>
-                    )}
-                    {currentStatus === 'Completed' && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onClearOrder(order.id)}>
-                            <X className="h-4 w-4"/>
-                            <span className="sr-only">Clear Order</span>
-                        </Button>
-                    )}
-                </div>
-            </div>
-            <div className="pl-6 space-y-2">
-                 {order.items.map(item => (
-                    <div key={item.lineItemId} className="flex items-center justify-between text-sm">
-                        <div className={cn(
-                            "flex items-center gap-2",
-                            item.status === 'cancelled' && 'text-red-500 line-through',
-                            item.status === 'edited' && 'text-amber-500 line-through'
-                        )}>
-                            <span className="font-medium">{item.quantity}x</span>
-                            <span>{item.name}</span>
-                            {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
-                        </div>
-                        {order.status === 'Preparing' && item.status !== 'cancelled' && item.status !== 'edited' && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => onEditItem(order.id, item)}>
-                                        <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive" onClick={() => onCancelItem(order.id, item)}>
-                                        <Ban className="mr-2 h-4 w-4" /> Cancel Item
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </div>
-                 ))}
-            </div>
-            {activeItems.length > 0 && (
-            <div>
-                 <Progress value={progress} className="h-2" />
-                 <p className="text-xs text-muted-foreground mt-1.5 text-right">
-                    {currentStatus === 'Preparing' && endTime > currentTime.getTime() && `Ready in approx. ${formatDistanceToNowStrict(endTime)}`}
-                    {currentStatus === 'Ready' && 'Ready for pickup!'}
-                    {currentStatus === 'Completed' && 'Order collected.'}
-                 </p>
-            </div>
+  return (
+    <div className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-2">
+            {order.orderType === "Dine In" && (
+              <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
             )}
+            {order.orderType === "Take Away" && (
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            )}
+            <p className="font-semibold">
+              {order.checkName} - #{order.id.slice(-6)}
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground pl-6">
+            {order.orderType === "Dine In" &&
+              `Table: ${order.tableName || "N/A"}`}
+            {order.orderType === "Take Away" &&
+              `For ${order.customerName || "N/A"}`}
+            {" · "}
+            Total: ${order.total.toFixed(2)}
+            {order.discountApplied && order.discountApplied > 0 && (
+              <span className="text-green-600 dark:text-green-400 font-medium">
+                {" "}
+                ({order.discountApplied}% off)
+              </span>
+            )}
+          </p>
         </div>
-    );
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={config.badgeVariant}
+            className={cn(
+              currentStatus === "Completed"
+                ? "bg-green-600 text-white border-transparent hover:bg-green-700"
+                : "",
+              currentStatus === "Ready" &&
+                "bg-blue-600 text-white border-transparent hover:bg-blue-700"
+            )}
+          >
+            <config.icon className="h-3 w-3 mr-1.5" />
+            {config.text}
+          </Badge>
+          {currentStatus === "Ready" && (
+            <Button size="sm" onClick={() => onCompleteOrder(order.id)}>
+              <CheckCircle className="h-4 w-4 mr-2" /> Mark Completed
+            </Button>
+          )}
+          {currentStatus === "Completed" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onClearOrder(order.id)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Clear Order</span>
+            </Button>
+          )}
+        </div>
+      </div>
+      <div className="pl-6 space-y-2">
+        {order.items.map((item) => (
+          <div
+            key={item.lineItemId}
+            className="flex items-center justify-between text-sm"
+          >
+            <div
+              className={cn(
+                "flex items-center gap-2",
+                item.status === "cancelled" && "text-red-500 line-through",
+                item.status === "edited" && "text-amber-500 line-through"
+              )}
+            >
+              <span className="font-medium">{item.quantity}x</span>
+              <span>{item.name}</span>
+              {item.status === "edited" && (
+                <Badge
+                  variant="outline"
+                  className="h-5 text-xs font-normal border-amber-500 text-amber-500"
+                >
+                  Edited
+                </Badge>
+              )}
+            </div>
+            {order.status === "Preparing" &&
+              item.status !== "cancelled" &&
+              item.status !== "edited" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem
+                      onClick={() => onEditItem(order.id, item)}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => onCancelItem(order.id, item)}
+                    >
+                      <Ban className="mr-2 h-4 w-4" /> Cancel Item
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+          </div>
+        ))}
+      </div>
+      {activeItems.length > 0 && (
+        <div>
+          <Progress value={progress} className="h-2" />
+          <p className="text-xs text-muted-foreground mt-1.5 text-right">
+            {currentStatus === "Preparing" &&
+              endTime > currentTime.getTime() &&
+              `Ready in approx. ${formatDistanceToNowStrict(endTime)}`}
+            {currentStatus === "Ready" && "Ready for pickup!"}
+            {currentStatus === "Completed" && "Order collected."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default function OrderProgress({ onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+export default function OrderProgress({
+  onCompleteOrder,
+  onClearOrder,
+  tables,
+}: OrderProgressProps) {
   const [orders, setOrders] = useState<ActiveOrder[]>([]);
-  const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
-  const [selectedTableId, setSelectedTableId] = useState<string>('all');
+  const [filter, setFilter] = useState<"all" | "Dine In" | "Take Away">("all");
+  const [selectedTableId, setSelectedTableId] = useState<string>("all");
   const { toast } = useToast();
-  
-  const [customizingItem, setCustomizingItem] = useState<{orderId: string, item: OrderItem} | null>(null);
+
+  const [customizingItem, setCustomizingItem] = useState<{
+    orderId: string;
+    item: OrderItem;
+  } | null>(null);
   const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
 
-    useEffect(() => {
-        const fetchExtrasData = async () => {
-            const extras = await getExtras();
-            setAvailableExtras(extras);
-        }
-        fetchExtrasData();
-        
-        const q = query(
-          collection(db, 'orders'), 
-          where('status', 'in', ['Preparing', 'Ready', 'Completed'])
+  useEffect(() => {
+    const fetchExtrasData = async () => {
+      const extras = await getExtras();
+      setAvailableExtras(extras);
+    };
+    fetchExtrasData();
+
+    const q = query(
+      collection(db, "orders"),
+      where("status", "in", ["Preparing", "Ready", "Completed"])
+    );
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const liveOrders: ActiveOrder[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          liveOrders.push({
+            id: doc.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp).toDate(),
+          } as ActiveOrder);
+        });
+        setOrders(
+          liveOrders.sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+          )
         );
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const liveOrders: ActiveOrder[] = [];
-          querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              liveOrders.push({
-                  id: doc.id,
-                  ...data,
-                  createdAt: (data.createdAt as Timestamp).toDate(),
-              } as ActiveOrder);
-          });
-          setOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
-      }, (error) => {
+      },
+      (error) => {
         console.error("Error in orders snapshot listener: ", error);
         toast({
           variant: "destructive",
           title: "Real-time Update Error",
-          description: "Could not fetch live order updates. Please check console for details."
-        })
-      });
+          description:
+            "Could not fetch live order updates. Please check console for details.",
+        });
+      }
+    );
 
-      return () => unsubscribe();
+    return () => unsubscribe();
   }, [toast]);
-
 
   useEffect(() => {
     // Reset table filter if main filter is not 'Dine In'
-    if (filter !== 'Dine In') {
-        setSelectedTableId('all');
+    if (filter !== "Dine In") {
+      setSelectedTableId("all");
     }
   }, [filter]);
 
   const handleEditItem = async (orderId: string, item: OrderItem) => {
     try {
-        const menuItemDoc = await getDoc(firestoreDoc(db, 'menuItems', item.id));
-        if (!menuItemDoc.exists()) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not find original menu item to edit.' });
-            return;
-        }
-        const fullMenuItemData = menuItemDoc.data() as MenuItem;
-        const itemWithFullDetails: OrderItem = {
-            ...item,
-            ingredients: fullMenuItemData.ingredients,
-        };
+      const menuItemDoc = await getDoc(firestoreDoc(db, "menuItems", item.id));
+      if (!menuItemDoc.exists()) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not find original menu item to edit.",
+        });
+        return;
+      }
+      const fullMenuItemData = menuItemDoc.data() as MenuItem;
+      console.log("Full menu item data for edit:", fullMenuItemData);
+      const itemWithFullDetails: OrderItem = {
+        ...item,
+        ingredients: fullMenuItemData.ingredients,
+      };
 
-        setCustomizingItem({ orderId, item: itemWithFullDetails });
+      setCustomizingItem({ orderId, item: itemWithFullDetails });
     } catch (error) {
-        console.error("Error fetching menu item for edit:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch item details for editing.' });
+      console.error("Error fetching menu item for edit:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch item details for editing.",
+      });
     }
-  }
+  };
 
   const handleCancelItem = async (orderId: string, item: OrderItem) => {
     const result = await cancelOrderItem(orderId, item.lineItemId);
-    if(result.success) {
-        toast({ title: 'Item Cancelled', description: `${item.name} has been cancelled from the order.`});
+    if (result.success) {
+      toast({
+        title: "Item Cancelled",
+        description: `${item.name} has been cancelled from the order.`,
+      });
     } else {
-        toast({ variant: 'destructive', title: 'Error', description: result.error });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error,
+      });
     }
-  }
+  };
 
-  const handleSaveCustomization = async (lineItemId: string, customizations: { added: Extra[], removed: string[] }) => {
+  const handleSaveCustomization = async (
+    lineItemId: string,
+    customizations: { added: Extra[]; removed: { id: string; name: string }[] }
+  ) => {
     if (!customizingItem) return;
-    
+
     const { orderId, item } = customizingItem;
-    
+
     const updatedItem: OrderItem = {
       ...item,
       customizations,
-      status: 'sent', // New customized item is marked as 'sent'
-      lineItemId: `${item.id}-${Date.now()}` // a new line item id to signify it's a new item
+      status: "sent", // New customized item is marked as 'sent'
+      lineItemId: `${item.id}-${Date.now()}`, // a new line item id to signify it's a new item
     };
 
     const result = await editOrderItem(orderId, item.lineItemId, updatedItem);
 
     if (result.success) {
-        toast({ title: 'Item Edited', description: `Changes to ${item.name} have been sent to the kitchen.` });
+      toast({
+        title: "Item Edited",
+        description: `Changes to ${item.name} have been sent to the kitchen.`,
+      });
     } else {
-        toast({ variant: 'destructive', title: 'Error', description: result.error });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error,
+      });
     }
     setCustomizingItem(null);
   };
 
-  const filteredOrders = orders.filter(order => {
-      if (order.status === 'Archived') return false; // Always hide archived orders
+  const filteredOrders = orders.filter((order) => {
+    if (order.status === "Archived") return false; // Always hide archived orders
 
-      if (filter !== 'all' && order.orderType !== filter) {
-          return false;
-      }
-      if (filter === 'Dine In' && selectedTableId !== 'all' && order.tableId !== selectedTableId) {
-          return false;
-      }
-      return true;
+    if (filter !== "all" && order.orderType !== filter) {
+      return false;
+    }
+    if (
+      filter === "Dine In" &&
+      selectedTableId !== "all" &&
+      order.tableId !== selectedTableId
+    ) {
+      return false;
+    }
+    return true;
   });
 
-  const visibleOrders = orders.filter(o => o.status !== 'Archived');
+  const visibleOrders = orders.filter((o) => o.status !== "Archived");
 
   return (
     <>
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+      <Card className="h-full flex flex-col">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
-                <CardTitle className="font-headline">Order Progress</CardTitle>
-                <CardDescription>Track active and recently completed orders in real-time.</CardDescription>
+              <CardTitle className="font-headline">Order Progress</CardTitle>
+              <CardDescription>
+                Track active and recently completed orders in real-time.
+              </CardDescription>
             </div>
             <div className="flex gap-2">
-                <Select value={filter} onValueChange={(value) => setFilter(value as any)}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Orders</SelectItem>
-                        <SelectItem value="Dine In">Dine In</SelectItem>
-                        <SelectItem value="Take Away">Take Away</SelectItem>
-                    </SelectContent>
+              <Select
+                value={filter}
+                onValueChange={(value) => setFilter(value as any)}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Orders</SelectItem>
+                  <SelectItem value="Dine In">Dine In</SelectItem>
+                  <SelectItem value="Take Away">Take Away</SelectItem>
+                </SelectContent>
+              </Select>
+              {filter === "Dine In" && (
+                <Select
+                  value={selectedTableId}
+                  onValueChange={setSelectedTableId}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by table" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tables</SelectItem>
+                    {tables.map((table) => (
+                      <SelectItem key={table.id} value={table.id}>
+                        {table.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-                {filter === 'Dine In' && (
-                     <Select value={selectedTableId} onValueChange={setSelectedTableId}>
-                        <SelectTrigger className="w-full sm:w-[180px]">
-                            <SelectValue placeholder="Filter by table" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Tables</SelectItem>
-                            {tables.map(table => (
-                                <SelectItem key={table.id} value={table.id}>{table.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
+              )}
             </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow flex flex-col min-h-0">
-        {visibleOrders.length === 0 ? (
+          </div>
+        </CardHeader>
+        <CardContent className="flex-grow flex flex-col min-h-0">
+          {visibleOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
-                <ClipboardList className="w-16 h-16 mb-4"/>
-                <p className="font-semibold">No active orders</p>
-                <p className="text-sm">Place a new order to see its progress here.</p>
+              <ClipboardList className="w-16 h-16 mb-4" />
+              <p className="font-semibold">No active orders</p>
+              <p className="text-sm">
+                Place a new order to see its progress here.
+              </p>
             </div>
-        ) : filteredOrders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
-                <ClipboardList className="w-16 h-16 mb-4"/>
-                <p className="font-semibold text-lg">No orders match filter</p>
-                <p className="text-sm">Try adjusting your filter settings.</p>
+              <ClipboardList className="w-16 h-16 mb-4" />
+              <p className="font-semibold text-lg">No orders match filter</p>
+              <p className="text-sm">Try adjusting your filter settings.</p>
             </div>
-        ) : (
-        <ScrollArea className="h-full w-full pr-4">
-            <div className="space-y-4">
+          ) : (
+            <ScrollArea className="h-full w-full pr-4">
+              <div className="space-y-4">
                 {filteredOrders.map((order) => (
-                    <OrderCard 
-                        key={order.id} 
-                        order={order} 
-                        onCompleteOrder={onCompleteOrder} 
-                        onClearOrder={onClearOrder} 
-                        onEditItem={handleEditItem} 
-                        onCancelItem={handleCancelItem} 
-                    />
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onCompleteOrder={onCompleteOrder}
+                    onClearOrder={onClearOrder}
+                    onEditItem={handleEditItem}
+                    onCancelItem={handleCancelItem}
+                  />
                 ))}
-            </div>
-        </ScrollArea>
-      )}
-      </CardContent>
-    </Card>
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
 
-    <CustomizeItemDialog 
+      <CustomizeItemDialog
         item={customizingItem?.item ?? null}
         availableExtras={availableExtras}
         onClose={() => setCustomizingItem(null)}
         onSave={handleSaveCustomization}
-    />
+      />
     </>
   );
 }

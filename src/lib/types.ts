@@ -1,6 +1,4 @@
-
-
-export type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
+export type OrderType = "Dine In" | "Take Away" | "Delivery";
 
 export interface RestaurantTable {
   id: string;
@@ -32,7 +30,7 @@ export interface MenuItem {
   imageUrl: string;
   imageHint: string;
   preparationTime: number; // in minutes
-  
+
   // Stored in Firestore
   ingredientLinks: {
     ingredientId: string;
@@ -62,9 +60,9 @@ export interface OrderItem extends MenuItem {
   quantity: number;
   customizations: {
     added: Extra[];
-    removed: string[];
+    removed: { id: string; name: string }[];
   };
-  status: 'new' | 'sent' | 'cancelled' | 'edited';
+  status: "new" | "sent" | "cancelled" | "edited";
 }
 
 export interface Member {
@@ -77,11 +75,11 @@ export interface Member {
   avatarHint: string;
 }
 
-export type OrderStatus = 'Preparing' | 'Ready' | 'Completed' | 'Archived';
+export type OrderStatus = "Preparing" | "Ready" | "Completed" | "Archived";
 
 // This is an order that has been sent to the kitchen
 export interface ActiveOrder {
-  id:string;
+  id: string;
   items: OrderItem[];
   status: OrderStatus;
   total: number;
@@ -101,16 +99,16 @@ export interface ActiveOrder {
 
 // This is a "check" or "tab" that is currently being built
 export interface Check {
-    id: string;
-    name: string;
-    items: OrderItem[];
-    orderType?: OrderType;
-    tableId?: string;
-    tableName?: string;
-    customerName?: string;
-    priceListId?: string;
-    employeeId?: string;
-    employeeName?: string;
+  id: string;
+  name: string;
+  items: OrderItem[];
+  orderType?: OrderType;
+  tableId?: string;
+  tableName?: string;
+  customerName?: string;
+  priceListId?: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 export interface Employee {
@@ -118,7 +116,7 @@ export interface Employee {
   name: string;
   email: string;
   password?: string;
-  role: 'Manager' | 'Server' | 'Chef';
+  role: "Manager" | "Server" | "Chef";
   startDate: string; // ISO date string
 }
 
@@ -130,7 +128,7 @@ export interface Admin {
 }
 
 export interface PriceList {
-    id: string;
-    name: string;
-    discount: number; // as a percentage
+  id: string;
+  name: string;
+  discount: number; // as a percentage
 }

@@ -20,6 +20,7 @@ export async function addMenuItem(formData: FormData) {
     imageHint: 'food placeholder',
     preparationTime: parseInt(formData.get('preparationTime') as string, 10) || 5,
     ingredientLinks: ingredientLinks,
+    ingredients: []
   };
 
   try {
