@@ -9,7 +9,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, addOrder, updateOrderStatus, sendNewItemsToKitchen, archiveOrder } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle, LayoutGrid } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, LayoutGrid, ClipboardCheck, UserCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
@@ -73,63 +73,64 @@ export default function Home() {
     }
     
     if (!employeeData?.id) {
-      setIsLoading(false); // Ensure loading is stopped before redirect
+      setIsLoading(false);
       router.replace('/login');
       return;
-    } else {
-      if (employeeData.role === 'Chef') {
-        setIsLoading(false); // Ensure loading is stopped before redirect
-        router.replace('/kitchen');
-        return;
-      }
-
-      setCurrentUser(employeeData);
-      const fetchInitialData = async () => {
-        setIsLoading(true);
-        const [
-          fetchedMembers, 
-          fetchedMenuItems, 
-          fetchedCategories, 
-          fetchedChecks, 
-          fetchedExtras,
-          fetchedSettings,
-          fetchedTables,
-        ] = await Promise.all([
-            getUsers(),
-            getMenuItems(),
-            getCategories(),
-            getChecks(),
-            getExtras(),
-            getSettings(),
-            getTables(),
-        ]);
-        setMembers(fetchedMembers);
-        setMenuItems(fetchedMenuItems);
-        setCategories(fetchedCategories);
-        setChecks(fetchedChecks);
-        setAvailableExtras(fetchedExtras);
-        setSettings(fetchedSettings);
-        setTables(fetchedTables);
-        
-        if (fetchedChecks.length === 0) {
-            const newCheckData: Omit<Check, 'id'> = { 
-              name: `Check 1`, 
-              items: [],
-              priceListId: fetchedSettings.activePriceListId,
-              employeeId: employeeData.id,
-              employeeName: employeeData.name,
-            };
-            const newCheck = await addCheck(newCheckData);
-            setChecks([newCheck]);
-            setActiveCheckId(newCheck.id);
-        } else {
-            setActiveCheckId(fetchedChecks[0].id);
-        }
-
-        setIsLoading(false);
-      }
-      fetchInitialData();
+    } 
+    
+    if (employeeData.role === 'Chef') {
+      setIsLoading(false);
+      router.replace('/kitchen');
+      return;
     }
+
+    setCurrentUser(employeeData);
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      const [
+        fetchedMembers, 
+        fetchedMenuItems, 
+        fetchedCategories, 
+        fetchedChecks, 
+        fetchedExtras,
+        fetchedSettings,
+        fetchedTables,
+      ] = await Promise.all([
+          getUsers(),
+          getMenuItems(),
+          getCategories(),
+          getChecks(),
+          getExtras(),
+          getSettings(),
+          getTables(),
+      ]);
+      setMembers(fetchedMembers);
+      setMenuItems(fetchedMenuItems);
+      setCategories(fetchedCategories);
+      setChecks(fetchedChecks);
+      setAvailableExtras(fetchedExtras);
+      setSettings(fetchedSettings);
+      setTables(fetchedTables);
+      
+      if (fetchedChecks.length === 0) {
+          const newCheckData: Omit<Check, 'id'> = { 
+            name: `Check 1`, 
+            items: [],
+            priceListId: fetchedSettings.activePriceListId,
+            employeeId: employeeData.id,
+            employeeName: employeeData.name,
+          };
+          const newCheck = await addCheck(newCheckData);
+          setChecks([newCheck]);
+          setActiveCheckId(newCheck.id);
+      } else {
+          setActiveCheckId(fetchedChecks[0].id);
+      }
+
+      setIsLoading(false);
+    }
+    fetchInitialData();
+    
   }, [router]);
   
   useEffect(() => {
