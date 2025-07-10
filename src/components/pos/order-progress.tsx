@@ -114,11 +114,12 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
                     <div key={item.lineItemId} className="flex items-center justify-between text-sm">
                         <div className={cn(
                             "flex items-center gap-2",
-                            (item.status === 'cancelled' || item.status === 'edited') && 'text-muted-foreground line-through'
+                            item.status === 'cancelled' && 'text-red-500 line-through',
+                            item.status === 'edited' && 'text-amber-500 line-through'
                         )}>
                             <span className="font-medium">{item.quantity}x</span>
                             <span>{item.name}</span>
-                            {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal">Edited</Badge>}
+                            {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
                         </div>
                         {order.status === 'Preparing' && item.status !== 'cancelled' && item.status !== 'edited' && (
                             <DropdownMenu>
@@ -307,7 +308,14 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
         <ScrollArea className="h-full w-full pr-4">
             <div className="space-y-4">
                 {filteredOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onCompleteOrder={onCompleteOrder} onClearOrder={onClearOrder} onEditItem={handleEditItem} onCancelItem={handleCancelItem} />
+                    <OrderCard 
+                        key={order.id} 
+                        order={order} 
+                        onCompleteOrder={onCompleteOrder} 
+                        onClearOrder={onClearOrder} 
+                        onEditItem={handleEditItem} 
+                        onCancelItem={handleCancelItem} 
+                    />
                 ))}
             </div>
         </ScrollArea>

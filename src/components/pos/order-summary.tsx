@@ -1,11 +1,12 @@
 
+
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2, Send } from 'lucide-react';
-import type { OrderItem, Check, OrderType, PriceList, RestaurantTable } from '@/lib/types';
+import type { OrderItem, Check, OrderType, PriceList, RestaurantTable, Extra } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +32,7 @@ interface OrderSummaryProps {
   priceLists: PriceList[];
   taxRate: number;
   tables: RestaurantTable[];
+  availableExtras: Extra[];
 }
 
 export default function OrderSummary({
@@ -49,6 +51,7 @@ export default function OrderSummary({
   priceLists,
   taxRate,
   tables,
+  availableExtras,
 }: OrderSummaryProps) {
   const [isClearAlertOpen, setClearAlertOpen] = useState(false);
   const order = activeCheck?.items ?? [];
@@ -315,13 +318,18 @@ export default function OrderSummary({
 
                 {modifiedItems.length > 0 && (
                     <div>
-                        <h4 className="text-sm font-medium text-destructive mb-2">Modified Items</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Modifications</h4>
                          <div className="space-y-2 text-sm pl-1">
                         {modifiedItems.map(item => (
-                            <div key={item.lineItemId} className="flex justify-between items-center text-muted-foreground line-through">
+                            <div key={item.lineItemId} className={cn(
+                                "flex justify-between items-center line-through",
+                                item.status === 'cancelled' && 'text-red-500',
+                                item.status === 'edited' && 'text-amber-500'
+                            )}>
                                 <div className="flex items-center gap-2">
                                     <span>{item.quantity} x {item.name}</span>
-                                    {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal">Edited</Badge>}
+                                    {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
+                                    {item.status === 'cancelled' && <Badge variant="outline" className="h-5 text-xs font-normal border-red-500 text-red-500">Cancelled</Badge>}
                                 </div>
                                 <span>${(item.price * item.quantity).toFixed(2)}</span>
                             </div>

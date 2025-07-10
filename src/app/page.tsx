@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder } from '@/app/pos/actions';
+import { addCheck, updateCheck, deleteCheck, sendNewItemsToKitchen, addOrder, updateOrderStatus, archiveOrder, cancelOrderItem, editOrderItem } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -41,7 +42,6 @@ export default function Home() {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
   const [isCloseCheckAlertOpen, setCloseCheckAlertOpen] = useState(false);
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(null);
@@ -116,28 +116,6 @@ export default function Home() {
   }, [router]);
   
   useEffect(() => {
-      // Listener for active kitchen orders
-      const ordersQuery = query(collection(db, 'orders'), where('status', 'in', ['Preparing', 'Ready', 'Completed']));
-      const unsubscribeOrders = onSnapshot(ordersQuery, (querySnapshot) => {
-          const liveOrders: ActiveOrder[] = [];
-          querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              liveOrders.push({
-                  id: doc.id,
-                  ...data,
-                  createdAt: (data.createdAt as Timestamp).toDate(),
-              } as ActiveOrder);
-          });
-          setActiveOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
-      }, (error) => {
-        console.error("Error in orders snapshot listener: ", error);
-        toast({
-          variant: "destructive",
-          title: "Real-time Error",
-          description: "Could not fetch live order updates."
-        })
-      });
-
       // Listener for open checks
       const checksQuery = query(collection(db, 'checks'));
       const unsubscribeChecks = onSnapshot(checksQuery, async (querySnapshot) => {
@@ -173,9 +151,7 @@ export default function Home() {
         })
       });
 
-
       return () => {
-        unsubscribeOrders();
         unsubscribeChecks();
       };
   }, [toast, activeCheckId, currentUser, settings]);
@@ -247,7 +223,7 @@ export default function Home() {
     if (itemToCustomize.quantity > 1) {
       const otherItems = order.filter(i => i.lineItemId !== itemToCustomize.lineItemId);
       const originalItem = { ...itemToCustomize, quantity: itemToCustomize.quantity - 1 };
-      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${item.id}-${Date.now()}`, status: 'new' as const };
+      const newItemToCustomize = { ...itemToCustomize, quantity: 1, lineItemId: `${itemToCustomize.id}-${Date.now()}`, status: 'new' as const };
       setCustomizingItem(newItemToCustomize);
       await updateCheck(activeCheck.id, { items: [...otherItems, originalItem, newItemToCustomize] });
     } else {
@@ -551,6 +527,7 @@ export default function Home() {
                 priceLists={settings.priceLists}
                 taxRate={settings.taxRate}
                 tables={tables}
+                availableExtras={availableExtras}
               />
             </div>
           </div>
@@ -568,7 +545,7 @@ export default function Home() {
         
         <TabsContent value="progress" className="flex-grow min-h-0 h-full mt-0">
           <OrderProgress 
-            orders={activeOrders} 
+            orders={[]} 
             onCompleteOrder={handleCompleteOrder} 
             onClearOrder={handleClearOrder} 
             tables={tables}
@@ -595,7 +572,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </Tabs>
     <CustomizeItemDialog 
         item={customizingItem}
