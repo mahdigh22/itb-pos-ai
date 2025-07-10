@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -77,9 +78,12 @@ export default function Home() {
     
     if (!employeeData?.id) {
       router.replace('/login');
+      setIsLoading(false); // Ensure loading is stopped before redirect
+      return;
     } else {
       if (employeeData.role === 'Chef') {
         router.replace('/kitchen');
+        setIsLoading(false); // Ensure loading is stopped before redirect
         return;
       }
 
