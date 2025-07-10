@@ -2,7 +2,7 @@
 
 "use client"
 
-import { Link } from "next-intl";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square, BarChart } from "lucide-react";
 import {

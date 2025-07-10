@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCategories, getMenuItems } from '@/app/admin/menu/actions';
 import { getExtras } from '@/app/admin/extras/actions';

@@ -1,9 +1,10 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, BookOpen } from 'lucide-react';
 import type { Category, MenuItem } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
-import { Link } from 'next-intl';
+import Link from 'next/link';
 import { Button } from '../ui/button';
 import { useTranslations } from 'next-intl';
 
