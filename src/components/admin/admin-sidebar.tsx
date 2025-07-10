@@ -19,7 +19,6 @@ import ItbIcon from "../itb-icon";
 import { ThemeToggle } from "../theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Button } from "../ui/button";
-import LanguageToggle from "../language-toggle";
 
 export default function AdminSidebar() {
     const pathname = usePathname();
@@ -72,7 +71,6 @@ export default function AdminSidebar() {
             </SidebarContent>
             <SidebarFooter className="p-2 flex flex-col gap-2">
                  <div className="flex items-center justify-around group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
-                    <LanguageToggle />
                     <ThemeToggle />
                     <Tooltip>
                         <TooltipTrigger asChild>
