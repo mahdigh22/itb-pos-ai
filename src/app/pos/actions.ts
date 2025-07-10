@@ -288,3 +288,80 @@ export async function archiveOrder(orderId: string) {
         return { success: false, error: 'Failed to archive order.' };
     }
 }
+
+export async function cancelOrderItem(orderId: string, lineItemId: string) {
+    const orderRef = doc(db, "orders", orderId);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) throw new Error("Order not found.");
+
+            const orderData = orderDoc.data() as ActiveOrder;
+            const updatedItems = orderData.items.map(item => {
+                if (item.lineItemId === lineItemId) {
+                    return { ...item, status: 'cancelled' as const };
+                }
+                return item;
+            });
+
+            // Recalculate total
+            const { total } = await calculateOrderTotal(updatedItems.filter(i => i.status !== 'cancelled'), orderData.discountApplied || 0);
+            
+            transaction.update(orderRef, { items: updatedItems, total });
+        });
+        revalidatePath('/');
+        return { success: true };
+    } catch(e) {
+        console.error("Error cancelling order item: ", e);
+        return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
+    }
+}
+
+export async function editOrderItem(orderId: string, oldLineItemId: string, newItem: OrderItem) {
+    const orderRef = doc(db, "orders", orderId);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) throw new Error("Order not found.");
+            
+            const orderData = orderDoc.data() as ActiveOrder;
+            
+            // Mark old item as cancelled and add the new one
+            const itemsWithoutOld = orderData.items.map(item => 
+                item.lineItemId === oldLineItemId ? { ...item, status: 'cancelled' as const } : item
+            );
+            const updatedItems = [...itemsWithoutOld, newItem];
+
+            // Recalculate total
+            const { total } = await calculateOrderTotal(updatedItems.filter(i => i.status !== 'cancelled'), orderData.discountApplied || 0);
+
+            transaction.update(orderRef, { items: updatedItems, total });
+        });
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error("Error editing order item: ", e);
+        return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
+    }
+}
+
+// Helper function to recalculate order total, assuming it might be needed in other places.
+// It needs access to settings to get the tax rate.
+async function calculateOrderTotal(items: OrderItem[], discountPercentage: number) {
+    const settingsDocRef = doc(db, "settings", "main");
+    const settingsDoc = await getDoc(settingsDocRef);
+    const taxRate = settingsDoc.exists() ? (settingsDoc.data().taxRate || 0) : 0;
+
+    const subtotal = items.reduce((acc, item) => {
+        const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
+        const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+        return acc + totalItemPrice;
+    }, 0);
+
+    const discountAmount = subtotal * (discountPercentage / 100);
+    const discountedSubtotal = subtotal - discountAmount;
+    const tax = discountedSubtotal * (taxRate / 100);
+    const total = discountedSubtotal + tax;
+    
+    return { total };
+}

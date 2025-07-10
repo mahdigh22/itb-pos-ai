@@ -7,14 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
-import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
+import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag, MoreVertical, Edit, Ban } from 'lucide-react';
+import type { ActiveOrder, OrderItem, OrderStatus, RestaurantTable, Extra } from '@/lib/types';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import CustomizeItemDialog from './customize-item-dialog';
+import { editOrderItem, cancelOrderItem } from '@/app/pos/actions';
+import { getExtras } from '@/app/admin/extras/actions';
 
 interface OrderProgressProps {
   orders: ActiveOrder[];
@@ -30,7 +35,13 @@ const statusConfig: Record<OrderStatus, { text: string; icon: React.ElementType;
     Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
 
-function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrder, onCompleteOrder: (id: string) => void, onClearOrder: (id: string) => void }) {
+function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelItem }: { 
+    order: ActiveOrder, 
+    onCompleteOrder: (id: string) => void, 
+    onClearOrder: (id: string) => void,
+    onEditItem: (orderId: string, item: OrderItem) => void,
+    onCancelItem: (orderId: string, item: OrderItem) => void,
+}) {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -97,6 +108,36 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                     )}
                 </div>
             </div>
+            <div className="pl-6 space-y-2">
+                 {order.items.map(item => (
+                    <div key={item.lineItemId} className="flex items-center justify-between text-sm">
+                        <div className={cn(
+                            "flex items-center gap-2",
+                            item.status === 'cancelled' && 'text-muted-foreground line-through'
+                        )}>
+                            <span className="font-medium">{item.quantity}x</span>
+                            <span>{item.name}</span>
+                        </div>
+                        {order.status === 'Preparing' && item.status !== 'cancelled' && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => onEditItem(order.id, item)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => onCancelItem(order.id, item)}>
+                                        <Ban className="mr-2 h-4 w-4" /> Cancel Item
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
+                 ))}
+            </div>
             <div>
                  <Progress value={progress} className="h-2" />
                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
@@ -114,8 +155,17 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
   const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
   const [selectedTableId, setSelectedTableId] = useState<string>('all');
   const { toast } = useToast();
+  
+  const [customizingItem, setCustomizingItem] = useState<{orderId: string, item: OrderItem} | null>(null);
+  const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
 
     useEffect(() => {
+        const fetchExtrasData = async () => {
+            const extras = await getExtras();
+            setAvailableExtras(extras);
+        }
+        fetchExtrasData();
+        
         const q = query(
           collection(db, 'orders'), 
           where('status', 'in', ['Preparing', 'Ready', 'Completed'])
@@ -151,6 +201,41 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
     }
   }, [filter]);
 
+  const handleEditItem = (orderId: string, item: OrderItem) => {
+    setCustomizingItem({ orderId, item });
+  }
+
+  const handleCancelItem = async (orderId: string, item: OrderItem) => {
+    const result = await cancelOrderItem(orderId, item.lineItemId);
+    if(result.success) {
+        toast({ title: 'Item Cancelled', description: `${item.name} has been cancelled from the order.`});
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+    }
+  }
+
+  const handleSaveCustomization = async (lineItemId: string, customizations: { added: Extra[], removed: string[] }) => {
+    if (!customizingItem) return;
+    
+    const { orderId, item } = customizingItem;
+    
+    const updatedItem: OrderItem = {
+      ...item,
+      customizations,
+      status: 'new', // New customized item is marked as 'new'
+      lineItemId: `${item.id}-${Date.now()}` // a new line item id to signify it's a new item
+    };
+
+    const result = await editOrderItem(orderId, item.lineItemId, updatedItem);
+
+    if (result.success) {
+        toast({ title: 'Item Edited', description: `Changes to ${item.name} have been sent to the kitchen.` });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+    }
+    setCustomizingItem(null);
+  };
+
   const filteredOrders = orders.filter(order => {
       if (order.status === 'Archived') return false; // Always hide archived orders
 
@@ -166,6 +251,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
   const visibleOrders = orders.filter(o => o.status !== 'Archived');
 
   return (
+    <>
     <Card className="h-full flex flex-col">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
@@ -217,12 +303,20 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
         <ScrollArea className="h-full w-full pr-4">
             <div className="space-y-4">
                 {filteredOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onCompleteOrder={onCompleteOrder} onClearOrder={onClearOrder} />
+                    <OrderCard key={order.id} order={order} onCompleteOrder={onCompleteOrder} onClearOrder={onClearOrder} onEditItem={handleEditItem} onCancelItem={handleCancelItem} />
                 ))}
             </div>
         </ScrollArea>
       )}
       </CardContent>
     </Card>
+
+    <CustomizeItemDialog 
+        item={customizingItem?.item ?? null}
+        availableExtras={availableExtras}
+        onClose={() => setCustomizingItem(null)}
+        onSave={handleSaveCustomization}
+    />
+    </>
   );
 }
