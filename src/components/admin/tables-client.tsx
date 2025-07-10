@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -63,9 +64,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         const result = await addTable(formData);
 
         if (result.success) {
-            toast({ title: 'Table Added' });
+            toast({ title: "Table Added" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
@@ -74,9 +75,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         setEditingTable(null);
         const result = await updateTable(editingTable.id, formData);
         if (result.success) {
-            toast({ title: 'Table Updated' });
+            toast({ title: "Table Updated" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -86,9 +87,9 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         setDeletingTable(null);
         const result = await deleteTable(deletingTable.id);
         if (result.success) {
-            toast({ title: 'Table Deleted' });
+            toast({ title: "Table Deleted" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -166,7 +167,7 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the table: <span className="font-bold">{deletingTable?.name}</span>.
+                            This will permanently delete the table: {deletingTable?.name}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

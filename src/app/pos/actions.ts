@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -67,16 +68,13 @@ export async function deleteCheck(checkId: string) {
 // Order Actions
 export async function sendNewItemsToKitchen(checkId: string) {
     const sourceCheckRef = doc(db, 'checks', checkId);
-
+    let targetCheckId: string | null = null;
+    
     // Phase 1: Read data outside transaction to find if a merge is needed
     const sourceCheckSnap = await getDoc(sourceCheckRef);
-
-    if (!sourceCheckSnap.exists()) {
-        return { success: false, error: 'Check not found.' };
-    }
+    if (!sourceCheckSnap.exists()) return { success: false, error: 'Check not found.' };
     const sourceCheck = { id: sourceCheckSnap.id, ...sourceCheckSnap.data() } as Check;
     
-    let targetCheckId: string | null = null;
     // Merge logic only applies to dine-in orders with a specified table
     if (sourceCheck.orderType === 'Dine In' && sourceCheck.tableId) {
         const q = query(
@@ -123,7 +121,8 @@ export async function sendNewItemsToKitchen(checkId: string) {
             
             const newSanitizedItems = newItemsToProcess.map(item => {
                 const { ingredients, ...rest } = item;
-                return { ...rest, cost: item.cost || 0 };
+                const cost = item.cost || 0;
+                return { ...rest, cost };
             });
 
             // Determine which check data to use for the new order (for pricing, customer name, etc.)
@@ -199,7 +198,11 @@ export async function sendNewItemsToKitchen(checkId: string) {
 
 export async function getOrders(): Promise<ActiveOrder[]> {
   try {
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const q = query(
+        collection(db, 'orders'), 
+        where('status', 'in', ['Preparing', 'Ready', 'Completed']),
+        orderBy('createdAt', 'desc')
+    );
     const querySnapshot = await getDocs(q);
     const orders: ActiveOrder[] = [];
     querySnapshot.forEach((doc) => {
@@ -274,13 +277,14 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     }
 }
 
-export async function deleteOrder(orderId: string) {
+export async function archiveOrder(orderId: string) {
     try {
-        await deleteDoc(doc(db, 'orders', orderId));
+        const orderRef = doc(db, 'orders', orderId);
+        await updateDoc(orderRef, { status: 'Archived' });
         revalidatePath('/');
         return { success: true };
     } catch (e) {
-        console.error("Error deleting order: ", e);
-        return { success: false, error: 'Failed to delete order.' };
+        console.error("Error archiving order: ", e);
+        return { success: false, error: 'Failed to archive order.' };
     }
 }

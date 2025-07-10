@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
 
 interface OrderSummaryProps {
   activeCheck: Check | undefined;
@@ -123,7 +121,7 @@ export default function OrderSummary({
             )}
         </div>
         <CardDescription>
-            {`Editing ${activeCheck.name}`}
+            Editing {activeCheck.name}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
@@ -365,7 +363,9 @@ export default function OrderSummary({
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>Clear all items from the check?</AlertDialogTitle>
-                <AlertDialogDescription>This action cannot be undone. All items will be removed from the current check.</AlertDialogDescription>
+                <AlertDialogDescription>
+                    This action cannot be undone. All items will be removed from the current check.
+                </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>

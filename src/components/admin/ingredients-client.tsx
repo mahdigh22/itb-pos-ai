@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -97,9 +98,9 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
         const result = await addIngredient(formData);
 
         if (result.success) {
-            toast({ title: 'Ingredient Added' });
+            toast({ title: "Ingredient Added" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
@@ -108,9 +109,9 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
         setEditingIngredient(null);
         const result = await updateIngredient(editingIngredient.id, formData);
         if (result.success) {
-            toast({ title: 'Ingredient Updated' });
+            toast({ title: "Ingredient Updated" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -120,9 +121,9 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
         setDeletingIngredient(null);
         const result = await deleteIngredient(deletingIngredient.id);
         if (result.success) {
-            toast({ title: 'Ingredient Deleted' });
+            toast({ title: "Ingredient Deleted" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -204,7 +205,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the ingredient: <span className="font-bold">{deletingIngredient?.name}</span>.
+                            This will permanently delete the ingredient: {deletingIngredient?.name}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

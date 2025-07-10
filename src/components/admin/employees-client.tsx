@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -31,7 +32,7 @@ function EmployeeForm({ employee, onFormSubmit, onCancel }: { employee?: Employe
             </div>
              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder={employee ? "Leave blank to keep current password" : "••••••••"} required={!employee} />
+                <Input id="password" name="password" type="password" placeholder={employee ? 'Leave blank to keep current password' : "••••••••"} required={!employee} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
@@ -89,9 +90,9 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
         const result = await addEmployee(formData);
 
         if (result.success) {
-            toast({ title: 'Employee Added' });
+            toast({ title: "Employee Added" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
@@ -103,9 +104,9 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
         const result = await updateEmployee(editingEmployee.id, formData);
 
         if (result.success) {
-            toast({ title: 'Employee Updated' });
+            toast({ title: "Employee Updated" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -117,9 +118,9 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
         
         const result = await deleteEmployee(deletingEmployee.id);
         if (result.success) {
-            toast({ title: 'Employee Deleted' });
+            toast({ title: "Employee Deleted" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -204,8 +205,7 @@ export default function EmployeesClient({ initialEmployees }: { initialEmployees
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the employee
-                            <span className="font-bold"> {deletingEmployee?.name}</span>.
+                            This action cannot be undone. This will permanently delete the employee {deletingEmployee?.name}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

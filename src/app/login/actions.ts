@@ -1,7 +1,7 @@
 
 'use server';
 
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
 
@@ -14,7 +14,12 @@ export async function loginEmployee(formData: FormData) {
   }
 
   try {
-    const q = query(collection(db, 'employees'), where('email', '==', email.toLowerCase()));
+    const q = query(
+      collection(db, 'employees'),
+      where('email', '==', email),
+      where('password', '==', password) // In a real app, use hashed passwords
+    );
+
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
@@ -22,18 +27,17 @@ export async function loginEmployee(formData: FormData) {
     }
 
     const employeeDoc = querySnapshot.docs[0];
-    const employee = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+    const employeeData = employeeDoc.data();
+    
+    const employee: Omit<Employee, 'password'> = {
+        id: employeeDoc.id,
+        name: employeeData.name,
+        email: employeeData.email,
+        role: employeeData.role,
+        startDate: employeeData.startDate.toDate().toISOString(),
+    };
 
-    // In a real app, you would use a secure password hashing library (e.g., bcrypt)
-    // to compare hashed passwords. For this prototype, we'll compare plaintext.
-    if (employee.password !== password) {
-      return { success: false, error: 'Invalid email or password.' };
-    }
-
-    // Return employee data without the password
-    const { password: _, ...employeeData } = employee;
-
-    return { success: true, employee: employeeData };
+    return { success: true, employee };
 
   } catch (e) {
     console.error('Login error:', e);

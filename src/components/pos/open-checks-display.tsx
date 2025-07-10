@@ -90,7 +90,7 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                                    </div>
                                )}
                                 <div>
-                                    <span>{check.items.length} item{check.items.length !== 1 ? 's' : ''}</span>
+                                    <span>{check.items.length} {check.items.length === 1 ? 'item' : 'items'}</span>
                                 </div>
                             </CardContent>
                             <CardFooter>

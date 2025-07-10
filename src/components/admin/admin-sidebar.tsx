@@ -30,15 +30,15 @@ export default function AdminSidebar() {
     };
 
     const navLinks = [
-        { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
-        { href: '/admin/reports', label: 'Reports', icon: BarChart },
-        { href: '/admin/menu', label: 'Menu', icon: BookOpen },
-        { href: '/admin/ingredients', label: 'Ingredients', icon: List },
-        { href: '/admin/extras', label: 'Extras', icon: Sparkles },
-        { href: '/admin/tables', label: 'Tables', icon: Square },
-        { href: '/admin/users', label: 'Users', icon: Users },
-        { href: '/admin/employees', label: 'Employees', icon: Briefcase },
-        { href: '/admin/settings', label: 'Settings', icon: Settings },
+        { href: '/admin', label: "Dashboard", icon: LayoutGrid },
+        { href: '/admin/reports', label: "Reports", icon: BarChart },
+        { href: '/admin/menu', label: "Menu", icon: BookOpen },
+        { href: '/admin/ingredients', label: "Ingredients", icon: List },
+        { href: '/admin/extras', label: "Extras", icon: Sparkles },
+        { href: '/admin/tables', label: "Tables", icon: Square },
+        { href: '/admin/users', label: "Users", icon: Users },
+        { href: '/admin/employees', label: "Employees", icon: Briefcase },
+        { href: '/admin/settings', label: "Settings", icon: Settings },
     ];
 
     return (
@@ -57,7 +57,7 @@ export default function AdminSidebar() {
                         <SidebarMenuItem key={link.href}>
                             <SidebarMenuButton
                                 asChild
-                                isActive={pathname === link.href || (pathname.startsWith(link.href) && link.href !== '/admin')}
+                                isActive={pathname.endsWith(link.href)}
                                 tooltip={{ children: link.label }}
                             >
                                 <Link href={link.href}>

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,9 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
-import { format, formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 interface OrderProgressProps {
   orders: ActiveOrder[];
@@ -19,10 +23,11 @@ interface OrderProgressProps {
   tables: RestaurantTable[];
 }
 
-const statusConfig: Record<OrderStatus, { icon: React.ElementType; label: string; badgeVariant: "default" | "secondary" | "outline" | "destructive" }> = {
-    Preparing: { icon: Soup, label: "Preparing", badgeVariant: "secondary" },
-    Ready: { icon: Package, label: "Ready", badgeVariant: "outline" },
-    Completed: { icon: CheckCircle, label: "Completed", badgeVariant: "default" },
+const statusConfig: Record<OrderStatus, { text: string; icon: React.ElementType; badgeVariant: "default" | "secondary" | "outline" | "destructive" }> = {
+    Preparing: { text: "Preparing", icon: Soup, badgeVariant: "secondary" },
+    Ready: { text: "Ready", icon: Package, badgeVariant: "outline" },
+    Completed: { text: "Completed", icon: CheckCircle, badgeVariant: "default" },
+    Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
 
 function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrder, onCompleteOrder: (id: string) => void, onClearOrder: (id: string) => void }) {
@@ -41,7 +46,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     let currentStatus: OrderStatus;
     let progress = 0;
     
-    if (order.status === 'Completed') {
+    if (order.status === 'Completed' || order.status === 'Archived') {
         currentStatus = 'Completed';
         progress = 100;
     } else {
@@ -54,7 +59,6 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     }
 
     const config = statusConfig[currentStatus];
-    const timeLeft = endTime - currentTime.getTime();
 
     return (
         <div className="p-4 border rounded-lg space-y-3 transition-all bg-card/50">
@@ -66,9 +70,8 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                         <p className="font-semibold">{order.checkName} - #{order.id.slice(-6)}</p>
                     </div>
                     <p className="text-sm text-muted-foreground pl-6">
-                        {order.orderType === 'Dine In' && `Table ${order.tableName || 'N/A'}`}
+                        {order.orderType === 'Dine In' && `Table: ${order.tableName || 'N/A'}`}
                         {order.orderType === 'Take Away' && `For ${order.customerName || 'N/A'}`}
-                        {order.orderType === 'Delivery' && `For ${order.customerName || 'N/A'}`}
                         {' · '}
                         Total: ${order.total.toFixed(2)}
                         {order.discountApplied && order.discountApplied > 0 && (
@@ -79,7 +82,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                 <div className="flex items-center gap-2">
                     <Badge variant={config.badgeVariant} className={currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : ''}>
                         <config.icon className="h-3 w-3 mr-1.5" />
-                        {config.label}
+                        {config.text}
                     </Badge>
                      {currentStatus === 'Ready' && (
                         <Button size="sm" onClick={() => onCompleteOrder(order.id)}>
@@ -97,7 +100,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
             <div>
                  <Progress value={progress} className="h-2" />
                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
-                    {currentStatus === 'Preparing' && timeLeft > 0 && `Ready in approx. ${formatDistanceToNowStrict(endTime)}`}
+                    {currentStatus === 'Preparing' && endTime > currentTime.getTime() && `Ready in approx. ${formatDistanceToNowStrict(endTime)}`}
                     {currentStatus === 'Ready' && 'Ready for pickup!'}
                     {currentStatus === 'Completed' && 'Order collected.'}
                  </p>
@@ -106,9 +109,40 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     );
 }
 
-export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+export default function OrderProgress({ orders: initialOrders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+  const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
   const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
   const [selectedTableId, setSelectedTableId] = useState<string>('all');
+  const { toast } = useToast();
+
+    useEffect(() => {
+        const q = query(
+          collection(db, 'orders'), 
+          where('status', 'in', ['Preparing', 'Ready', 'Completed'])
+        );
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const liveOrders: ActiveOrder[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              liveOrders.push({
+                  id: doc.id,
+                  ...data,
+                  createdAt: (data.createdAt as Timestamp).toDate(),
+              } as ActiveOrder);
+          });
+          setOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      }, (error) => {
+        console.error("Error in orders snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
+      });
+
+      return () => unsubscribe();
+  }, [toast]);
+
 
   useEffect(() => {
     // Reset table filter if main filter is not 'Dine In'
@@ -118,6 +152,8 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
   }, [filter]);
 
   const filteredOrders = orders.filter(order => {
+      if (order.status === 'Archived') return false; // Always hide archived orders
+
       if (filter !== 'all' && order.orderType !== filter) {
           return false;
       }
@@ -126,6 +162,8 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
       }
       return true;
   });
+
+  const visibleOrders = orders.filter(o => o.status !== 'Archived');
 
   return (
     <Card className="h-full flex flex-col">
@@ -163,7 +201,7 @@ export default function OrderProgress({ orders, onCompleteOrder, onClearOrder, t
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col min-h-0">
-        {orders.length === 0 ? (
+        {visibleOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
                 <ClipboardList className="w-16 h-16 mb-4"/>
                 <p className="font-semibold">No active orders</p>

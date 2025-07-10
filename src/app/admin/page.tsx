@@ -1,8 +1,10 @@
 
-import { getOrdersForReports } from "./reports/actions";
-import DashboardClient from "@/components/admin/dashboard-client";
+import DashboardClient from '@/components/admin/dashboard-client';
+import { getOrdersForReports } from './reports/actions';
 
 export default async function AdminDashboardPage() {
-    const initialOrders = await getOrdersForReports();
-    return <DashboardClient initialOrders={initialOrders} />;
+    const orders = await getOrdersForReports();
+    return (
+        <DashboardClient initialOrders={orders} />
+    )
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -14,7 +15,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { addExtra, updateExtra, deleteExtra } from '@/app/admin/extras/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
-
 
 function ExtraForm({ extra, onFormSubmit, onCancel }) {
     return (
@@ -69,9 +69,9 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
         const result = await addExtra(formData);
 
         if (result.success) {
-            toast({ title: 'Extra Added' });
+            toast({ title: "Extra Added" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
@@ -80,9 +80,9 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
         setEditingExtra(null);
         const result = await updateExtra(editingExtra.id, formData);
         if (result.success) {
-            toast({ title: 'Extra Updated' });
+            toast({ title: "Extra Updated" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -92,9 +92,9 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
         setDeletingExtra(null);
         const result = await deleteExtra(deletingExtra.id);
         if (result.success) {
-            toast({ title: 'Extra Deleted' });
+            toast({ title: "Extra Deleted" });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
@@ -175,7 +175,7 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the extra: <span className="font-bold">{deletingExtra?.name}</span>.
+                            This will permanently delete the extra: {deletingExtra?.name}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

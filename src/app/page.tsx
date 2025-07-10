@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -10,7 +9,7 @@ import { getExtras } from '@/app/admin/extras/actions';
 import { getUsers } from '@/app/admin/users/actions';
 import { getSettings } from '@/app/admin/settings/actions';
 import { getTables } from '@/app/admin/tables/actions';
-import { getChecks, addCheck, updateCheck, deleteCheck, getOrders, addOrder, deleteOrder, updateOrderStatus, sendNewItemsToKitchen } from '@/app/pos/actions';
+import { getChecks, addCheck, updateCheck, deleteCheck, addOrder, updateOrderStatus, sendNewItemsToKitchen, archiveOrder } from '@/app/pos/actions';
 import type { OrderItem, MenuItem, ActiveOrder, Check, Member, Category, OrderType, Extra, PriceList, RestaurantTable, Employee } from '@/lib/types';
 import MenuDisplay from '@/components/pos/menu-display';
 import OrderSummary from '@/components/pos/order-summary';
@@ -30,14 +29,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Loader2, ClipboardList, LogOut, Settings, ClipboardCheck, UserCircle, LayoutGrid } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import ItbIcon from '@/components/itb-icon';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Home() {
   const router = useRouter();
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const { toast } = useToast()
@@ -71,9 +73,12 @@ export default function Home() {
     }
     
     if (!employeeData?.id) {
+      setIsLoading(false); // Ensure loading is stopped before redirect
       router.replace('/login');
+      return;
     } else {
       if (employeeData.role === 'Chef') {
+        setIsLoading(false); // Ensure loading is stopped before redirect
         router.replace('/kitchen');
         return;
       }
@@ -86,7 +91,6 @@ export default function Home() {
           fetchedMenuItems, 
           fetchedCategories, 
           fetchedChecks, 
-          fetchedOrders,
           fetchedExtras,
           fetchedSettings,
           fetchedTables,
@@ -95,7 +99,6 @@ export default function Home() {
             getMenuItems(),
             getCategories(),
             getChecks(),
-            getOrders(),
             getExtras(),
             getSettings(),
             getTables(),
@@ -104,14 +107,13 @@ export default function Home() {
         setMenuItems(fetchedMenuItems);
         setCategories(fetchedCategories);
         setChecks(fetchedChecks);
-        setActiveOrders(fetchedOrders);
         setAvailableExtras(fetchedExtras);
         setSettings(fetchedSettings);
         setTables(fetchedTables);
         
         if (fetchedChecks.length === 0) {
             const newCheckData: Omit<Check, 'id'> = { 
-              name: 'Check 1', 
+              name: `Check 1`, 
               items: [],
               priceListId: fetchedSettings.activePriceListId,
               employeeId: employeeData.id,
@@ -129,6 +131,32 @@ export default function Home() {
       fetchInitialData();
     }
   }, [router]);
+  
+  useEffect(() => {
+      const q = query(collection(db, 'orders'), where('status', 'in', ['Preparing', 'Ready', 'Completed']));
+
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const liveOrders: ActiveOrder[] = [];
+          querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              liveOrders.push({
+                  id: doc.id,
+                  ...data,
+                  createdAt: (data.createdAt as Timestamp).toDate(),
+              } as ActiveOrder);
+          });
+          setActiveOrders(liveOrders.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()));
+      }, (error) => {
+        console.error("Error in orders snapshot listener: ", error);
+        toast({
+          variant: "destructive",
+          title: "Real-time Update Error",
+          description: "Could not fetch live order updates. Please check console for details."
+        })
+      });
+
+      return () => unsubscribe();
+  }, [toast]);
 
   const updateActiveCheckDetails = async (updates: Partial<Omit<Check, 'id'>>) => {
     if (!activeCheckId) return;
@@ -276,10 +304,8 @@ export default function Home() {
       });
 
       const updatedChecks = await getChecks();
-      const newOrders = await getOrders();
       
       setChecks(updatedChecks);
-      setActiveOrders(newOrders);
 
       const emptyCheck = updatedChecks.find(c => c.items.length === 0);
 
@@ -287,7 +313,7 @@ export default function Home() {
           setActiveCheckId(emptyCheck.id);
           toast({
               title: "Switched to Empty Check",
-              description: `The previous check is available in 'Open Checks'.`,
+              description: "The previous check is available in 'Open Checks'.",
           });
       } else {
           const newCheckName = `Check ${updatedChecks.length + 1}`;
@@ -303,7 +329,7 @@ export default function Home() {
           setActiveCheckId(newCheck.id);
           toast({
               title: "New Check Started",
-              description: `The previous check is available in 'Open Checks'.`,
+              description: "The previous check is available in 'Open Checks'.",
           });
       }
 
@@ -311,7 +337,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: result.error || 'Could not send items to kitchen.',
+        description: result.error || "Could not send items to kitchen.",
       });
       const updatedChecks = await getChecks();
       setChecks(updatedChecks);
@@ -331,7 +357,7 @@ export default function Home() {
           setActiveCheckId(remainingChecks[0].id);
       } else {
           const newCheckData: Omit<Check, 'id'> = { 
-            name: 'Check 1', 
+            name: 'Check 1',
             items: [],
             priceListId: settings.activePriceListId,
             employeeId: currentUser.id,
@@ -344,7 +370,7 @@ export default function Home() {
 
       toast({
           title: "Bill Closed",
-          description: `${activeCheck.name} has been paid and closed.`,
+          description: `${activeCheck.name}'s bill has been paid and closed.`,
       });
       setCloseCheckAlertOpen(false);
       return;
@@ -385,9 +411,6 @@ export default function Home() {
     await addOrder(newOrderData);
     await deleteCheck(activeCheckId);
     
-    const newOrders = await getOrders();
-    setActiveOrders(newOrders);
-    
     const remainingChecks = checks.filter(c => c.id !== activeCheckId);
     setChecks(remainingChecks);
 
@@ -395,7 +418,7 @@ export default function Home() {
         setActiveCheckId(remainingChecks[0].id);
     } else {
         const newCheckData: Omit<Check, 'id'> = { 
-          name: 'Check 1', 
+          name: 'Check 1',
           items: [],
           priceListId: settings.activePriceListId,
           employeeId: currentUser.id,
@@ -408,7 +431,7 @@ export default function Home() {
 
     toast({
         title: "Order Sent & Closed!",
-        description: `${activeCheck.name} sent and check is closed.`,
+        description: `${activeCheck.name}'s order sent and check is closed.`,
     });
     setCloseCheckAlertOpen(false);
   }
@@ -427,7 +450,6 @@ export default function Home() {
 
   const handleCompleteOrder = async (orderId: string) => {
     await updateOrderStatus(orderId, 'Completed');
-    setActiveOrders(prev => prev.map(o => o.id === orderId ? {...o, status: 'Completed'} : o));
     toast({
         title: "Order Completed",
         description: "The order has been marked as complete.",
@@ -435,8 +457,11 @@ export default function Home() {
   }
 
   const handleClearOrder = async (orderId: string) => {
-    await deleteOrder(orderId);
-    setActiveOrders(prev => prev.filter(o => o.id !== orderId));
+    await archiveOrder(orderId);
+     toast({
+        title: "Order Cleared",
+        description: "The completed order has been removed from the view.",
+    });
   }
 
 
@@ -499,6 +524,14 @@ export default function Home() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>My Account ({currentUser.role})</DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      {currentUser.role === 'Manager' && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin">
+                            <LayoutGrid className="mr-2 h-4 w-4" />
+                            <span>Go to Admin</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Log out</span>

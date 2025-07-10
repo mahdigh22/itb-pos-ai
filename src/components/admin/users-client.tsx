@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic } from 'react';
@@ -160,8 +161,8 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setEditingUser(member)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingUser(member)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingUser(member)}><Edit className="mr-2 h-4 w-4"/>Edit</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingUser(member)}><Trash2 className="mr-2 h-4 w-4"/>Delete</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -196,11 +197,11 @@ export default function UsersClient({ initialMembers }: { initialMembers: Member
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescriptionComponent>This will permanently delete the user <span className="font-bold">{deletingUser?.name}</span>.</AlertDialogDescriptionComponent>
+                        <AlertDialogDescriptionComponent>This will permanently delete the user {deletingUser?.name}.</AlertDialogDescriptionComponent>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDelete}>Yes, Confirm</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
