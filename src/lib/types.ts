@@ -63,7 +63,7 @@ export interface OrderItem extends MenuItem {
     added: Extra[];
     removed: string[];
   };
-  status: 'new' | 'sent' | 'cancelled';
+  status: 'new' | 'sent' | 'cancelled' | 'edited';
 }
 
 export interface Member {

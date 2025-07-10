@@ -338,9 +338,9 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
             
             const orderData = orderDoc.data() as ActiveOrder;
             
-            // Mark old item as cancelled and add the new one
+            // Mark old item as edited and add the new one
             const itemsWithoutOld = orderData.items.map(item => 
-                item.lineItemId === oldLineItemId ? { ...item, status: 'cancelled' as const } : item
+                item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
             );
             const updatedItems = [...itemsWithoutOld, newItem];
 
@@ -351,7 +351,7 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
                 if (checkDoc.exists()) {
                     const checkData = checkDoc.data() as Check;
                     const updatedCheckItems = checkData.items.map(item => 
-                        item.lineItemId === oldLineItemId ? { ...item, status: 'cancelled' as const } : item
+                        item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
                     );
                     const finalCheckItems = [...updatedCheckItems, newItem];
                     transaction.update(checkRef, { items: finalCheckItems });

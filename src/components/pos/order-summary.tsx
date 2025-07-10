@@ -55,10 +55,11 @@ export default function OrderSummary({
   const isCheckPristine = !activeCheck?.items.some(item => item.status === 'sent');
   const pristineChecks = checks.filter(c => !c.items.some(item => item.status === 'sent'));
 
-  const activeItems = order.filter(item => item.status !== 'cancelled');
+  const activeItems = order.filter(item => item.status !== 'cancelled' && item.status !== 'edited');
   const sentItems = activeItems.filter((item) => item.status === 'sent');
   const newItems = activeItems.filter((item) => item.status === 'new');
-  const cancelledItems = order.filter(item => item.status === 'cancelled');
+  const modifiedItems = order.filter(item => item.status === 'cancelled' || item.status === 'edited');
+
 
   const subtotal = activeItems.reduce((acc, item) => {
     const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
@@ -215,7 +216,7 @@ export default function OrderSummary({
                     </div>
                 )}
                 
-                {(sentItems.length > 0 || cancelledItems.length > 0) && newItems.length > 0 && <Separator />}
+                {(sentItems.length > 0 || modifiedItems.length > 0) && newItems.length > 0 && <Separator />}
 
                 {newItems.length > 0 && (
                   <div>
@@ -300,22 +301,25 @@ export default function OrderSummary({
                     </div>
                   </div>
                 )}
-                 {newItems.length === 0 && sentItems.length > 0 && cancelledItems.length === 0 && (
+                 {newItems.length === 0 && sentItems.length > 0 && modifiedItems.length === 0 && (
                     <div className="text-center text-muted-foreground py-6">
                         <p className="font-medium">No new items to send.</p>
                         <p className="text-xs">Add more items from the menu.</p>
                     </div>
                 )}
 
-                 {cancelledItems.length > 0 && <Separator />}
+                 {modifiedItems.length > 0 && <Separator />}
 
-                {cancelledItems.length > 0 && (
+                {modifiedItems.length > 0 && (
                     <div>
-                        <h4 className="text-sm font-medium text-destructive mb-2">Cancelled Items</h4>
+                        <h4 className="text-sm font-medium text-destructive mb-2">Modified Items</h4>
                          <div className="space-y-2 text-sm pl-1">
-                        {cancelledItems.map(item => (
+                        {modifiedItems.map(item => (
                             <div key={item.lineItemId} className="flex justify-between items-center text-muted-foreground line-through">
-                                <span>{item.quantity} x {item.name}</span>
+                                <div className="flex items-center gap-2">
+                                    <span>{item.quantity} x {item.name}</span>
+                                    {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal">Edited</Badge>}
+                                </div>
                                 <span>${(item.price * item.quantity).toFixed(2)}</span>
                             </div>
                         ))}

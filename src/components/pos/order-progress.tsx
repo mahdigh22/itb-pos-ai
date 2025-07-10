@@ -53,7 +53,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
     const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
     const endTime = startTime + totalDuration;
     const elapsedTime = currentTime.getTime() - startTime;
-    const activeItems = order.items.filter(i => i.status !== 'cancelled');
+    const activeItems = order.items.filter(i => i.status !== 'cancelled' && i.status !== 'edited');
 
     let currentStatus: OrderStatus;
     let progress = 0;
@@ -114,12 +114,13 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
                     <div key={item.lineItemId} className="flex items-center justify-between text-sm">
                         <div className={cn(
                             "flex items-center gap-2",
-                            item.status === 'cancelled' && 'text-muted-foreground line-through'
+                            (item.status === 'cancelled' || item.status === 'edited') && 'text-muted-foreground line-through'
                         )}>
                             <span className="font-medium">{item.quantity}x</span>
                             <span>{item.name}</span>
+                            {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal">Edited</Badge>}
                         </div>
-                        {order.status === 'Preparing' && item.status !== 'cancelled' && (
+                        {order.status === 'Preparing' && item.status !== 'cancelled' && item.status !== 'edited' && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-7 w-7">
