@@ -329,7 +329,6 @@ export default function OrderSummary({
                                 <div className="flex items-center gap-2">
                                     <span>{item.quantity} x {item.name}</span>
                                     {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
-                                    {item.status === 'cancelled' && <Badge variant="outline" className="h-5 text-xs font-normal border-red-500 text-red-500">Cancelled</Badge>}
                                 </div>
                                 <span>${(item.price * item.quantity).toFixed(2)}</span>
                             </div>

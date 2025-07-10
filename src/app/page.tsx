@@ -116,6 +116,8 @@ export default function Home() {
   }, [router]);
   
   useEffect(() => {
+      if (!currentUser) return;
+      
       // Listener for open checks
       const checksQuery = query(collection(db, 'checks'));
       const unsubscribeChecks = onSnapshot(checksQuery, async (querySnapshot) => {

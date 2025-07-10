@@ -92,7 +92,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelI
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Badge variant={config.badgeVariant} className={currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : ''}>
+                    <Badge variant={config.badgeVariant} className={cn(currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : '', currentStatus === 'Ready' && 'bg-blue-600 text-white border-transparent hover:bg-blue-700' )}>
                         <config.icon className="h-3 w-3 mr-1.5" />
                         {config.text}
                     </Badge>
