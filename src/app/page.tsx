@@ -178,19 +178,17 @@ export default function Home() {
 
   const handleAddItem = async (item: MenuItem) => {
     if (!activeCheck) return;
-    const order = activeCheck.items;
     
     const newOrderItem: OrderItem = { 
         ...item, 
         quantity: 1, 
         lineItemId: `${item.id}-${Date.now()}`, 
-        status: 'new',
+        status: 'new' as const, 
         customizations: { added: [], removed: [] },
     };
 
-    const newItems = [...order, newOrderItem];
+    const newItems = [...activeCheck.items, newOrderItem];
 
-    // The entire OrderItem is now assignable to what `updateCheck` expects.
     await updateCheck(activeCheck.id, { items: newItems });
   };
 
@@ -200,7 +198,7 @@ export default function Home() {
       await handleRemoveItem(lineItemId);
       return;
     }
-    const newItems = (activeCheck.items).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' } : item))
+    const newItems = (activeCheck.items).map((item) => (item.lineItemId === lineItemId ? { ...item, quantity, status: 'new' as const } : item))
     await updateCheck(activeCheck.id, { items: newItems });
   };
 
