@@ -7,17 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag } from 'lucide-react';
-import type { ActiveOrder, OrderStatus, RestaurantTable } from '@/lib/types';
+import { X, CheckCircle, Package, Soup, ClipboardList, UtensilsCrossed, ShoppingBag, MoreVertical, Edit, Ban } from 'lucide-react';
+import type { ActiveOrder, OrderItem, OrderStatus, RestaurantTable, Extra, MenuItem } from '@/lib/types';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp, getDoc, doc as firestoreDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import CustomizeItemDialog from './customize-item-dialog';
+import { editOrderItem, cancelOrderItem } from '@/app/pos/actions';
+import { getExtras } from '@/app/admin/extras/actions';
 
 interface OrderProgressProps {
-  orders: ActiveOrder[];
   onCompleteOrder: (orderId: string) => void;
   onClearOrder: (orderId: string) => void;
   tables: RestaurantTable[];
@@ -30,7 +34,13 @@ const statusConfig: Record<OrderStatus, { text: string; icon: React.ElementType;
     Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
 
-function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrder, onCompleteOrder: (id: string) => void, onClearOrder: (id: string) => void }) {
+function OrderCard({ order, onCompleteOrder, onClearOrder, onEditItem, onCancelItem }: { 
+    order: ActiveOrder, 
+    onCompleteOrder: (id: string) => void, 
+    onClearOrder: (id: string) => void,
+    onEditItem: (orderId: string, item: OrderItem) => void,
+    onCancelItem: (orderId: string, item: OrderItem) => void,
+}) {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -42,6 +52,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
     const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
     const endTime = startTime + totalDuration;
     const elapsedTime = currentTime.getTime() - startTime;
+    const activeItems = order.items.filter(i => i.status !== 'cancelled' && i.status !== 'edited');
 
     let currentStatus: OrderStatus;
     let progress = 0;
@@ -80,7 +91,7 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Badge variant={config.badgeVariant} className={currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : ''}>
+                    <Badge variant={config.badgeVariant} className={cn(currentStatus === 'Completed' ? 'bg-green-600 text-white border-transparent hover:bg-green-700' : '', currentStatus === 'Ready' && 'bg-blue-600 text-white border-transparent hover:bg-blue-700' )}>
                         <config.icon className="h-3 w-3 mr-1.5" />
                         {config.text}
                     </Badge>
@@ -97,6 +108,39 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                     )}
                 </div>
             </div>
+            <div className="pl-6 space-y-2">
+                 {order.items.map(item => (
+                    <div key={item.lineItemId} className="flex items-center justify-between text-sm">
+                        <div className={cn(
+                            "flex items-center gap-2",
+                            item.status === 'cancelled' && 'text-red-500 line-through',
+                            item.status === 'edited' && 'text-amber-500 line-through'
+                        )}>
+                            <span className="font-medium">{item.quantity}x</span>
+                            <span>{item.name}</span>
+                            {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
+                        </div>
+                        {order.status === 'Preparing' && item.status !== 'cancelled' && item.status !== 'edited' && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => onEditItem(order.id, item)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-destructive" onClick={() => onCancelItem(order.id, item)}>
+                                        <Ban className="mr-2 h-4 w-4" /> Cancel Item
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
+                 ))}
+            </div>
+            {activeItems.length > 0 && (
             <div>
                  <Progress value={progress} className="h-2" />
                  <p className="text-xs text-muted-foreground mt-1.5 text-right">
@@ -105,17 +149,27 @@ function OrderCard({ order, onCompleteOrder, onClearOrder }: { order: ActiveOrde
                     {currentStatus === 'Completed' && 'Order collected.'}
                  </p>
             </div>
+            )}
         </div>
     );
 }
 
-export default function OrderProgress({ orders: initialOrders, onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
-  const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
+export default function OrderProgress({ onCompleteOrder, onClearOrder, tables }: OrderProgressProps) {
+  const [orders, setOrders] = useState<ActiveOrder[]>([]);
   const [filter, setFilter] = useState<'all' | 'Dine In' | 'Take Away'>('all');
   const [selectedTableId, setSelectedTableId] = useState<string>('all');
   const { toast } = useToast();
+  
+  const [customizingItem, setCustomizingItem] = useState<{orderId: string, item: OrderItem} | null>(null);
+  const [availableExtras, setAvailableExtras] = useState<Extra[]>([]);
 
     useEffect(() => {
+        const fetchExtrasData = async () => {
+            const extras = await getExtras();
+            setAvailableExtras(extras);
+        }
+        fetchExtrasData();
+        
         const q = query(
           collection(db, 'orders'), 
           where('status', 'in', ['Preparing', 'Ready', 'Completed'])
@@ -151,6 +205,57 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
     }
   }, [filter]);
 
+  const handleEditItem = async (orderId: string, item: OrderItem) => {
+    try {
+        const menuItemDoc = await getDoc(firestoreDoc(db, 'menuItems', item.id));
+        if (!menuItemDoc.exists()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find original menu item to edit.' });
+            return;
+        }
+        const fullMenuItemData = menuItemDoc.data() as MenuItem;
+        const itemWithFullDetails: OrderItem = {
+            ...item,
+            ingredients: fullMenuItemData.ingredients,
+        };
+
+        setCustomizingItem({ orderId, item: itemWithFullDetails });
+    } catch (error) {
+        console.error("Error fetching menu item for edit:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch item details for editing.' });
+    }
+  }
+
+  const handleCancelItem = async (orderId: string, item: OrderItem) => {
+    const result = await cancelOrderItem(orderId, item.lineItemId);
+    if(result.success) {
+        toast({ title: 'Item Cancelled', description: `${item.name} has been cancelled from the order.`});
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+    }
+  }
+
+  const handleSaveCustomization = async (lineItemId: string, customizations: { added: Extra[], removed: string[] }) => {
+    if (!customizingItem) return;
+    
+    const { orderId, item } = customizingItem;
+    
+    const updatedItem: OrderItem = {
+      ...item,
+      customizations,
+      status: 'sent', // New customized item is marked as 'sent'
+      lineItemId: `${item.id}-${Date.now()}` // a new line item id to signify it's a new item
+    };
+
+    const result = await editOrderItem(orderId, item.lineItemId, updatedItem);
+
+    if (result.success) {
+        toast({ title: 'Item Edited', description: `Changes to ${item.name} have been sent to the kitchen.` });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+    }
+    setCustomizingItem(null);
+  };
+
   const filteredOrders = orders.filter(order => {
       if (order.status === 'Archived') return false; // Always hide archived orders
 
@@ -166,6 +271,7 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
   const visibleOrders = orders.filter(o => o.status !== 'Archived');
 
   return (
+    <>
     <Card className="h-full flex flex-col">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
@@ -217,12 +323,27 @@ export default function OrderProgress({ orders: initialOrders, onCompleteOrder, 
         <ScrollArea className="h-full w-full pr-4">
             <div className="space-y-4">
                 {filteredOrders.map((order) => (
-                    <OrderCard key={order.id} order={order} onCompleteOrder={onCompleteOrder} onClearOrder={onClearOrder} />
+                    <OrderCard 
+                        key={order.id} 
+                        order={order} 
+                        onCompleteOrder={onCompleteOrder} 
+                        onClearOrder={onClearOrder} 
+                        onEditItem={handleEditItem} 
+                        onCancelItem={handleCancelItem} 
+                    />
                 ))}
             </div>
         </ScrollArea>
       )}
       </CardContent>
     </Card>
+
+    <CustomizeItemDialog 
+        item={customizingItem?.item ?? null}
+        availableExtras={availableExtras}
+        onClose={() => setCustomizingItem(null)}
+        onSave={handleSaveCustomization}
+    />
+    </>
   );
 }

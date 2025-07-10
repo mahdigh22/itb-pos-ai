@@ -1,10 +1,12 @@
+
+
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Minus, Trash2, CreditCard, FilePlus, ShoppingCart, Settings2, Send } from 'lucide-react';
-import type { OrderItem, Check, OrderType, PriceList, RestaurantTable } from '@/lib/types';
+import type { OrderItem, Check, OrderType, PriceList, RestaurantTable, Extra } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,6 +32,7 @@ interface OrderSummaryProps {
   priceLists: PriceList[];
   taxRate: number;
   tables: RestaurantTable[];
+  availableExtras: Extra[];
 }
 
 export default function OrderSummary({
@@ -55,10 +58,13 @@ export default function OrderSummary({
   const isCheckPristine = !activeCheck?.items.some(item => item.status === 'sent');
   const pristineChecks = checks.filter(c => !c.items.some(item => item.status === 'sent'));
 
-  const sentItems = order.filter((item) => item.status === 'sent');
-  const newItems = order.filter((item) => item.status === 'new');
+  const activeItems = order.filter(item => item.status !== 'cancelled' && item.status !== 'edited');
+  const sentItems = activeItems.filter((item) => item.status === 'sent');
+  const newItems = activeItems.filter((item) => item.status === 'new');
+  const modifiedItems = order.filter(item => item.status === 'cancelled' || item.status === 'edited');
 
-  const subtotal = order.reduce((acc, item) => {
+
+  const subtotal = activeItems.reduce((acc, item) => {
     const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
     const totalItemPrice = (item.price + extrasPrice) * item.quantity;
     return acc + totalItemPrice;
@@ -213,13 +219,17 @@ export default function OrderSummary({
                     </div>
                 )}
                 
-                {sentItems.length > 0 && newItems.length > 0 && <Separator />}
+                {(sentItems.length > 0 || modifiedItems.length > 0) && newItems.length > 0 && <Separator />}
 
                 {newItems.length > 0 && (
                   <div>
                     {sentItems.length > 0 && <h4 className="text-sm font-medium text-muted-foreground mb-2">New Items</h4>}
                     <div className="space-y-2">
-                        {newItems.map((item) => (
+                        {newItems.map((item) => {
+                          const extrasPrice = item.customizations?.added.reduce((acc, extra) => acc + extra.price, 0) || 0;
+                          const totalItemPrice = (item.price + extrasPrice) * item.quantity;
+                        
+                          return (
                         <div key={item.lineItemId} className="flex items-start py-3 border-b last:border-b-0 gap-4">
                             <Avatar className="w-14 h-14 rounded-md border">
                                 <AvatarImage src={item.imageUrl} alt={item.name} />
@@ -255,7 +265,7 @@ export default function OrderSummary({
                                         </Button>
                                         </div>
                                         <p className="w-20 text-right font-semibold text-base">
-                                        ${(item.price * item.quantity).toFixed(2)}
+                                          ${totalItemPrice.toFixed(2)}
                                         </p>
                                         <Button
                                         variant="ghost"
@@ -268,7 +278,6 @@ export default function OrderSummary({
                                     </div>
                                 </div>
                                 
-                                {( (item.customizations?.added?.length || 0) > 0 || (item.customizations?.removed?.length || 0) > 0 || (item.ingredients && item.ingredients.length > 0) ) && (
                                 <div className="mt-2 flex items-center gap-4 flex-wrap">
                                     <div className="flex-grow flex flex-wrap gap-1">
                                     {item.customizations?.removed?.map(r => (
@@ -282,7 +291,7 @@ export default function OrderSummary({
                                         </Badge>
                                     ))}
                                     </div>
-                                    {item.ingredients && item.ingredients.length > 0 && (
+                                    {(item.ingredients?.some(i => i.isOptional) || (availableExtras && availableExtras.length > 0)) && (
                                     <div className="flex-shrink-0">
                                         <Button variant="link" size="sm" className="h-auto p-0 text-muted-foreground hover:text-primary" onClick={() => onCustomizeItem(item)}>
                                         <Settings2 className="h-3 w-3 mr-1.5"/>
@@ -291,19 +300,42 @@ export default function OrderSummary({
                                     </div>
                                     )}
                                 </div>
-                                )}
                             </div>
                         </div>
-                        ))}
+                        )})}
                     </div>
                   </div>
                 )}
-                 {newItems.length === 0 && sentItems.length > 0 && (
+                 {newItems.length === 0 && sentItems.length > 0 && modifiedItems.length === 0 && (
                     <div className="text-center text-muted-foreground py-6">
                         <p className="font-medium">No new items to send.</p>
                         <p className="text-xs">Add more items from the menu.</p>
                     </div>
                 )}
+
+                 {modifiedItems.length > 0 && <Separator />}
+
+                {modifiedItems.length > 0 && (
+                    <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-2">Modifications</h4>
+                         <div className="space-y-2 text-sm pl-1">
+                        {modifiedItems.map(item => (
+                            <div key={item.lineItemId} className={cn(
+                                "flex justify-between items-center line-through",
+                                item.status === 'cancelled' && 'text-red-500',
+                                item.status === 'edited' && 'text-amber-500'
+                            )}>
+                                <div className="flex items-center gap-2">
+                                    <span>{item.quantity} x {item.name}</span>
+                                    {item.status === 'edited' && <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>}
+                                </div>
+                                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                )}
+
               </div>
             </ScrollArea>
             <div className="mt-auto pt-4 border-t">
@@ -344,7 +376,7 @@ export default function OrderSummary({
             </>
         )}
         {activeCheck.orderType === 'Take Away' && (
-             <Button className="w-full" size="lg" onClick={onSendToKitchen} disabled={order.length === 0}>
+             <Button className="w-full" size="lg" onClick={onCloseCheck} disabled={order.length === 0}>
                 <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
             </Button>
         )}

@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import type { ActiveOrder, OrderItem, RestaurantTable } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from '@/lib/utils';
 
 
-export default function ReportsClient({ initialOrders, tables }: { initialOrders: RestaurantTable[], tables: RestaurantTable[] }) {
+export default function ReportsClient({ initialOrders, tables }: { initialOrders: ActiveOrder[], tables: RestaurantTable[] }) {
     const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
     const [filterText, setFilterText] = useState('');
     const [filterType, setFilterType] = useState('all');

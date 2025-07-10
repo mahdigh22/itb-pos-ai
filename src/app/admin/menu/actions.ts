@@ -93,7 +93,19 @@ export async function getMenuItems(): Promise<MenuItem[]> {
     const items: MenuItem[] = [];
     menuItemsSnapshot.forEach((doc) => {
       const data = doc.data();
-      const menuItem = { id: doc.id, ...data } as MenuItem;
+      const menuItem: MenuItem = { 
+        id: doc.id,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        imageUrl: data.imageUrl,
+        imageHint: data.imageHint,
+        preparationTime: data.preparationTime,
+        ingredientLinks: data.ingredientLinks || [],
+        ingredients: [],
+        cost: 0,
+       };
       
       let calculatedCost = 0;
 
@@ -107,12 +119,12 @@ export async function getMenuItems(): Promise<MenuItem[]> {
                     return { 
                       ...ingredient, 
                       isOptional: link.isOptional, 
-                      quantity: link.quantity || 1, // Default quantity to 1 if not specified
+                      quantity: link.quantity || 1,
                     };
                 }
                 return null;
             })
-            .filter(Boolean) as MenuItem['ingredients'];
+            .filter((i): i is NonNullable<typeof i> => i !== null);
       }
       
       menuItem.cost = calculatedCost;

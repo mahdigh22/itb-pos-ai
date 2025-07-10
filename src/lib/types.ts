@@ -13,6 +13,7 @@ export interface Ingredient {
   stock: number; // The current quantity in stock
   unit: string; // e.g., 'grams', 'pcs', 'ml'
   cost: number; // The cost per unit
+  isOptional?: boolean;
 }
 
 export interface Extra {
@@ -26,21 +27,21 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number; // This is the sell price (customer price)
-  cost?: number; // This is the calculated cost of goods sold
+  cost: number; // This is the calculated cost of goods sold
   category: string;
   imageUrl: string;
   imageHint: string;
   preparationTime: number; // in minutes
   
   // Stored in Firestore
-  ingredientLinks?: {
+  ingredientLinks: {
     ingredientId: string;
     isOptional: boolean;
     quantity: number; // The amount of this ingredient used in the recipe
   }[];
 
   // Populated in getMenuItems for UI consumption
-  ingredients?: {
+  ingredients: {
     id: string;
     name: string;
     isOptional: boolean;
@@ -59,11 +60,11 @@ export interface Category {
 export interface OrderItem extends MenuItem {
   lineItemId: string; // Unique ID for this line in the order
   quantity: number;
-  customizations?: {
+  customizations: {
     added: Extra[];
     removed: string[];
   };
-  status: 'new' | 'sent';
+  status: 'new' | 'sent' | 'cancelled' | 'edited';
 }
 
 export interface Member {
@@ -86,6 +87,7 @@ export interface ActiveOrder {
   total: number;
   createdAt: Date;
   checkName: string;
+  sourceCheckId?: string; // Link back to the original check
   totalPreparationTime: number; // in minutes
   orderType: OrderType;
   tableId?: string;
