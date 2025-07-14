@@ -86,12 +86,21 @@ import { db } from "@/lib/firebase";
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
-  return (...args: Parameters<F>): void => {
+  const debounced = (...args: Parameters<F>): void => {
     if (timeout) {
       clearTimeout(timeout);
     }
     timeout = setTimeout(() => func(...args), waitFor);
   };
+
+  debounced.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  }
+
+  return debounced;
 }
 
 
@@ -301,6 +310,7 @@ export default function Home() {
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
     if (!activeCheck) return;
+    debouncedUpdateCheck.cancel();
     if (quantity < 1) {
       await handleRemoveItem(lineItemId);
       return;
@@ -315,6 +325,7 @@ export default function Home() {
 
   const handleRemoveItem = async (lineItemId: string) => {
     if (!activeCheck) return;
+    debouncedUpdateCheck.cancel();
     const newItems = activeCheck.items.filter(
       (item) => item.lineItemId !== lineItemId
     );
@@ -323,11 +334,13 @@ export default function Home() {
 
   const handleClearCheck = async () => {
     if (!activeCheck) return;
+    debouncedUpdateCheck.cancel();
     await updateCheck(activeCheck.id, { items: [] });
   };
 
   const handleStartCustomization = async (itemToCustomize: OrderItem) => {
     if (!activeCheck) return;
+    debouncedUpdateCheck.cancel();
     const order = activeCheck.items;
     if (itemToCustomize.quantity > 1) {
       const otherItems = order.filter(
@@ -336,6 +349,7 @@ export default function Home() {
       const originalItem = {
         ...itemToCustomize,
         quantity: itemToCustomize.quantity - 1,
+        status: "new" as const,
       };
       const newItemToCustomize: OrderItem = {
         ...itemToCustomize,
@@ -409,6 +423,7 @@ export default function Home() {
 
   const handleSendToKitchen = async () => {
     if (!activeCheckId || !activeCheck || !currentUser) return;
+    debouncedUpdateCheck.cancel();
 
     if (activeCheck.orderType === "Take Away") {
       await handleFinalizeAndPay();
@@ -473,6 +488,8 @@ export default function Home() {
       !currentUser
     )
       return;
+      
+    debouncedUpdateCheck.cancel();
 
     const originalCheckName = activeCheck.name;
 
