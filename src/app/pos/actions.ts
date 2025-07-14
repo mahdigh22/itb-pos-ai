@@ -72,11 +72,16 @@ async function deductStockForItems(items: OrderItem[], transaction: any) {
 
     // Aggregate all ingredients needed for the items and their extras
     items.forEach(item => {
+        const removedIngredientIds = new Set(item.customizations.removed.map(r => r.id));
+
         // Main item ingredients
         if (item.ingredientLinks) {
             item.ingredientLinks.forEach(link => {
-                const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
-                ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
+                // Only deduct stock if the ingredient has not been removed
+                if (!removedIngredientIds.has(link.ingredientId)) {
+                    const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
+                    ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
+                }
             });
         }
         // Added extras ingredients
