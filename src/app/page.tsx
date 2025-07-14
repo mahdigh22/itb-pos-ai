@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -82,6 +82,19 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+// Debounce function
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<F>): void => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+}
+
+
 export default function Home() {
   const router = useRouter();
 
@@ -113,6 +126,14 @@ export default function Home() {
     () => checks.find((c) => c.id === activeCheckId),
     [checks, activeCheckId]
   );
+  
+  // Ref for debounced update function
+  const debouncedUpdateCheck = useRef(
+    debounce((checkId: string, updates: Partial<Omit<Check, 'id'>>) => {
+      updateCheck(checkId, updates);
+    }, 500)
+  ).current;
+
 
   useEffect(() => {
     let employeeData = null;
@@ -238,7 +259,7 @@ export default function Home() {
 
   const handleAddItem = (item: MenuItem) => {
     if (!activeCheck) return;
-  
+
     const existingItemIndex = activeCheck.items.findIndex(
       (orderItem) =>
         orderItem.id === item.id &&
@@ -246,13 +267,13 @@ export default function Home() {
           (orderItem.customizations.added.length === 0 &&
             orderItem.customizations.removed.length === 0))
     );
-      
+
     let newItems: OrderItem[];
-  
+
     if (existingItemIndex > -1) {
       newItems = activeCheck.items.map((orderItem, index) => {
         if (index === existingItemIndex) {
-          return { ...orderItem, quantity: orderItem.quantity + 1 };
+          return { ...orderItem, quantity: orderItem.quantity + 1, status: 'new' as const };
         }
         return orderItem;
       });
@@ -261,21 +282,22 @@ export default function Home() {
         ...item,
         quantity: 1,
         lineItemId: `${item.id}-${Date.now()}`,
-        status: "new",
+        status: "new" as const,
         customizations: { added: [], removed: [] },
       };
       newItems = [...activeCheck.items, newOrderItem];
     }
-  
+
     // Optimistic Update
-    const updatedChecks = checks.map(c => 
+    const updatedChecks = checks.map((c) =>
       c.id === activeCheck.id ? { ...c, items: newItems } : c
     );
     setChecks(updatedChecks);
-  
-    // Server Update
-    updateCheck(activeCheck.id, { items: newItems });
+
+    // Debounced Server Update
+    debouncedUpdateCheck(activeCheck.id, { items: newItems });
   };
+
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
     if (!activeCheck) return;
@@ -319,7 +341,7 @@ export default function Home() {
         ...itemToCustomize,
         quantity: 1,
         lineItemId: `${itemToCustomize.id}-${Date.now()}`,
-        status: "new",
+        status: "new" as const,
       };
       setCustomizingItem(newItemToCustomize);
       await updateCheck(activeCheck.id, {
