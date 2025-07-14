@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -238,16 +239,34 @@ export default function Home() {
   const handleAddItem = async (item: MenuItem) => {
     if (!activeCheck) return;
 
-    const newOrderItem: OrderItem = {
-      ...item,
-      quantity: 1,
-      lineItemId: `${item.id}-${Date.now()}`,
-      status: "new" as const,
-      customizations: { added: [], removed: [] },
-    };
+    const existingItemIndex = activeCheck.items.findIndex(
+      (orderItem) =>
+        orderItem.id === item.id &&
+        (!orderItem.customizations ||
+          (orderItem.customizations.added.length === 0 &&
+            orderItem.customizations.removed.length === 0))
+    );
+      
+    let newItems: OrderItem[];
 
-    const newItems = [...activeCheck.items, newOrderItem];
-
+    if (existingItemIndex > -1) {
+      newItems = activeCheck.items.map((orderItem, index) => {
+        if (index === existingItemIndex) {
+          return { ...orderItem, quantity: orderItem.quantity + 1 };
+        }
+        return orderItem;
+      });
+    } else {
+      const newOrderItem: OrderItem = {
+        ...item,
+        quantity: 1,
+        lineItemId: `${item.id}-${Date.now()}`,
+        status: "new" as const,
+        customizations: { added: [], removed: [] },
+      };
+      newItems = [...activeCheck.items, newOrderItem];
+    }
+    
     await updateCheck(activeCheck.id, { items: newItems });
   };
 
