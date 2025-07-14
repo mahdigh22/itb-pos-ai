@@ -19,7 +19,7 @@ import {
     documentId
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ActiveOrder, Check, Employee, OrderItem, OrderStatus, PriceList } from '@/lib/types';
+import type { ActiveOrder, Check, Employee, Ingredient, OrderItem, OrderStatus, PriceList } from '@/lib/types';
 
 // Check Actions
 export async function getChecks(): Promise<Check[]> {
@@ -66,6 +66,59 @@ export async function deleteCheck(checkId: string) {
 }
 
 // Order Actions
+
+async function deductStockForItems(items: OrderItem[], transaction: any) {
+    const ingredientUsage = new Map<string, number>();
+
+    // Aggregate all ingredients needed for the items
+    items.forEach(item => {
+        if (item.ingredientLinks) {
+            item.ingredientLinks.forEach(link => {
+                const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
+                ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
+            });
+        }
+    });
+
+    if (ingredientUsage.size === 0) {
+        return; // No ingredients to deduct
+    }
+
+    // Fetch all required ingredient documents
+    const ingredientIds = Array.from(ingredientUsage.keys());
+    const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
+    const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+
+    // Check stock and prepare updates
+    const stockUpdates: { ref: any, newStock: number }[] = [];
+    for (let i = 0; i < ingredientDocs.length; i++) {
+        const ingredientDoc = ingredientDocs[i];
+        const ingredientId = ingredientIds[i];
+
+        if (!ingredientDoc.exists()) {
+            throw new Error(`Ingredient with ID ${ingredientId} not found.`);
+        }
+
+        const ingredientData = ingredientDoc.data() as Ingredient;
+        const requiredStock = ingredientUsage.get(ingredientId)!;
+        
+        if (ingredientData.stock < requiredStock) {
+            throw new Error(`Insufficient stock for ${ingredientData.name}. Required: ${requiredStock}, Available: ${ingredientData.stock}`);
+        }
+
+        stockUpdates.push({
+            ref: ingredientDoc.ref,
+            newStock: ingredientData.stock - requiredStock,
+        });
+    }
+
+    // Apply all stock updates
+    stockUpdates.forEach(update => {
+        transaction.update(update.ref, { stock: update.newStock });
+    });
+}
+
+
 export async function sendNewItemsToKitchen(checkId: string) {
     const sourceCheckRef = doc(db, 'checks', checkId);
     let targetCheckId: string | null = null;
@@ -114,6 +167,9 @@ export async function sendNewItemsToKitchen(checkId: string) {
             if (newItemsToProcess.length === 0) {
                 return; // Nothing to send, exit transaction.
             }
+
+            // Deduct stock before creating the order
+            await deductStockForItems(newItemsToProcess, transaction);
 
             const settings = settingsDoc.exists() ? settingsDoc.data()! : { taxRate: 0, priceLists: [] };
             const taxRate = settings.taxRate || 0;
@@ -186,6 +242,7 @@ export async function sendNewItemsToKitchen(checkId: string) {
         });
 
         revalidatePath('/');
+        revalidatePath('/admin/ingredients');
         return { success: true };
     } catch (e) {
         console.error("Error in transaction for sending items to kitchen: ", e);
@@ -237,26 +294,34 @@ export async function getOrders(): Promise<ActiveOrder[]> {
 
 export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date }) {
     try {
-        // Sanitize items before saving to prevent storing client-side fields
-        const sanitizedItems = orderData.items.map(item => {
-            const { ingredients, ...rest } = item;
-            return { ...rest, cost: item.cost || 0 };
+        await runTransaction(db, async (transaction) => {
+            // Deduct stock first
+            await deductStockForItems(orderData.items, transaction);
+
+            // Sanitize items for saving
+            const sanitizedItems = orderData.items.map(item => {
+                const { ingredients, ...rest } = item;
+                return { ...rest, cost: item.cost || 0 };
+            });
+
+            const dataToSave = {
+                ...orderData,
+                items: sanitizedItems,
+                createdAt: Timestamp.fromDate(orderData.createdAt),
+                tableId: orderData.tableId || null,
+                tableName: orderData.tableName || null,
+                customerName: orderData.customerName || null,
+                priceListId: orderData.priceListId || null,
+                employeeId: orderData.employeeId || null,
+                employeeName: orderData.employeeName || null,
+            };
+
+            const newOrderRef = doc(collection(db, 'orders'));
+            transaction.set(newOrderRef, dataToSave);
         });
-
-        const dataToSave = {
-            ...orderData,
-            items: sanitizedItems,
-            createdAt: Timestamp.fromDate(orderData.createdAt),
-            tableId: orderData.tableId || null,
-            tableName: orderData.tableName || null,
-            customerName: orderData.customerName || null,
-            priceListId: orderData.priceListId || null,
-            employeeId: orderData.employeeId || null,
-            employeeName: orderData.employeeName || null,
-        };
-
-        await addDoc(collection(db, 'orders'), dataToSave);
+        
         revalidatePath('/');
+        revalidatePath('/admin/ingredients');
         return { success: true };
     } catch (e) {
         console.error("Error adding order: ", e);
@@ -299,12 +364,38 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
             if (!orderDoc.exists()) throw new Error("Order not found.");
 
             const orderData = orderDoc.data() as ActiveOrder;
+            let itemToCancel: OrderItem | undefined;
             const updatedItems = orderData.items.map(item => {
                 if (item.lineItemId === lineItemId) {
+                    itemToCancel = item;
                     return { ...item, status: 'cancelled' as const };
                 }
                 return item;
             });
+
+            if (itemToCancel) {
+                 // Return stock for the cancelled item
+                const ingredientUsage = new Map<string, number>();
+                if (itemToCancel.ingredientLinks) {
+                    itemToCancel.ingredientLinks.forEach(link => {
+                        const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
+                        ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * itemToCancel!.quantity);
+                    });
+                }
+                if (ingredientUsage.size > 0) {
+                    const ingredientIds = Array.from(ingredientUsage.keys());
+                    const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
+                    const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+                    
+                    for (let i = 0; i < ingredientDocs.length; i++) {
+                        const ingDoc = ingredientDocs[i];
+                        if (ingDoc.exists()) {
+                            const newStock = (ingDoc.data().stock || 0) + (ingredientUsage.get(ingDoc.id) || 0);
+                            transaction.update(ingDoc.ref, { stock: newStock });
+                        }
+                    }
+                }
+            }
             
             // Sync change with the source check if it exists
             if (orderData.sourceCheckId) {
@@ -322,6 +413,7 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
             transaction.update(orderRef, { items: updatedItems });
         });
         revalidatePath('/');
+        revalidatePath('/admin/ingredients');
         return { success: true };
     } catch(e) {
         console.error("Error cancelling order item: ", e);

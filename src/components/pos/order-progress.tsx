@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -207,7 +208,7 @@ function OrderCard({
               >
                 <span className="font-medium">{item.quantity}x</span>
                 <span>{item.name}</span>
-                {item.status === 'edited' && (
+                 {item.status === 'edited' && (
                   <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>
                 )}
                 {item.status === 'cancelled' && (
