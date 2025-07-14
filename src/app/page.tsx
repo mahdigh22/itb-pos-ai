@@ -236,9 +236,9 @@ export default function Home() {
     }
   };
 
-  const handleAddItem = async (item: MenuItem) => {
+  const handleAddItem = (item: MenuItem) => {
     if (!activeCheck) return;
-
+  
     const existingItemIndex = activeCheck.items.findIndex(
       (orderItem) =>
         orderItem.id === item.id &&
@@ -248,7 +248,7 @@ export default function Home() {
     );
       
     let newItems: OrderItem[];
-
+  
     if (existingItemIndex > -1) {
       newItems = activeCheck.items.map((orderItem, index) => {
         if (index === existingItemIndex) {
@@ -261,13 +261,20 @@ export default function Home() {
         ...item,
         quantity: 1,
         lineItemId: `${item.id}-${Date.now()}`,
-        status: "new" as const,
+        status: "new",
         customizations: { added: [], removed: [] },
       };
       newItems = [...activeCheck.items, newOrderItem];
     }
-    
-    await updateCheck(activeCheck.id, { items: newItems });
+  
+    // Optimistic Update
+    const updatedChecks = checks.map(c => 
+      c.id === activeCheck.id ? { ...c, items: newItems } : c
+    );
+    setChecks(updatedChecks);
+  
+    // Server Update
+    updateCheck(activeCheck.id, { items: newItems });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
@@ -308,11 +315,11 @@ export default function Home() {
         ...itemToCustomize,
         quantity: itemToCustomize.quantity - 1,
       };
-      const newItemToCustomize = {
+      const newItemToCustomize: OrderItem = {
         ...itemToCustomize,
         quantity: 1,
         lineItemId: `${itemToCustomize.id}-${Date.now()}`,
-        status: "new" as const,
+        status: "new",
       };
       setCustomizingItem(newItemToCustomize);
       await updateCheck(activeCheck.id, {
