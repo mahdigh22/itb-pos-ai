@@ -18,6 +18,10 @@ export interface Extra {
   id: string;
   name: string;
   price: number;
+  ingredientLinks?: {
+    ingredientId: string;
+    quantity: number;
+  }[];
 }
 
 export interface MenuItem {

@@ -1,24 +1,68 @@
 
-
 'use client';
 
-import { useState, useOptimistic } from 'react';
+import { useState, useOptimistic, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
-import type { Extra } from "@/lib/types";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from "lucide-react";
+import type { Extra, Ingredient } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { addExtra, updateExtra, deleteExtra } from '@/app/admin/extras/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-function ExtraForm({ extra, onFormSubmit, onCancel }) {
+type IngredientLink = {
+  id: string; // client-side unique id
+  ingredientId: string;
+  quantity: number;
+};
+
+function ExtraForm({ extra, ingredients, onFormSubmit, onCancel }) {
+    const [ingredientLinks, setIngredientLinks] = useState<IngredientLink[]>([]);
+    
+    useEffect(() => {
+        setIngredientLinks(
+            extra?.ingredientLinks?.map((link) => ({
+                ...link,
+                id: `link-${Date.now()}-${Math.random()}`,
+            })) || []
+        );
+    }, [extra]);
+
+    const addIngredientLink = () => {
+        setIngredientLinks((prev) => [
+            ...prev,
+            { id: `link-${Date.now()}`, ingredientId: "", quantity: 1 },
+        ]);
+    };
+
+    const updateIngredientLink = (id: string, field: "ingredientId" | "quantity", value: string | number) => {
+        setIngredientLinks((prev) =>
+            prev.map((link) => (link.id === id ? { ...link, [field]: value } : link))
+        );
+    };
+
+    const removeIngredientLink = (id: string) => {
+        setIngredientLinks((prev) => prev.filter((link) => link.id !== id));
+    };
+    
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const finalLinks = ingredientLinks
+            .filter((link) => link.ingredientId && link.quantity > 0)
+            .map(({ id, ...rest }) => rest);
+        formData.set("ingredientLinks", JSON.stringify(finalLinks));
+        onFormSubmit(formData);
+    };
+
     return (
-        <form action={onFormSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <input type="hidden" name="id" value={extra?.id || ''} />
             <div className="space-y-2">
                 <Label htmlFor="name">Extra Name</Label>
@@ -28,6 +72,32 @@ function ExtraForm({ extra, onFormSubmit, onCancel }) {
                 <Label htmlFor="price">Price</Label>
                 <Input id="price" name="price" type="number" step="0.01" placeholder="1.50" required defaultValue={extra?.price ?? 0} />
             </div>
+
+            <div className="space-y-3">
+              <Label>Ingredients Used</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {ingredientLinks.map(link => {
+                   const selectedIngredient = ingredients.find(ing => ing.id === link.ingredientId);
+                   return (
+                    <div key={link.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
+                      <Select value={link.ingredientId} onValueChange={(val) => updateIngredientLink(link.id, "ingredientId", val)}>
+                          <SelectTrigger><SelectValue placeholder="Select Ingredient"/></SelectTrigger>
+                          <SelectContent>{ingredients.map(ing => <SelectItem key={ing.id} value={ing.id}>{ing.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <div className="flex items-center">
+                          <Input type="number" placeholder="Qty" className="w-20 h-9" value={link.quantity} onChange={e => updateIngredientLink(link.id, "quantity", parseFloat(e.target.value) || 0)} min="0" step="any"/>
+                          {selectedIngredient && <span className="text-sm text-muted-foreground ml-2">{selectedIngredient.unit}</span>}
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeIngredientLink(link.id)}><X className="h-4 w-4" /></Button>
+                    </div>
+                   )
+                })}
+                <Button type="button" variant="outline" size="sm" className="w-full" onClick={addIngredientLink}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Ingredient
+                </Button>
+              </div>
+            </div>
+
             <DialogFooter>
                 <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
                 <Button type="submit">{extra ? 'Save Changes' : 'Add Extra'}</Button>
@@ -36,7 +106,7 @@ function ExtraForm({ extra, onFormSubmit, onCancel }) {
     );
 }
 
-export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[] }) {
+export default function ExtrasClient({ initialExtras, availableIngredients }: { initialExtras: Extra[], availableIngredients: Ingredient[] }) {
     const { toast } = useToast();
     const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -157,7 +227,7 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
                         <DialogTitle>Add New Extra</DialogTitle>
                         <DialogDescription>Add a new extra with its name and price.</DialogDescription>
                     </DialogHeader>
-                    <ExtraForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                    <ExtraForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} ingredients={availableIngredients} />
                 </DialogContent>
             </Dialog>
 
@@ -166,7 +236,7 @@ export default function ExtrasClient({ initialExtras }: { initialExtras: Extra[]
                     <DialogHeader>
                         <DialogTitle>Edit Extra</DialogTitle>
                     </DialogHeader>
-                    <ExtraForm extra={editingExtra} onFormSubmit={handleEditSubmit} onCancel={() => setEditingExtra(null)} />
+                    <ExtraForm extra={editingExtra} onFormSubmit={handleEditSubmit} onCancel={() => setEditingExtra(null)} ingredients={availableIngredients} />
                 </DialogContent>
             </Dialog>
 

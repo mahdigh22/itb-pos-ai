@@ -19,7 +19,7 @@ import {
     documentId
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { ActiveOrder, Check, Employee, Ingredient, OrderItem, OrderStatus, PriceList } from '@/lib/types';
+import type { ActiveOrder, Check, Employee, Extra, Ingredient, OrderItem, OrderStatus, PriceList } from '@/lib/types';
 
 // Check Actions
 export async function getChecks(): Promise<Check[]> {
@@ -70,12 +70,24 @@ export async function deleteCheck(checkId: string) {
 async function deductStockForItems(items: OrderItem[], transaction: any) {
     const ingredientUsage = new Map<string, number>();
 
-    // Aggregate all ingredients needed for the items
+    // Aggregate all ingredients needed for the items and their extras
     items.forEach(item => {
+        // Main item ingredients
         if (item.ingredientLinks) {
             item.ingredientLinks.forEach(link => {
                 const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
                 ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
+            });
+        }
+        // Added extras ingredients
+        if (item.customizations?.added) {
+            item.customizations.added.forEach(extra => {
+                if (extra.ingredientLinks) {
+                    extra.ingredientLinks.forEach(link => {
+                         const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
+                         ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
+                    });
+                }
             });
         }
     });
@@ -86,6 +98,8 @@ async function deductStockForItems(items: OrderItem[], transaction: any) {
 
     // Fetch all required ingredient documents
     const ingredientIds = Array.from(ingredientUsage.keys());
+    if (ingredientIds.length === 0) return;
+
     const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
     const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
 

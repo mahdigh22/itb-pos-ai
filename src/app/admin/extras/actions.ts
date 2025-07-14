@@ -7,9 +7,13 @@ import { db } from '@/lib/firebase';
 import type { Extra } from '@/lib/types';
 
 export async function addExtra(formData: FormData) {
+  const ingredientLinksString = formData.get('ingredientLinks') as string;
+  const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
+
   const newExtra: Omit<Extra, 'id'> = {
     name: formData.get('name') as string,
     price: parseFloat(formData.get('price') as string) || 0,
+    ingredientLinks,
   };
 
   try {
@@ -27,9 +31,13 @@ export async function addExtra(formData: FormData) {
 }
 
 export async function updateExtra(id: string, formData: FormData) {
+    const ingredientLinksString = formData.get('ingredientLinks') as string;
+    const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
+
     const extraUpdates = {
         name: formData.get('name') as string,
         price: parseFloat(formData.get('price') as string) || 0,
+        ingredientLinks,
     };
 
     try {
@@ -73,6 +81,7 @@ export async function getExtras(): Promise<Extra[]> {
         id: doc.id,
         name: data.name,
         price: data.price || 0,
+        ingredientLinks: data.ingredientLinks || [],
        } as Extra);
     });
     return extras.sort((a, b) => a.name.localeCompare(b.name));
