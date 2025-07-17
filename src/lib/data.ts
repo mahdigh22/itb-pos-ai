@@ -1,6 +1,6 @@
 
 import type { Category, MenuItem, Employee } from './types';
-import { collection, getDocs, addDoc, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export const categories: Category[] = [];
@@ -28,6 +28,16 @@ export async function ensureDefaultRestaurant(): Promise<string> {
       name: 'Default Admin',
       email: 'admin@default.com',
       password: 'password'
+    });
+
+    console.log("Creating default manager employee for new restaurant...");
+    await setDoc(doc(db, 'restaurants', restaurantId, 'employees', 'default-manager'), {
+      name: 'Default Manager',
+      email: 'manager@default.com',
+      password: 'password',
+      role: 'Manager',
+      startDate: Timestamp.now(),
+      restaurantId: restaurantId,
     });
 
   } else {
