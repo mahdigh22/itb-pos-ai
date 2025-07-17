@@ -6,7 +6,7 @@ import type { Check, PriceList } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Package, Users, Utensils, Hash, ShoppingBag, UtensilsCrossed } from 'lucide-react';
+import { Package, Users, Hash, ShoppingBag, UtensilsCrossed } from 'lucide-react';
 
 interface OpenChecksDisplayProps {
   checks: Check[];
@@ -61,7 +61,8 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                 {checks.map((check) => {
                     const isActive = check.id === activeCheckId;
                     const { total } = calculateTotal(check, priceLists, taxRate);
-                    const Icon = check.orderType === 'Dine In' ? UtensilsCrossed : ShoppingBag;
+                    const isTakeAway = check.orderType === 'Take Away';
+                    const Icon = isTakeAway ? ShoppingBag : UtensilsCrossed;
 
                     return (
                         <Card
@@ -69,7 +70,8 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                             onClick={() => onSelectCheck(check.id)}
                             className={cn(
                                 'cursor-pointer transition-all hover:shadow-lg',
-                                isActive ? 'border-primary ring-2 ring-primary shadow-lg' : 'hover:border-primary/50'
+                                isActive ? 'ring-2 ring-primary shadow-lg' : 'hover:border-primary/50',
+                                isTakeAway ? 'bg-secondary/50 border-secondary' : 'bg-card'
                             )}
                         >
                             <CardHeader className="pb-2">
