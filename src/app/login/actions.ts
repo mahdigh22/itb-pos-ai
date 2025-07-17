@@ -1,7 +1,7 @@
 
 'use server';
 
-import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
 
@@ -14,45 +14,44 @@ export async function loginEmployee(formData: FormData) {
   }
 
   try {
-    // Query across all 'employees' sub-collections in all restaurants by email only
-    const q = query(
-      collectionGroup(db, 'employees'),
-      where('email', '==', email)
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return { success: false, error: 'No employee found with that email.' };
+    // First, get all restaurants
+    const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
+    if (restaurantsSnapshot.empty) {
+      return { success: false, error: 'No restaurants configured in the system.' };
     }
 
-    // Since emails should be unique, we expect at most one result, but we'll iterate just in case.
-    for (const employeeDoc of querySnapshot.docs) {
+    // Iterate over each restaurant and check for the employee
+    for (const restaurantDoc of restaurantsSnapshot.docs) {
+      const restaurantId = restaurantDoc.id;
+      const employeesCollectionRef = collection(db, 'restaurants', restaurantId, 'employees');
+      
+      const q = query(employeesCollectionRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const employeeDoc = querySnapshot.docs[0];
         const employeeData = employeeDoc.data();
-        
+
         // Now, verify the password in the application code.
         if (employeeData.password === password) {
-            const restaurantId = employeeDoc.ref.parent.parent?.id;
-
-            if (!restaurantId) {
-                return { success: false, error: 'Could not determine the restaurant for this employee.' };
-            }
-            
-            const employee: Omit<Employee, 'password'> = {
-                id: employeeDoc.id,
-                name: employeeData.name,
-                email: employeeData.email,
-                role: employeeData.role,
-                startDate: employeeData.startDate.toDate().toISOString(),
-                restaurantId: restaurantId,
-            };
-
-            return { success: true, employee };
+          const employee: Omit<Employee, 'password'> = {
+            id: employeeDoc.id,
+            name: employeeData.name,
+            email: employeeData.email,
+            role: employeeData.role,
+            startDate: employeeData.startDate.toDate().toISOString(),
+            restaurantId: restaurantId,
+          };
+          return { success: true, employee };
+        } else {
+          // Found email but password was wrong. Since emails should be unique, we can stop here.
+          return { success: false, error: 'Invalid password.' };
         }
+      }
     }
 
-    // If we get here, it means we found an email but the password was wrong for all matches.
-    return { success: false, error: 'Invalid password.' };
+    // If we get here, it means we iterated through all restaurants and found no matching email.
+    return { success: false, error: 'No employee found with that email.' };
 
   } catch (e) {
     console.error('Login error:', e);
