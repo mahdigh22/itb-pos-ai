@@ -269,12 +269,14 @@ export default function Home() {
   const handleAddItem = (item: MenuItem) => {
     if (!activeCheck) return;
 
+    // A simple check to see if customizations object is empty
+    const hasCustomizations = (orderItem: OrderItem) => {
+        const customs = orderItem.customizations;
+        return customs && (customs.added.length > 0 || customs.removed.length > 0);
+    }
+
     const existingItemIndex = activeCheck.items.findIndex(
-      (orderItem) =>
-        orderItem.id === item.id &&
-        (!orderItem.customizations ||
-          (orderItem.customizations.added.length === 0 &&
-            orderItem.customizations.removed.length === 0))
+      (orderItem) => orderItem.id === item.id && !hasCustomizations(orderItem)
     );
 
     let newItems: OrderItem[];
@@ -338,32 +340,10 @@ export default function Home() {
     await updateCheck(activeCheck.id, { items: [] });
   };
 
-  const handleStartCustomization = async (itemToCustomize: OrderItem) => {
+  const handleStartCustomization = (itemToCustomize: OrderItem) => {
     if (!activeCheck) return;
     debouncedUpdateCheck.cancel();
-    const order = activeCheck.items;
-    if (itemToCustomize.quantity > 1) {
-      const otherItems = order.filter(
-        (i) => i.lineItemId !== itemToCustomize.lineItemId
-      );
-      const originalItem: OrderItem = {
-        ...itemToCustomize,
-        quantity: itemToCustomize.quantity - 1,
-        status: "new" as const,
-      };
-      const newItemToCustomize: OrderItem = {
-        ...itemToCustomize,
-        quantity: 1,
-        lineItemId: `${itemToCustomize.id}-${Date.now()}`,
-        status: "new" as const,
-      };
-      setCustomizingItem(newItemToCustomize);
-      await updateCheck(activeCheck.id, {
-        items: [...otherItems, originalItem, newItemToCustomize],
-      });
-    } else {
-      setCustomizingItem(itemToCustomize);
-    }
+    setCustomizingItem(itemToCustomize);
   };
 
   const handleUpdateCustomization = async (
