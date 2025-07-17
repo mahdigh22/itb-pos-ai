@@ -49,7 +49,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
             <ItbIcon className="h-10 w-10" />
-            <CardTitle className="text-3xl font-headline text-primary">ITB Members</CardTitle>
+            <CardTitle className="text-3xl font-headline text-primary">Members</CardTitle>
           </div>
           <CardDescription>Enter your credentials to access the system.</CardDescription>
         </CardHeader>

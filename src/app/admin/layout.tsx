@@ -18,8 +18,7 @@ export default function AdminLayout({
   const [isAdminLoaded, setIsAdminLoaded] = useState(false);
 
   useEffect(() => {
-    // This layout should not protect the login page.
-    // The login page has its own layout.
+   
     if (pathname === '/admin/login') {
         setIsAdminLoaded(true);
         return;

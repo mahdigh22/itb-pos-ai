@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -98,11 +96,10 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
       clearTimeout(timeout);
       timeout = null;
     }
-  }
+  };
 
   return debounced;
 }
-
 
 export default function Home() {
   const router = useRouter();
@@ -135,15 +132,14 @@ export default function Home() {
     () => checks.find((c) => c.id === activeCheckId),
     [checks, activeCheckId]
   );
-  
+
   const debouncedUpdateCheck = useRef(
-    debounce((checkId: string, updates: Partial<Omit<Check, 'id'>>) => {
+    debounce((checkId: string, updates: Partial<Omit<Check, "id">>) => {
       if (currentUser?.restaurantId) {
         updateCheck(currentUser.restaurantId, checkId, updates);
       }
     }, 500)
   ).current;
-
 
   useEffect(() => {
     let employeeData = null;
@@ -203,7 +199,9 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     const restaurantId = currentUser.restaurantId;
 
-    const checksQuery = query(collection(db, "restaurants", restaurantId, "checks"));
+    const checksQuery = query(
+      collection(db, "restaurants", restaurantId, "checks")
+    );
     const unsubscribeChecks = onSnapshot(
       checksQuery,
       async (querySnapshot) => {
@@ -265,29 +263,39 @@ export default function Home() {
 
   const handleAddItem = (item: MenuItem) => {
     if (!activeCheck || !currentUser?.restaurantId) return;
-  
+
     const restaurantId = currentUser.restaurantId;
     const customizationsAreEqual = (a: any, b: any) => {
       const aAdded = a.added.map((i: any) => i.id).sort();
       const bAdded = b.added.map((i: any) => i.id).sort();
       const aRemoved = a.removed.map((i: any) => i.id).sort();
       const bRemoved = b.removed.map((i: any) => i.id).sort();
-  
-      return aAdded.join(',') === bAdded.join(',') && aRemoved.join(',') === bRemoved.join(',');
+
+      return (
+        aAdded.join(",") === bAdded.join(",") &&
+        aRemoved.join(",") === bRemoved.join(",")
+      );
     };
 
     const existingItemIndex = activeCheck.items.findIndex(
       (orderItem) =>
         orderItem.id === item.id &&
-        customizationsAreEqual(orderItem.customizations, { added: [], removed: [] })
+        customizationsAreEqual(orderItem.customizations, {
+          added: [],
+          removed: [],
+        })
     );
-  
+
     let newItems: OrderItem[];
-  
+
     if (existingItemIndex > -1) {
       newItems = activeCheck.items.map((orderItem, index) => {
         if (index === existingItemIndex) {
-          return { ...orderItem, quantity: orderItem.quantity + 1, status: "new" as const };
+          return {
+            ...orderItem,
+            quantity: orderItem.quantity + 1,
+            status: "new" as const,
+          };
         }
         return orderItem;
       });
@@ -301,15 +309,15 @@ export default function Home() {
       };
       newItems = [...activeCheck.items, newOrderItem];
     }
-  
+
     const updatedChecks = checks.map((c) =>
       c.id === activeCheck.id ? { ...c, items: newItems } : c
     );
     setChecks(updatedChecks);
-  
+
     debouncedUpdateCheck(activeCheck.id, { items: newItems });
   };
-  
+
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
     if (!activeCheck || !currentUser?.restaurantId) return;
     debouncedUpdateCheck.cancel();
@@ -322,7 +330,9 @@ export default function Home() {
         ? { ...item, quantity, status: "new" as const }
         : item
     );
-    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, {
+      items: newItems,
+    });
   };
 
   const handleRemoveItem = async (lineItemId: string) => {
@@ -331,7 +341,9 @@ export default function Home() {
     const newItems = activeCheck.items.filter(
       (item) => item.lineItemId !== lineItemId
     );
-    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, {
+      items: newItems,
+    });
   };
 
   const handleClearCheck = async () => {
@@ -345,7 +357,6 @@ export default function Home() {
     debouncedUpdateCheck.cancel();
     setCustomizingItem(itemToCustomize);
   };
-  
 
   const handleUpdateCustomization = async (
     lineItemId: string,
@@ -358,7 +369,9 @@ export default function Home() {
         ? { ...item, customizations, status: "new" as const }
         : item
     );
-    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, {
+      items: newItems,
+    });
     setCustomizingItem(null);
   };
 
@@ -409,15 +422,19 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Order Type Required",
-        description: "Please select Dine In or Take Away before sending to kitchen.",
+        description:
+          "Please select Dine In or Take Away before sending to kitchen.",
       });
       return;
     }
 
     debouncedUpdateCheck.cancel();
-    
+
     const originalCheckName = activeCheck.name;
-    const result = await sendNewItemsToKitchen(currentUser.restaurantId, activeCheckId);
+    const result = await sendNewItemsToKitchen(
+      currentUser.restaurantId,
+      activeCheckId
+    );
 
     if (result.success) {
       toast({
@@ -426,29 +443,53 @@ export default function Home() {
       });
 
       const currentChecks = checks;
-      const emptyCheck = currentChecks.find(c => c.items.length === 0 && c.id !== activeCheckId);
+      const emptyCheck = currentChecks.find(
+        (c) => c.items.length === 0 && c.id !== activeCheckId
+      );
 
       if (emptyCheck) {
         setActiveCheckId(emptyCheck.id);
-        toast({ title: "Switched to Empty Check", description: "The previous check is available in 'Open Checks'." });
+        toast({
+          title: "Switched to Empty Check",
+          description: "The previous check is available in 'Open Checks'.",
+        });
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
-        const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [], priceListId: settings?.activePriceListId, employeeId: currentUser.id, employeeName: currentUser.name };
+        const newCheckData: Omit<Check, "id"> = {
+          name: newCheckName,
+          items: [],
+          priceListId: settings?.activePriceListId,
+          employeeId: currentUser.id,
+          employeeName: currentUser.name,
+        };
         const newCheck = await addCheck(currentUser.restaurantId, newCheckData);
         setActiveCheckId(newCheck.id);
-        toast({ title: "New Check Started", description: "The previous check is available in 'Open Checks'." });
+        toast({
+          title: "New Check Started",
+          description: "The previous check is available in 'Open Checks'.",
+        });
       }
     } else {
-      toast({ variant: "destructive", title: "Error", description: result.error || "Could not send items to kitchen." });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: result.error || "Could not send items to kitchen.",
+      });
     }
   };
 
   const handleFinalizeAndPay = async () => {
-    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !currentUser?.restaurantId) return;
-      
+    if (
+      !activeCheck ||
+      !activeCheckId ||
+      activeCheck.items.length === 0 ||
+      !currentUser?.restaurantId
+    )
+      return;
+
     debouncedUpdateCheck.cancel();
     const originalCheckName = activeCheck.name;
-    
+
     await deleteCheck(currentUser.restaurantId, activeCheckId);
     toast({
       title: "Bill Closed",
@@ -458,11 +499,12 @@ export default function Home() {
   };
 
   const handleCloseCheck = () => {
-    if (activeCheck?.orderType === 'Take Away') {
+    if (activeCheck?.orderType === "Take Away") {
       toast({
-          variant: 'destructive',
-          title: 'Invalid Action',
-          description: 'Takeaway orders close when marked complete. Please use "Send to Kitchen".',
+        variant: "destructive",
+        title: "Invalid Action",
+        description:
+          'Takeaway orders close when marked complete. Please use "Send to Kitchen".',
       });
       return;
     }
@@ -471,7 +513,8 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Order Type Required",
-        description: "Please select Dine In or Take Away before closing the check.",
+        description:
+          "Please select Dine In or Take Away before closing the check.",
       });
       return;
     }
@@ -511,7 +554,8 @@ export default function Home() {
     );
   }
 
-  const closeCheckAlertDescription = "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?";
+  const closeCheckAlertDescription =
+    "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?";
 
   return (
     <>
@@ -529,9 +573,7 @@ export default function Home() {
                 className="flex items-center gap-2 text-lg font-headline font-semibold"
               >
                 <ItbIcon className="h-8 w-8" />
-                <span className="text-xl text-primary font-bold">
-                  ITB Members
-                </span>
+                <span className="text-xl text-primary font-bold">Members</span>
               </Link>
 
               <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
