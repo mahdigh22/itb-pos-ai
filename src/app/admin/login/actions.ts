@@ -51,18 +51,22 @@ export async function loginAdmin(formData: FormData) {
   try {
     const q = query(
       collection(db, 'restaurants', restaurantId, 'admins'),
-      where('email', '==', email),
-      where('password', '==', password) // WARNING: Storing plain text passwords is not secure.
+      where('email', '==', email)
     );
 
     const querySnapshot = await getDocs(q);
 
     if (querySnapshot.empty) {
-      return { success: false, error: 'Invalid admin email or password.' };
+      return { success: false, error: 'Invalid admin email.' };
     }
 
     const adminDoc = querySnapshot.docs[0];
     const adminData = adminDoc.data();
+
+    // Verify password in application code
+    if (adminData.password !== password) {
+        return { success: false, error: 'Invalid password.' };
+    }
     
     // Return admin data without the password
     const admin: Omit<Admin, 'password'> = {
