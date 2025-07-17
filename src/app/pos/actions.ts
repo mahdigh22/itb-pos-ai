@@ -289,6 +289,7 @@ export async function getOrders(restaurantId: string): Promise<ActiveOrder[]> {
     const q = query(
         collection(db, 'restaurants', restaurantId, 'orders'), 
         where('status', 'in', ['Pending', 'Preparing', 'Ready', 'Completed']),
+        orderBy('status'),
         orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -442,24 +443,24 @@ export async function editOrderItem(restaurantId: string, orderId: string, oldLi
 
     try {
         await runTransaction(db, async (transaction) => {
+            // READS
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) throw new Error("Order not found.");
-            
+
             const orderData = orderDoc.data() as ActiveOrder;
             const oldItem = orderData.items.find(i => i.lineItemId === oldLineItemId);
             if (!oldItem) throw new Error("Original item to edit not found in order.");
-
-            let checkRef = null;
-            let checkDoc = null;
+            
+            let checkDoc: any = null;
             if (orderData.sourceCheckId) {
-                checkRef = doc(db, "restaurants", restaurantId, "checks", orderData.sourceCheckId);
+                const checkRef = doc(db, "restaurants", restaurantId, "checks", orderData.sourceCheckId);
                 checkDoc = await transaction.get(checkRef);
             }
-            
-            const stockAdjustments = new Map<string, number>();
-            const quantity = oldItem.quantity;
 
             const oldIngredients = new Map<string, number>();
+            const newIngredients = new Map<string, number>();
+            const quantity = oldItem.quantity;
+            
             oldItem.ingredientLinks.forEach(link => {
                 if (!oldItem.customizations.removed.some(r => r.id === link.ingredientId)) {
                     oldIngredients.set(link.ingredientId, (oldIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
@@ -471,7 +472,6 @@ export async function editOrderItem(restaurantId: string, orderId: string, oldLi
                 });
             });
 
-            const newIngredients = new Map<string, number>();
             newItem.ingredientLinks.forEach(link => {
                 if (!newItem.customizations.removed.some(r => r.id === link.ingredientId)) {
                     newIngredients.set(link.ingredientId, (newIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
@@ -486,7 +486,9 @@ export async function editOrderItem(restaurantId: string, orderId: string, oldLi
             const allIngredientIds = new Set([...oldIngredients.keys(), ...newIngredients.keys()]);
             const ingredientRefs = Array.from(allIngredientIds).map(id => doc(db, 'restaurants', restaurantId, 'ingredients', id));
             const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+            const stockAdjustments = new Map<string, number>();
 
+            // CALCULATIONS
             for (const id of allIngredientIds) {
                 const oldQty = oldIngredients.get(id) || 0;
                 const newQty = newIngredients.get(id) || 0;
@@ -494,22 +496,25 @@ export async function editOrderItem(restaurantId: string, orderId: string, oldLi
                     stockAdjustments.set(id, oldQty - newQty);
                 }
             }
-            
+
+            // WRITES
             for (const ingDoc of ingredientDocs) {
                 if (ingDoc.exists()) {
                     const adjustment = stockAdjustments.get(ingDoc.id) || 0;
+                    if (adjustment === 0) continue;
                     const newStock = (ingDoc.data().stock || 0) + adjustment;
                     if (newStock < 0) throw new Error(`Insufficient stock for ${ingDoc.data().name}.`);
                     transaction.update(ingDoc.ref, { stock: newStock });
                 }
             }
-
+            
             const itemsWithoutOld = orderData.items.map(item => 
                 item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
             );
             const updatedItems = [...itemsWithoutOld, newItem];
 
-            if (checkDoc && checkDoc.exists() && checkRef) {
+            if (checkDoc && checkDoc.exists()) {
+                const checkRef = doc(db, "restaurants", restaurantId, "checks", orderData.sourceCheckId!);
                 const checkData = checkDoc.data() as Check;
                 const updatedCheckItems = checkData.items.map(item => 
                     item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
