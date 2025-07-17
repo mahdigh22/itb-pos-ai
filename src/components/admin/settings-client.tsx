@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useOptimistic } from 'react';
+import { useState, useOptimistic, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,22 +9,22 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList } from '@/app/admin/settings/actions';
-import type { PriceList } from '@/lib/types';
+import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList, getSettings } from '@/app/admin/settings/actions';
+import type { PriceList, Admin } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 
-interface SettingsClientProps {
-    initialTaxRate: number;
-    initialPriceLists: PriceList[];
-    initialActivePriceListId?: string;
+interface Settings {
+    taxRate: number;
+    priceLists: PriceList[];
+    activePriceListId?: string;
 }
 
-function PriceListForm({ priceList, onFormSubmit, onCancel }) {
+function PriceListForm({ priceList, onFormSubmit, onCancel }: { priceList?: PriceList | null, onFormSubmit: (data: FormData) => void, onCancel: () => void }) {
     return (
-        <form action={onFormSubmit} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); onFormSubmit(new FormData(e.currentTarget)); }} className="space-y-4">
             <input type="hidden" name="id" value={priceList?.id || ''} />
             <div className="space-y-2"><Label htmlFor="pl-name">Price List Name</Label><Input id="pl-name" name="name" placeholder="e.g. VIP Members" required defaultValue={priceList?.name}/></div>
             <div className="space-y-2"><Label htmlFor="pl-discount">Discount (%)</Label><Input id="pl-discount" name="discount" type="number" placeholder="15" required defaultValue={priceList?.discount} /></div>
@@ -36,90 +36,103 @@ function PriceListForm({ priceList, onFormSubmit, onCancel }) {
     );
 }
 
-export default function SettingsClient({ initialTaxRate, initialPriceLists, initialActivePriceListId }: SettingsClientProps) {
+export default function SettingsClient() {
     const { toast } = useToast();
-    const [taxRate, setTaxRate] = useState(initialTaxRate);
+    const [settings, setSettings] = useState<Settings | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
     const [isSavingTax, setIsSavingTax] = useState(false);
-    const [activePriceListId, setActivePriceListId] = useState(initialActivePriceListId);
     
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [editingPriceList, setEditingPriceList] = useState<PriceList | null>(null);
     const [deletingPriceList, setDeletingPriceList] = useState<PriceList | null>(null);
 
-    const [optimisticPriceLists, manageOptimisticPriceLists] = useOptimistic<PriceList[], {action: 'add' | 'delete', priceList: PriceList}>(
-        initialPriceLists,
-        (state, { action, priceList }) => {
-            switch(action) {
-                case 'add': return [...state, priceList];
-                case 'delete': return state.filter(pl => pl.id !== priceList.id);
-                default: return state;
-            }
+     useEffect(() => {
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
+            getSettings(admin.restaurantId).then(data => {
+                setSettings(data);
+                setIsLoading(false);
+            });
+        } else {
+            setIsLoading(false);
         }
-    );
+    }, []);
 
     const handleSaveTax = async () => {
+        if (!settings || !currentAdmin) return;
         setIsSavingTax(true);
-        const result = await saveTaxRate(taxRate);
+        const result = await saveTaxRate(currentAdmin.restaurantId, settings.taxRate);
         if (result.success) {
             toast({ title: 'Settings Saved', description: 'Tax rate has been updated.' });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
-            setTaxRate(initialTaxRate); // Revert on error
+            const data = await getSettings(currentAdmin.restaurantId);
+            setSettings(data);
         }
         setIsSavingTax(false);
     };
 
     const handleActivePriceListChange = async (newId: string) => {
+        if (!settings || !currentAdmin) return;
         const finalId = newId === 'none' ? null : newId;
-        setActivePriceListId(finalId ?? undefined); // Optimistic UI update
-        const result = await saveActivePriceList(finalId);
+        const oldId = settings.activePriceListId;
+        setSettings(s => s ? ({ ...s, activePriceListId: finalId ?? undefined }) : null);
+        
+        const result = await saveActivePriceList(currentAdmin.restaurantId, finalId);
         if (result.success) {
             toast({ title: 'Settings Saved', description: 'Active price list has been updated.' });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
-            setActivePriceListId(initialActivePriceListId); // Revert on error
+            setSettings(s => s ? ({ ...s, activePriceListId: oldId }) : null);
         }
     };
 
     const handleAddPriceList = async (formData: FormData) => {
-        const newPriceList: PriceList = {
-            id: `optimistic-pl-${Date.now()}`,
-            name: formData.get('name') as string,
-            discount: parseFloat(formData.get('discount') as string),
-        };
-        manageOptimisticPriceLists({ action: 'add', priceList: newPriceList });
+        if (!currentAdmin) return;
         setAddDialogOpen(false);
-
-        const result = await addPriceList(formData);
+        const result = await addPriceList(currentAdmin.restaurantId, formData);
         if (!result.success) {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
         } else {
             toast({ title: 'Price List Added' });
+            const data = await getSettings(currentAdmin.restaurantId);
+            setSettings(data);
         }
     };
     
     const handleEditPriceList = async (formData: FormData) => {
-        if (!editingPriceList) return;
+        if (!editingPriceList || !currentAdmin) return;
         setEditingPriceList(null);
-        const result = await updatePriceList(editingPriceList.id, formData);
+        const result = await updatePriceList(currentAdmin.restaurantId, editingPriceList.id, formData);
         if (!result.success) {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
         } else {
             toast({ title: 'Price List Updated' });
+            const data = await getSettings(currentAdmin.restaurantId);
+            setSettings(data);
         }
     };
     
     const handleDeletePriceList = async () => {
-        if (!deletingPriceList) return;
-        manageOptimisticPriceLists({ action: 'delete', priceList: deletingPriceList });
+        if (!deletingPriceList || !currentAdmin) return;
         setDeletingPriceList(null);
-        const result = await deletePriceList(deletingPriceList.id);
+        const result = await deletePriceList(currentAdmin.restaurantId, deletingPriceList.id);
         if (!result.success) {
             toast({ variant: 'destructive', title: 'Error', description: result.error });
         } else {
             toast({ title: 'Price List Deleted' });
+            const data = await getSettings(currentAdmin.restaurantId);
+            setSettings(data);
         }
     };
+    
+    if (isLoading || !settings) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
 
     return (
@@ -139,8 +152,8 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists, init
                         <Input 
                             id="tax-rate" 
                             type="number" 
-                            value={taxRate} 
-                            onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)} 
+                            value={settings.taxRate} 
+                            onChange={(e) => setSettings(s => s ? { ...s, taxRate: parseFloat(e.target.value) || 0 } : null)} 
                         />
                          <Button className="mt-2" onClick={handleSaveTax} disabled={isSavingTax}>
                             {isSavingTax ? 'Saving...' : 'Save Tax Rate'}
@@ -149,7 +162,7 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists, init
                     <div className="space-y-2">
                         <Label htmlFor="active-price-list">Default Price List for New Checks</Label>
                         <Select
-                            value={activePriceListId || 'none'}
+                            value={settings.activePriceListId || 'none'}
                             onValueChange={handleActivePriceListChange}
                         >
                             <SelectTrigger id="active-price-list">
@@ -157,7 +170,7 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists, init
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="none">None (No Discount)</SelectItem>
-                                {optimisticPriceLists.map((pl) => (
+                                {settings.priceLists.map((pl) => (
                                     <SelectItem key={pl.id} value={pl.id}>
                                         {pl.name} ({pl.discount}%)
                                     </SelectItem>
@@ -179,7 +192,7 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists, init
                    <Table>
                         <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Discount</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {optimisticPriceLists.map((pl) => (
+                            {settings.priceLists.map((pl) => (
                                 <TableRow key={pl.id}>
                                     <TableCell className="font-medium">{pl.name}</TableCell>
                                     <TableCell>{pl.discount}%</TableCell>
@@ -202,7 +215,7 @@ export default function SettingsClient({ initialTaxRate, initialPriceLists, init
             <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader><DialogTitle>Add New Price List</DialogTitle></DialogHeader>
-                    <PriceListForm onFormSubmit={handleAddPriceList} onCancel={() => setAddDialogOpen(false)} />
+                    <PriceListForm onFormSubmit={handleAddPriceList} onCancel={() => setAddDialogOpen(false)} priceList={null} />
                 </DialogContent>
             </Dialog>
 

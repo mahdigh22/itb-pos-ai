@@ -1,9 +1,8 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import type { ActiveOrder, OrderItem, RestaurantTable } from '@/lib/types';
+import type { ActiveOrder, OrderItem, RestaurantTable, Admin } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
@@ -16,34 +15,51 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Calendar as CalendarIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from '@/lib/utils';
+import { getTables } from '@/app/admin/tables/actions';
 
+export default function ReportsClient() {
+    const [orders, setOrders] = useState<ActiveOrder[]>([]);
+    const [tables, setTables] = useState<RestaurantTable[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
-export default function ReportsClient({ initialOrders, tables }: { initialOrders: ActiveOrder[], tables: RestaurantTable[] }) {
-    const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
     const [filterText, setFilterText] = useState('');
     const [filterType, setFilterType] = useState('all');
     const [filterTable, setFilterTable] = useState('all');
     const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
     useEffect(() => {
-        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const liveOrders: ActiveOrder[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                liveOrders.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: (data.createdAt as Timestamp).toDate(),
-                } as ActiveOrder);
-            });
-            setOrders(liveOrders);
-        });
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
 
-        return () => unsubscribe();
+            const ordersQuery = query(collection(db, 'restaurants', admin.restaurantId, 'orders'), orderBy('createdAt', 'desc'));
+            const unsubscribe = onSnapshot(ordersQuery, (querySnapshot) => {
+                const liveOrders: ActiveOrder[] = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    liveOrders.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: (data.createdAt as Timestamp).toDate(),
+                    } as ActiveOrder);
+                });
+                setOrders(liveOrders);
+            });
+
+            getTables(admin.restaurantId).then(tablesData => {
+                setTables(tablesData);
+            });
+
+            setIsLoading(false);
+            return () => unsubscribe();
+        } else {
+            setIsLoading(false);
+        }
     }, []);
 
     const filteredOrders = useMemo(() => {
@@ -66,6 +82,10 @@ export default function ReportsClient({ initialOrders, tables }: { initialOrders
             return true;
         });
     }, [orders, filterText, filterType, filterTable, dateRange]);
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     return (
         <div className="space-y-6">

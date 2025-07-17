@@ -8,16 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from "lucide-react";
-import type { Extra, Ingredient } from "@/lib/types";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Loader2 } from "lucide-react";
+import type { Extra, Ingredient, Admin } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { addExtra, updateExtra, deleteExtra } from '@/app/admin/extras/actions';
+import { addExtra, updateExtra, deleteExtra, getExtras } from '@/app/admin/extras/actions';
+import { getIngredients } from '@/app/admin/ingredients/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 type IngredientLink = {
-  id: string; // client-side unique id
+  id: string;
   ingredientId: string;
   quantity: number;
 };
@@ -106,14 +107,37 @@ function ExtraForm({ extra, ingredients, onFormSubmit, onCancel }: { extra?: Ext
     );
 }
 
-export default function ExtrasClient({ initialExtras, availableIngredients }: { initialExtras: Extra[], availableIngredients: Ingredient[] }) {
+export default function ExtrasClient() {
     const { toast } = useToast();
+    const [extras, setExtras] = useState<Extra[]>([]);
+    const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
     const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [deletingExtra, setDeletingExtra] = useState<Extra | null>(null);
 
+     useEffect(() => {
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
+            Promise.all([
+                getExtras(admin.restaurantId),
+                getIngredients(admin.restaurantId)
+            ]).then(([extrasData, ingredientsData]) => {
+                setExtras(extrasData);
+                setIngredients(ingredientsData);
+                setIsLoading(false);
+            });
+        } else {
+            setIsLoading(false);
+        }
+    }, []);
+
     const [optimisticExtras, manageOptimisticExtras] = useOptimistic<Extra[], {action: 'add' | 'delete', extra: Extra}>(
-        initialExtras,
+        extras,
         (state, { action, extra }) => {
             switch (action) {
                 case 'add':
@@ -125,49 +149,55 @@ export default function ExtrasClient({ initialExtras, availableIngredients }: { 
             }
         }
     );
+     useEffect(() => {
+        setExtras(extras);
+    }, [extras]);
 
     const handleAddSubmit = async (formData: FormData) => {
-        const newExtra: Extra = {
-            id: `optimistic-${Date.now()}`,
-            name: formData.get('name') as string,
-            price: parseFloat(formData.get('price') as string) || 0,
-            ingredientLinks: JSON.parse(formData.get('ingredientLinks') as string || '[]'),
-        };
-        
+        if (!currentAdmin) return;
         setAddDialogOpen(false);
-        manageOptimisticExtras({ action: 'add', extra: newExtra });
-
-        const result = await addExtra(formData);
+        const result = await addExtra(currentAdmin.restaurantId, formData);
 
         if (result.success) {
             toast({ title: "Extra Added" });
+            const data = await getExtras(currentAdmin.restaurantId);
+            setExtras(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
     const handleEditSubmit = async (formData: FormData) => {
-        if (!editingExtra) return;
+        if (!editingExtra || !currentAdmin) return;
         setEditingExtra(null);
-        const result = await updateExtra(editingExtra.id, formData);
+        const result = await updateExtra(currentAdmin.restaurantId, editingExtra.id, formData);
         if (result.success) {
             toast({ title: "Extra Updated" });
+            const data = await getExtras(currentAdmin.restaurantId);
+            setExtras(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
     const handleDelete = async () => {
-        if (!deletingExtra) return;
-        manageOptimisticExtras({ action: 'delete', extra: deletingExtra });
+        if (!deletingExtra || !currentAdmin) return;
+        const extraToDelete = { ...deletingExtra };
+        manageOptimisticExtras({ action: 'delete', extra: extraToDelete });
         setDeletingExtra(null);
-        const result = await deleteExtra(deletingExtra.id);
+        const result = await deleteExtra(currentAdmin.restaurantId, extraToDelete.id);
         if (result.success) {
             toast({ title: "Extra Deleted" });
+            setExtras(prev => prev.filter(e => e.id !== extraToDelete.id));
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
+            manageOptimisticExtras({ action: 'add', extra: extraToDelete });
         }
     };
+    
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
 
     return (
@@ -228,7 +258,7 @@ export default function ExtrasClient({ initialExtras, availableIngredients }: { 
                         <DialogTitle>Add New Extra</DialogTitle>
                         <DialogDescription>Add a new extra with its name and price.</DialogDescription>
                     </DialogHeader>
-                    <ExtraForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} ingredients={availableIngredients} />
+                    <ExtraForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} ingredients={ingredients} />
                 </DialogContent>
             </Dialog>
 
@@ -237,7 +267,7 @@ export default function ExtrasClient({ initialExtras, availableIngredients }: { 
                     <DialogHeader>
                         <DialogTitle>Edit Extra</DialogTitle>
                     </DialogHeader>
-                    <ExtraForm extra={editingExtra} onFormSubmit={handleEditSubmit} onCancel={() => setEditingExtra(null)} ingredients={availableIngredients} />
+                    <ExtraForm extra={editingExtra} onFormSubmit={handleEditSubmit} onCancel={() => setEditingExtra(null)} ingredients={ingredients} />
                 </DialogContent>
             </Dialog>
 

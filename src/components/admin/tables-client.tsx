@@ -1,24 +1,23 @@
 
-
 'use client';
 
-import { useState, useOptimistic } from 'react';
+import { useState, useOptimistic, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
-import type { RestaurantTable } from "@/lib/types";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Loader2 } from "lucide-react";
+import type { RestaurantTable, Admin } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { addTable, updateTable, deleteTable } from '@/app/admin/tables/actions';
+import { addTable, updateTable, deleteTable, getTables } from '@/app/admin/tables/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 
-function TableForm({ table, onFormSubmit, onCancel }) {
+function TableForm({ table, onFormSubmit, onCancel }: { table?: RestaurantTable | null, onFormSubmit: (data: FormData) => void, onCancel: () => void }) {
     return (
-        <form action={onFormSubmit} className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); onFormSubmit(new FormData(e.currentTarget)); }} className="space-y-4">
             <input type="hidden" name="id" value={table?.id || ''} />
             <div className="space-y-2">
                 <Label htmlFor="name">Table Name / Number</Label>
@@ -32,14 +31,32 @@ function TableForm({ table, onFormSubmit, onCancel }) {
     );
 }
 
-export default function TablesClient({ initialTables }: { initialTables: RestaurantTable[] }) {
+export default function TablesClient() {
     const { toast } = useToast();
+    const [tables, setTables] = useState<RestaurantTable[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
     const [editingTable, setEditingTable] = useState<RestaurantTable | null>(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [deletingTable, setDeletingTable] = useState<RestaurantTable | null>(null);
 
+    useEffect(() => {
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
+            getTables(admin.restaurantId).then(data => {
+                setTables(data);
+                setIsLoading(false);
+            });
+        } else {
+            setIsLoading(false);
+        }
+    }, []);
+
     const [optimisticTables, manageOptimisticTables] = useOptimistic<RestaurantTable[], {action: 'add' | 'delete', table: RestaurantTable}>(
-        initialTables,
+        tables,
         (state, { action, table }) => {
             switch (action) {
                 case 'add':
@@ -52,46 +69,55 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
         }
     );
 
-    const handleAddSubmit = async (formData: FormData) => {
-        const newTable: RestaurantTable = {
-            id: `optimistic-${Date.now()}`,
-            name: formData.get('name') as string,
-        };
-        
-        setAddDialogOpen(false);
-        manageOptimisticTables({ action: 'add', table: newTable });
+    useEffect(() => {
+        setTables(tables);
+    }, [tables]);
 
-        const result = await addTable(formData);
+    const handleAddSubmit = async (formData: FormData) => {
+        if (!currentAdmin) return;
+        setAddDialogOpen(false);
+        const result = await addTable(currentAdmin.restaurantId, formData);
 
         if (result.success) {
             toast({ title: "Table Added" });
+            const data = await getTables(currentAdmin.restaurantId);
+            setTables(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
     const handleEditSubmit = async (formData: FormData) => {
-        if (!editingTable) return;
+        if (!editingTable || !currentAdmin) return;
         setEditingTable(null);
-        const result = await updateTable(editingTable.id, formData);
+        const result = await updateTable(currentAdmin.restaurantId, editingTable.id, formData);
         if (result.success) {
             toast({ title: "Table Updated" });
+            const data = await getTables(currentAdmin.restaurantId);
+            setTables(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
     const handleDelete = async () => {
-        if (!deletingTable) return;
-        manageOptimisticTables({ action: 'delete', table: deletingTable });
+        if (!deletingTable || !currentAdmin) return;
+        const tableToDelete = { ...deletingTable };
+        manageOptimisticTables({ action: 'delete', table: tableToDelete });
         setDeletingTable(null);
-        const result = await deleteTable(deletingTable.id);
+        const result = await deleteTable(currentAdmin.restaurantId, tableToDelete.id);
         if (result.success) {
             toast({ title: "Table Deleted" });
+            setTables(prev => prev.filter(t => t.id !== tableToDelete.id));
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
+            manageOptimisticTables({ action: 'add', table: tableToDelete });
         }
     };
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     return (
         <div className="space-y-6">
@@ -149,7 +175,7 @@ export default function TablesClient({ initialTables }: { initialTables: Restaur
                         <DialogTitle>Add New Table</DialogTitle>
                         <DialogDescription>Add a new table available for seating.</DialogDescription>
                     </DialogHeader>
-                    <TableForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                    <TableForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} table={null} />
                 </DialogContent>
             </Dialog>
 

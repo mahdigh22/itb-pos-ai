@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useOptimistic, useEffect } from "react";
@@ -9,7 +10,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Trash2, Edit, X } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +54,7 @@ import {
   AlertDialogTitle,
   AlertDialogDescription as AlertDialogDescriptionComponent,
 } from "@/components/ui/alert-dialog";
-import type { MenuItem, Category, Ingredient, Extra } from "@/lib/types";
+import type { MenuItem, Category, Ingredient, Admin } from "@/lib/types";
 import {
   addMenuItem,
   addCategory,
@@ -61,17 +62,13 @@ import {
   deleteMenuItem,
   updateCategory,
   deleteCategory,
+  getMenuItems,
+  getCategories,
 } from "@/app/admin/menu/actions";
+import { getIngredients } from "@/app/admin/ingredients/actions";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { getExtras } from "@/app/admin/extras/actions";
-
-interface MenuClientProps {
-  initialMenuItems: MenuItem[];
-  initialCategories: Category[];
-  availableIngredients: Ingredient[];
-}
 
 type IngredientLink = {
   id: string; // client-side unique id
@@ -93,7 +90,7 @@ function MenuItemFormDialog({
   useEffect(() => {
     if (open) {
       setIngredientLinks(
-        initialData?.ingredientLinks?.map((link) => ({
+        initialData?.ingredientLinks?.map((link: any) => ({
           ...link,
           id: `link-${Date.now()}-${Math.random()}`,
         })) || []
@@ -132,7 +129,7 @@ function MenuItemFormDialog({
     const formData = new FormData(event.currentTarget);
     const finalLinks = ingredientLinks
       .filter((link) => link.ingredientId && link.quantity > 0)
-      .map(({ id, ...rest }) => rest); // remove client-side id
+      .map(({ id, ...rest }) => rest);
     formData.set("ingredientLinks", JSON.stringify(finalLinks));
     onFormSubmit(formData);
   };
@@ -193,7 +190,7 @@ function MenuItemFormDialog({
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
+                  {categories.map((cat: Category) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
                     </SelectItem>
@@ -221,7 +218,7 @@ function MenuItemFormDialog({
             <div className="space-y-2 rounded-md border p-3">
               {ingredientLinks.map((link) => {
                 const selectedIngredient = ingredients.find(
-                  (ing) => ing.id === link.ingredientId
+                  (ing: Ingredient) => ing.id === link.ingredientId
                 );
                 return (
                   <div
@@ -238,7 +235,7 @@ function MenuItemFormDialog({
                         <SelectValue placeholder="Select Ingredient" />
                       </SelectTrigger>
                       <SelectContent>
-                        {ingredients.map((ing) => (
+                        {ingredients.map((ing: Ingredient) => (
                           <SelectItem key={ing.id} value={ing.id}>
                             {ing.name}
                           </SelectItem>
@@ -340,12 +337,14 @@ function MenuItemFormDialog({
   );
 }
 
-export default function MenuClient({
-  initialMenuItems,
-  initialCategories,
-  availableIngredients,
-}: MenuClientProps) {
+export default function MenuClient() {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
 
   // Menu Item State
   const [isItemAddDialogOpen, setItemAddDialogOpen] = useState(false);
@@ -355,14 +354,32 @@ export default function MenuClient({
   // Category State
   const [isCategoryAddDialogOpen, setCategoryAddDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<Category | null>(
-    null
-  );
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+
+  useEffect(() => {
+    const adminData = localStorage.getItem('currentAdmin');
+    if (adminData) {
+        const admin = JSON.parse(adminData);
+        setCurrentAdmin(admin);
+        Promise.all([
+            getMenuItems(admin.restaurantId),
+            getCategories(admin.restaurantId),
+            getIngredients(admin.restaurantId)
+        ]).then(([menuData, categoryData, ingredientData]) => {
+            setMenuItems(menuData);
+            setCategories(categoryData);
+            setIngredients(ingredientData);
+            setIsLoading(false);
+        });
+    } else {
+        setIsLoading(false);
+    }
+  }, []);
 
   const [optimisticMenuItems, manageOptimisticMenuItems] = useOptimistic<
     MenuItem[],
     { action: "add" | "delete"; item: MenuItem }
-  >(initialMenuItems, (state, { action, item }) => {
+  >(menuItems, (state, { action, item }) => {
     switch (action) {
       case "add":
         return [...state, item].sort((a, b) => a.name.localeCompare(b.name));
@@ -376,12 +393,10 @@ export default function MenuClient({
   const [optimisticCategories, manageOptimisticCategories] = useOptimistic<
     Category[],
     { action: "add" | "delete"; category: Category }
-  >(initialCategories, (state, { action, category }) => {
+  >(categories, (state, { action, category }) => {
     switch (action) {
       case "add":
-        return [...state, category].sort((a, b) =>
-          a.name.localeCompare(b.name)
-        );
+        return [...state, category].sort((a, b) => a.name.localeCompare(b.name));
       case "delete":
         return state.filter((c) => c.id !== category.id);
       default:
@@ -389,105 +404,95 @@ export default function MenuClient({
     }
   });
 
+  useEffect(() => setMenuItems(menuItems), [menuItems]);
+  useEffect(() => setCategories(categories), [categories]);
+
   const handleItemAddSubmit = async (formData: FormData) => {
-    // Optimistic update not easily possible due to computed fields (cost).
-    // Let server action handle it.
+    if (!currentAdmin) return;
     setItemAddDialogOpen(false);
-    const result = await addMenuItem(formData);
+    const result = await addMenuItem(currentAdmin.restaurantId, formData);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Menu Item Added" });
+      const data = await getMenuItems(currentAdmin.restaurantId);
+      setMenuItems(data);
     }
   };
 
   const handleItemEditSubmit = async (formData: FormData) => {
-    if (!editingItem) return;
+    if (!editingItem || !currentAdmin) return;
     setEditingItem(null);
-    const result = await updateMenuItem(editingItem.id, formData);
+    const result = await updateMenuItem(currentAdmin.restaurantId, editingItem.id, formData);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Menu Item Updated" });
+      const data = await getMenuItems(currentAdmin.restaurantId);
+      setMenuItems(data);
     }
   };
 
   const handleItemDelete = async () => {
-    if (!deletingItem) return;
+    if (!deletingItem || !currentAdmin) return;
     manageOptimisticMenuItems({ action: "delete", item: deletingItem });
     setDeletingItem(null);
-    const result = await deleteMenuItem(deletingItem.id);
+    const result = await deleteMenuItem(currentAdmin.restaurantId, deletingItem.id);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Menu Item Deleted" });
+      setMenuItems(prev => prev.filter(item => item.id !== deletingItem.id));
     }
   };
 
   const handleCategoryAddSubmit = async (formData: FormData) => {
+    if (!currentAdmin) return;
     const newCategory = {
       id: `optimistic-${Date.now()}`,
       name: formData.get("name") as string,
     };
     manageOptimisticCategories({ action: "add", category: newCategory });
     setCategoryAddDialogOpen(false);
-    const result = await addCategory(formData);
+    const result = await addCategory(currentAdmin.restaurantId, formData);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Category Added" });
+      const data = await getCategories(currentAdmin.restaurantId);
+      setCategories(data);
     }
   };
 
   const handleCategoryEditSubmit = async (formData: FormData) => {
-    if (!editingCategory) return;
+    if (!editingCategory || !currentAdmin) return;
     setEditingCategory(null);
-    const result = await updateCategory(editingCategory.id, formData);
+    const result = await updateCategory(currentAdmin.restaurantId, editingCategory.id, formData);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Category Updated" });
+      const data = await getCategories(currentAdmin.restaurantId);
+      setCategories(data);
     }
   };
 
   const handleCategoryDelete = async () => {
-    if (!deletingCategory) return;
-    manageOptimisticCategories({
-      action: "delete",
-      category: deletingCategory,
-    });
+    if (!deletingCategory || !currentAdmin) return;
+    manageOptimisticCategories({ action: "delete", category: deletingCategory });
     setDeletingCategory(null);
-    const result = await deleteCategory(deletingCategory.id);
+    const result = await deleteCategory(currentAdmin.restaurantId, deletingCategory.id);
     if (!result.success) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error,
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error });
     } else {
       toast({ title: "Category Deleted" });
+      setCategories(prev => prev.filter(cat => cat.id !== deletingCategory.id));
     }
   };
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -643,7 +648,7 @@ export default function MenuClient({
         open={isItemAddDialogOpen}
         onOpenChange={setItemAddDialogOpen}
         categories={optimisticCategories}
-        ingredients={availableIngredients}
+        ingredients={ingredients}
         onFormSubmit={handleItemAddSubmit}
         initialData={null}
       />
@@ -651,7 +656,7 @@ export default function MenuClient({
         open={!!editingItem}
         onOpenChange={(isOpen:boolean) => !isOpen && setEditingItem(null)}
         categories={optimisticCategories}
-        ingredients={availableIngredients}
+        ingredients={ingredients}
         onFormSubmit={handleItemEditSubmit}
         initialData={editingItem}
       />
@@ -685,26 +690,17 @@ export default function MenuClient({
           <DialogHeader>
             <DialogTitle>Add New Category</DialogTitle>
           </DialogHeader>
-          <form action={handleCategoryAddSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="cat-name">Category Name</Label>
-              <Input
-                id="cat-name"
-                name="name"
-                placeholder="e.g. Sides"
-                required
-              />
+          <form onSubmit={(e) => { e.preventDefault(); handleCategoryAddSubmit(new FormData(e.currentTarget)); }}>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cat-name">Category Name</Label>
+                <Input id="cat-name" name="name" placeholder="e.g. Sides" required />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setCategoryAddDialogOpen(false)}>Cancel</Button>
+                <Button type="submit">Add Category</Button>
+              </DialogFooter>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCategoryAddDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Add Category</Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -716,27 +712,17 @@ export default function MenuClient({
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
           </DialogHeader>
-          <form action={handleCategoryEditSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="cat-name-edit">Category Name</Label>
-              <Input
-                id="cat-name-edit"
-                name="name"
-                placeholder="e.g. Sides"
-                required
-                defaultValue={editingCategory?.name}
-              />
+          <form onSubmit={(e) => { e.preventDefault(); handleCategoryEditSubmit(new FormData(e.currentTarget)); }}>
+            <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cat-name-edit">Category Name</Label>
+                  <Input id="cat-name-edit" name="name" placeholder="e.g. Sides" required defaultValue={editingCategory?.name} />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingCategory(null)} >Cancel</Button>
+                  <Button type="submit">Save Changes</Button>
+                </DialogFooter>
             </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditingCategory(null)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

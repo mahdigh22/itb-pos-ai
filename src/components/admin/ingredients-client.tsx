@@ -1,23 +1,22 @@
 
-
 'use client';
 
-import { useState, useOptimistic } from 'react';
+import { useState, useOptimistic, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, MoreHorizontal, Trash2, Edit } from "lucide-react";
-import type { Ingredient } from "@/lib/types";
+import { PlusCircle, MoreHorizontal, Trash2, Edit, Loader2 } from "lucide-react";
+import type { Ingredient, Admin } from "@/lib/types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { addIngredient, updateIngredient, deleteIngredient } from '@/app/admin/ingredients/actions';
+import { addIngredient, updateIngredient, deleteIngredient, getIngredients } from '@/app/admin/ingredients/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 
-function IngredientForm({ ingredient, onFormSubmit, onCancel }) {
+function IngredientForm({ ingredient, onFormSubmit, onCancel }: { ingredient?: Ingredient | null, onFormSubmit: (data: FormData) => Promise<void>, onCancel: () => void }) {
     return (
         <form action={onFormSubmit} className="space-y-4">
              <input type="hidden" name="id" value={ingredient?.id || ''} />
@@ -62,19 +61,38 @@ function IngredientForm({ ingredient, onFormSubmit, onCancel }) {
     );
 }
 
-
-export default function IngredientsClient({ initialIngredients }: { initialIngredients: Ingredient[] }) {
+export default function IngredientsClient() {
     const { toast } = useToast();
+    const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+
     const [editingIngredient, setEditingIngredient] = useState<Ingredient | null>(null);
     const [isAddDialogOpen, setAddDialogOpen] = useState(false);
     const [deletingIngredient, setDeletingIngredient] = useState<Ingredient | null>(null);
 
-    const [optimisticIngredients, manageOptimisticIngredients] = useOptimistic<Ingredient[], {action: 'add' | 'delete', ingredient: Ingredient}>(
-        initialIngredients,
+     useEffect(() => {
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
+            getIngredients(admin.restaurantId).then(data => {
+                setIngredients(data);
+                setIsLoading(false);
+            });
+        } else {
+            setIsLoading(false);
+        }
+    }, []);
+
+    const [optimisticIngredients, manageOptimisticIngredients] = useOptimistic<Ingredient[], {action: 'add' | 'delete' | 'update', ingredient: Ingredient}>(
+        ingredients,
         (state, { action, ingredient }) => {
             switch (action) {
                 case 'add':
                     return [...state, ingredient].sort((a, b) => a.name.localeCompare(b.name));
+                case 'update':
+                    return state.map(i => i.id === ingredient.id ? { ...i, ...ingredient } : i);
                 case 'delete':
                     return state.filter((i) => i.id !== ingredient.id);
                 default:
@@ -83,49 +101,58 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
         }
     );
 
+     useEffect(() => {
+        setIngredients(ingredients);
+    }, [ingredients]);
+
+
     const handleAddSubmit = async (formData: FormData) => {
-        const newIngredient: Ingredient = {
-            id: `optimistic-${Date.now()}`,
-            name: formData.get('name') as string,
-            stock: parseFloat(formData.get('stock') as string) || 0,
-            unit: formData.get('unit') as string || 'units',
-            cost: parseFloat(formData.get('cost') as string) || 0,
-        };
+        if (!currentAdmin) return;
         
         setAddDialogOpen(false);
-        manageOptimisticIngredients({ action: 'add', ingredient: newIngredient });
-        
-        const result = await addIngredient(formData);
+        const result = await addIngredient(currentAdmin.restaurantId, formData);
 
         if (result.success) {
             toast({ title: "Ingredient Added" });
+            const data = await getIngredients(currentAdmin.restaurantId);
+            setIngredients(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
     
     const handleEditSubmit = async (formData: FormData) => {
-        if (!editingIngredient) return;
+        if (!editingIngredient || !currentAdmin) return;
         setEditingIngredient(null);
-        const result = await updateIngredient(editingIngredient.id, formData);
+        const result = await updateIngredient(currentAdmin.restaurantId, editingIngredient.id, formData);
         if (result.success) {
             toast({ title: "Ingredient Updated" });
+            const data = await getIngredients(currentAdmin.restaurantId);
+            setIngredients(data);
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
         }
     };
 
     const handleDelete = async () => {
-        if (!deletingIngredient) return;
-        manageOptimisticIngredients({ action: 'delete', ingredient: deletingIngredient });
+        if (!deletingIngredient || !currentAdmin) return;
+        const ingToDelete = { ...deletingIngredient };
+        manageOptimisticIngredients({ action: 'delete', ingredient: ingToDelete });
         setDeletingIngredient(null);
-        const result = await deleteIngredient(deletingIngredient.id);
+
+        const result = await deleteIngredient(currentAdmin.restaurantId, ingToDelete.id);
         if (result.success) {
             toast({ title: "Ingredient Deleted" });
+            setIngredients(prev => prev.filter(i => i.id !== ingToDelete.id));
         } else {
             toast({ variant: 'destructive', title: "Error", description: result.error });
+            manageOptimisticIngredients({ action: 'add', ingredient: ingToDelete });
         }
     };
+    
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     return (
         <div className="space-y-6">
@@ -187,7 +214,7 @@ export default function IngredientsClient({ initialIngredients }: { initialIngre
                         <DialogTitle>Add New Ingredient</DialogTitle>
                         <DialogDescription>Add a new ingredient to your master list.</DialogDescription>
                     </DialogHeader>
-                    <IngredientForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} />
+                    <IngredientForm onFormSubmit={handleAddSubmit} onCancel={() => setAddDialogOpen(false)} ingredient={null} />
                 </DialogContent>
             </Dialog>
 
