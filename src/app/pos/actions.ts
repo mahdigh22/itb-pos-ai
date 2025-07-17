@@ -22,9 +22,10 @@ import { db } from '@/lib/firebase';
 import type { ActiveOrder, Check, Employee, Extra, Ingredient, OrderItem, OrderStatus, PriceList } from '@/lib/types';
 
 // Check Actions
-export async function getChecks(): Promise<Check[]> {
+export async function getChecks(restaurantId: string): Promise<Check[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'checks'));
+    if (!restaurantId) return [];
+    const querySnapshot = await getDocs(collection(db, 'restaurants', restaurantId, 'checks'));
     const checks: Check[] = [];
     querySnapshot.forEach((doc) => {
       checks.push({ id: doc.id, ...doc.data() } as Check);
@@ -36,17 +37,16 @@ export async function getChecks(): Promise<Check[]> {
   }
 }
 
-export async function addCheck(check: Omit<Check, 'id'>): Promise<Check> {
-    const docRef = await addDoc(collection(db, 'checks'), check);
+export async function addCheck(restaurantId: string, check: Omit<Check, 'id'>): Promise<Check> {
+    const docRef = await addDoc(collection(db, 'restaurants', restaurantId, 'checks'), check);
     revalidatePath('/');
     return { id: docRef.id, ...check };
 }
 
-export async function updateCheck(checkId: string, updates: Partial<Omit<Check, 'id'>>) {
+export async function updateCheck(restaurantId: string, checkId: string, updates: Partial<Omit<Check, 'id'>>) {
   try {
-    const checkRef = doc(db, 'checks', checkId);
+    const checkRef = doc(db, 'restaurants', restaurantId, 'checks', checkId);
     await updateDoc(checkRef, updates);
-    // No revalidate needed for this as it's a frequent action
     return { success: true };
   } catch (e) {
     console.error("Error updating check: ", e);
@@ -54,9 +54,9 @@ export async function updateCheck(checkId: string, updates: Partial<Omit<Check, 
   }
 }
 
-export async function deleteCheck(checkId: string) {
+export async function deleteCheck(restaurantId: string, checkId: string) {
     try {
-        await deleteDoc(doc(db, 'checks', checkId));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'checks', checkId));
         revalidatePath('/');
         return { success: true };
     } catch(e) {
@@ -67,24 +67,20 @@ export async function deleteCheck(checkId: string) {
 
 // Order Actions
 
-async function deductStockForItems(items: OrderItem[], transaction: any) {
+async function deductStockForItems(restaurantId: string, items: OrderItem[], transaction: any) {
     const ingredientUsage = new Map<string, number>();
 
-    // Aggregate all ingredients needed for the items and their extras
     items.forEach(item => {
         const removedIngredientIds = new Set(item.customizations.removed.map(r => r.id));
 
-        // Main item ingredients
         if (item.ingredientLinks) {
             item.ingredientLinks.forEach(link => {
-                // Only deduct stock if the ingredient has not been removed
                 if (!removedIngredientIds.has(link.ingredientId)) {
                     const currentQuantity = ingredientUsage.get(link.ingredientId) || 0;
                     ingredientUsage.set(link.ingredientId, currentQuantity + link.quantity * item.quantity);
                 }
             });
         }
-        // Added extras ingredients
         if (item.customizations?.added) {
             item.customizations.added.forEach(extra => {
                 if (extra.ingredientLinks) {
@@ -97,18 +93,14 @@ async function deductStockForItems(items: OrderItem[], transaction: any) {
         }
     });
 
-    if (ingredientUsage.size === 0) {
-        return; // No ingredients to deduct
-    }
+    if (ingredientUsage.size === 0) return;
 
-    // Fetch all required ingredient documents
     const ingredientIds = Array.from(ingredientUsage.keys());
     if (ingredientIds.length === 0) return;
 
-    const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
+    const ingredientRefs = ingredientIds.map(id => doc(db, 'restaurants', restaurantId, 'ingredients', id));
     const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
 
-    // Check stock and prepare updates
     const stockUpdates: { ref: any, newStock: number }[] = [];
     for (let i = 0; i < ingredientDocs.length; i++) {
         const ingredientDoc = ingredientDocs[i];
@@ -131,26 +123,23 @@ async function deductStockForItems(items: OrderItem[], transaction: any) {
         });
     }
 
-    // Apply all stock updates
     stockUpdates.forEach(update => {
         transaction.update(update.ref, { stock: update.newStock });
     });
 }
 
 
-export async function sendNewItemsToKitchen(checkId: string) {
-    const sourceCheckRef = doc(db, 'checks', checkId);
+export async function sendNewItemsToKitchen(restaurantId: string, checkId: string) {
+    const sourceCheckRef = doc(db, 'restaurants', restaurantId, 'checks', checkId);
     let targetCheckId: string | null = null;
     
-    // Phase 1: Read data outside transaction to find if a merge is needed
     const sourceCheckSnap = await getDoc(sourceCheckRef);
     if (!sourceCheckSnap.exists()) return { success: false, error: 'Check not found.' };
     const sourceCheck = { id: sourceCheckSnap.id, ...sourceCheckSnap.data() } as Check;
     
-    // Merge logic only applies to dine-in orders with a specified table
     if (sourceCheck.orderType === 'Dine In' && sourceCheck.tableId) {
         const q = query(
-            collection(db, 'checks'), 
+            collection(db, 'restaurants', restaurantId, 'checks'), 
             where('tableId', '==', sourceCheck.tableId), 
             where(documentId(), '!=', sourceCheck.id)
         );
@@ -160,18 +149,16 @@ export async function sendNewItemsToKitchen(checkId: string) {
         }
     }
 
-    // Phase 2: Perform atomic write operations in a transaction
     try {
         await runTransaction(db, async (transaction) => {
-            // ----- ALL READS FIRST -----
-            const settingsDocRef = doc(db, "settings", "main");
+            const settingsDocRef = doc(db, "restaurants", restaurantId, "settings", "main");
             const freshSourceSnap = await transaction.get(sourceCheckRef);
             const settingsDoc = await transaction.get(settingsDocRef);
             
             let freshTargetSnap: any = null;
             let targetCheckRef: any = null;
             if (targetCheckId) {
-                targetCheckRef = doc(db, 'checks', targetCheckId);
+                targetCheckRef = doc(db, 'restaurants', restaurantId, 'checks', targetCheckId);
                 freshTargetSnap = await transaction.get(targetCheckRef);
             }
             
@@ -179,16 +166,14 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 throw new Error("Source check was deleted during operation.");
             }
             
-            // ----- LOGIC AND PREPARATION -----
             const freshSourceCheck = { id: freshSourceSnap.id, ...freshSourceSnap.data() } as Check;
             const newItemsToProcess = freshSourceCheck.items.filter(item => item.status === 'new');
 
             if (newItemsToProcess.length === 0) {
-                return; // Nothing to send, exit transaction.
+                return;
             }
 
-            // Deduct stock before creating the order
-            await deductStockForItems(newItemsToProcess, transaction);
+            await deductStockForItems(restaurantId, newItemsToProcess, transaction);
 
             const settings = settingsDoc.exists() ? settingsDoc.data()! : { taxRate: 0, priceLists: [] };
             const taxRate = settings.taxRate || 0;
@@ -200,7 +185,6 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 return { ...rest, cost };
             });
 
-            // Determine which check data to use for the new order (for pricing, customer name, etc.)
             const finalCheckDataForOrder = freshTargetSnap?.exists() 
                 ? { ...freshTargetSnap.data(), id: freshTargetSnap.id } as Check 
                 : freshSourceCheck;
@@ -237,13 +221,11 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 employeeName: finalCheckDataForOrder.employeeName || null,
             };
 
-            const newOrderRef = doc(collection(db, 'orders'));
+            const newOrderRef = doc(collection(db, 'restaurants', restaurantId, 'orders'));
 
-            // ----- ALL WRITES LAST -----
             transaction.set(newOrderRef, newOrderData);
 
             if (targetCheckRef && freshTargetSnap?.exists()) {
-                // MERGE case
                 if (!freshTargetSnap.exists()) throw new Error("Target check was deleted during operation.");
                 const targetCheck = { id: freshTargetSnap.id, ...freshTargetSnap.data() } as Check;
                 const itemsToMerge = newItemsToProcess.map(item => ({...item, status: 'sent' as const}));
@@ -252,7 +234,6 @@ export async function sendNewItemsToKitchen(checkId: string) {
                 transaction.update(targetCheckRef, { items: mergedItems });
                 transaction.delete(sourceCheckRef);
             } else {
-                // NO MERGE case
                 const updatedItems = freshSourceCheck.items.map(item => 
                     item.status === 'new' ? { ...item, status: 'sent' as const } : item
                 );
@@ -272,8 +253,8 @@ export async function sendNewItemsToKitchen(checkId: string) {
     }
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-    const orderRef = doc(db, 'orders', orderId);
+export async function updateOrderStatus(restaurantId: string, orderId: string, status: OrderStatus) {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId);
     try {
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
@@ -283,10 +264,9 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 
             transaction.update(orderRef, { status });
 
-            // If a Take Away order is completed, delete its source check
             const orderData = orderDoc.data();
             if (status === 'Completed' && orderData.orderType === 'Take Away' && orderData.sourceCheckId) {
-                const checkRef = doc(db, 'checks', orderData.sourceCheckId);
+                const checkRef = doc(db, 'restaurants', restaurantId, 'checks', orderData.sourceCheckId);
                 transaction.delete(checkRef);
             }
         });
@@ -303,10 +283,11 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 }
 
 
-export async function getOrders(): Promise<ActiveOrder[]> {
+export async function getOrders(restaurantId: string): Promise<ActiveOrder[]> {
   try {
+    if (!restaurantId) return [];
     const q = query(
-        collection(db, 'orders'), 
+        collection(db, 'restaurants', restaurantId, 'orders'), 
         where('status', 'in', ['Pending', 'Preparing', 'Ready', 'Completed']),
         orderBy('createdAt', 'desc')
     );
@@ -341,13 +322,11 @@ export async function getOrders(): Promise<ActiveOrder[]> {
 }
 
 
-export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date }) {
+export async function addOrder(restaurantId: string, orderData: Omit<ActiveOrder, 'id' | 'createdAt'> & { createdAt: Date }) {
     try {
         await runTransaction(db, async (transaction) => {
-            // Deduct stock first
-            await deductStockForItems(orderData.items, transaction);
+            await deductStockForItems(restaurantId, orderData.items, transaction);
 
-            // Sanitize items for saving
             const sanitizedItems = orderData.items.map(item => {
                 const { ingredients, ...rest } = item;
                 return { ...rest, cost: item.cost || 0 };
@@ -365,7 +344,7 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
                 employeeName: orderData.employeeName || null,
             };
 
-            const newOrderRef = doc(collection(db, 'orders'));
+            const newOrderRef = doc(collection(db, 'restaurants', restaurantId, 'orders'));
             transaction.set(newOrderRef, dataToSave);
         });
         
@@ -383,9 +362,9 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
 
 
 
-export async function archiveOrder(orderId: string) {
+export async function archiveOrder(restaurantId: string, orderId: string) {
     try {
-        const orderRef = doc(db, 'orders', orderId);
+        const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId);
         await updateDoc(orderRef, { status: 'Archived' });
         revalidatePath('/');
         return { success: true };
@@ -395,8 +374,8 @@ export async function archiveOrder(orderId: string) {
     }
 }
 
-export async function cancelOrderItem(orderId: string, lineItemId: string) {
-    const orderRef = doc(db, "orders", orderId);
+export async function cancelOrderItem(restaurantId: string, orderId: string, lineItemId: string) {
+    const orderRef = doc(db, "restaurants", restaurantId, "orders", orderId);
     try {
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
@@ -413,7 +392,6 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
             });
 
             if (itemToCancel) {
-                 // Return stock for the cancelled item
                 const ingredientUsage = new Map<string, number>();
                 if (itemToCancel.ingredientLinks) {
                     itemToCancel.ingredientLinks.forEach(link => {
@@ -423,7 +401,7 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
                 }
                 if (ingredientUsage.size > 0) {
                     const ingredientIds = Array.from(ingredientUsage.keys());
-                    const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
+                    const ingredientRefs = ingredientIds.map(id => doc(db, 'restaurants', restaurantId, 'ingredients', id));
                     const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
                     
                     for (let i = 0; i < ingredientDocs.length; i++) {
@@ -436,9 +414,8 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
                 }
             }
             
-            // Sync change with the source check if it exists
             if (orderData.sourceCheckId) {
-                const checkRef = doc(db, "checks", orderData.sourceCheckId);
+                const checkRef = doc(db, "restaurants", restaurantId, "checks", orderData.sourceCheckId);
                 const checkDoc = await transaction.get(checkRef);
                 if (checkDoc.exists()) {
                     const checkData = checkDoc.data() as Check;
@@ -460,28 +437,25 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
     }
 }
 
-export async function editOrderItem(orderId: string, oldLineItemId: string, newItem: OrderItem) {
-    const orderRef = doc(db, "orders", orderId);
+export async function editOrderItem(restaurantId: string, orderId: string, oldLineItemId: string, newItem: OrderItem) {
+    const orderRef = doc(db, "restaurants", restaurantId, "orders", orderId);
 
     try {
         await runTransaction(db, async (transaction) => {
-            // --- GATHER ALL READS FIRST ---
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) throw new Error("Order not found.");
-            const orderData = orderDoc.data() as ActiveOrder;
             
+            const orderData = orderDoc.data() as ActiveOrder;
             const oldItem = orderData.items.find(i => i.lineItemId === oldLineItemId);
             if (!oldItem) throw new Error("Original item to edit not found in order.");
 
-            // Find source check if it exists
             let checkRef = null;
             let checkDoc = null;
             if (orderData.sourceCheckId) {
-                checkRef = doc(db, "checks", orderData.sourceCheckId);
+                checkRef = doc(db, "restaurants", restaurantId, "checks", orderData.sourceCheckId);
                 checkDoc = await transaction.get(checkRef);
             }
             
-            // Calculate stock adjustments and gather ingredient IDs
             const stockAdjustments = new Map<string, number>();
             const quantity = oldItem.quantity;
 
@@ -510,26 +484,17 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
             });
 
             const allIngredientIds = new Set([...oldIngredients.keys(), ...newIngredients.keys()]);
+            const ingredientRefs = Array.from(allIngredientIds).map(id => doc(db, 'restaurants', restaurantId, 'ingredients', id));
+            const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
 
             for (const id of allIngredientIds) {
                 const oldQty = oldIngredients.get(id) || 0;
                 const newQty = newIngredients.get(id) || 0;
                 if (oldQty !== newQty) {
-                    stockAdjustments.set(id, oldQty - newQty); // Positive value means stock goes up
+                    stockAdjustments.set(id, oldQty - newQty);
                 }
             }
             
-            // Fetch all required ingredient documents
-            let ingredientDocs: any[] = [];
-            if (stockAdjustments.size > 0) {
-                const ingredientIds = Array.from(stockAdjustments.keys());
-                const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
-                ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
-            }
-
-            // --- PERFORM ALL WRITES LAST ---
-
-            // Apply stock adjustments
             for (const ingDoc of ingredientDocs) {
                 if (ingDoc.exists()) {
                     const adjustment = stockAdjustments.get(ingDoc.id) || 0;
@@ -539,13 +504,11 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
                 }
             }
 
-            // Mark old item as edited and add the new one
             const itemsWithoutOld = orderData.items.map(item => 
                 item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
             );
             const updatedItems = [...itemsWithoutOld, newItem];
 
-            // Sync with check
             if (checkDoc && checkDoc.exists() && checkRef) {
                 const checkData = checkDoc.data() as Check;
                 const updatedCheckItems = checkData.items.map(item => 
@@ -565,27 +528,4 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
         console.error("Error editing order item: ", e);
         return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
     }
-}
-
-
-
-// Helper function to recalculate order total, assuming it might be needed in other places.
-// It needs access to settings to get the tax rate.
-async function calculateOrderTotal(items: OrderItem[], discountPercentage: number) {
-    const settingsDocRef = doc(db, "settings", "main");
-    const settingsDoc = await getDoc(settingsDocRef);
-    const taxRate = settingsDoc.exists() ? (settingsDoc.data().taxRate || 0) : 0;
-
-    const subtotal = items.reduce((acc, item) => {
-        const extrasPrice = item.customizations?.added.reduce((extraAcc, extra) => extraAcc + extra.price, 0) || 0;
-        const totalItemPrice = (item.price + extrasPrice) * item.quantity;
-        return acc + totalItemPrice;
-    }, 0);
-
-    const discountAmount = subtotal * (discountPercentage / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const tax = discountedSubtotal * (taxRate / 100);
-    const total = discountedSubtotal + tax;
-    
-    return { total };
 }

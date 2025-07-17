@@ -6,7 +6,7 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase
 import { db } from '@/lib/firebase';
 import type { Ingredient } from '@/lib/types';
 
-export async function addIngredient(formData: FormData) {
+export async function addIngredient(restaurantId: string, formData: FormData) {
   const newIngredient: Omit<Ingredient, 'id'> = {
     name: formData.get('name') as string,
     stock: parseFloat(formData.get('stock') as string) || 0,
@@ -15,7 +15,7 @@ export async function addIngredient(formData: FormData) {
   };
 
   try {
-    await addDoc(collection(db, 'ingredients'), newIngredient);
+    await addDoc(collection(db, 'restaurants', restaurantId, 'ingredients'), newIngredient);
     revalidatePath('/admin/ingredients');
     revalidatePath('/admin/menu'); // Revalidate menu page as it uses ingredients
     return { success: true };
@@ -28,7 +28,7 @@ export async function addIngredient(formData: FormData) {
   }
 }
 
-export async function updateIngredient(id: string, formData: FormData) {
+export async function updateIngredient(restaurantId: string, id: string, formData: FormData) {
     const ingredientUpdates = {
         name: formData.get('name') as string,
         stock: parseFloat(formData.get('stock') as string) || 0,
@@ -37,7 +37,7 @@ export async function updateIngredient(id: string, formData: FormData) {
     };
 
     try {
-        const ingredientRef = doc(db, 'ingredients', id);
+        const ingredientRef = doc(db, 'restaurants', restaurantId, 'ingredients', id);
         await updateDoc(ingredientRef, ingredientUpdates);
         revalidatePath('/admin/ingredients');
         revalidatePath('/admin/menu');
@@ -51,9 +51,9 @@ export async function updateIngredient(id: string, formData: FormData) {
     }
 }
 
-export async function deleteIngredient(id: string) {
+export async function deleteIngredient(restaurantId: string, id: string) {
     try {
-        await deleteDoc(doc(db, 'ingredients', id));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'ingredients', id));
         revalidatePath('/admin/ingredients');
         revalidatePath('/admin/menu');
         return { success: true };
@@ -67,9 +67,10 @@ export async function deleteIngredient(id: string) {
 }
 
 
-export async function getIngredients(): Promise<Ingredient[]> {
+export async function getIngredients(restaurantId: string): Promise<Ingredient[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'ingredients'));
+    if (!restaurantId) return [];
+    const querySnapshot = await getDocs(collection(db, 'restaurants', restaurantId, 'ingredients'));
     const ingredients: Ingredient[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();

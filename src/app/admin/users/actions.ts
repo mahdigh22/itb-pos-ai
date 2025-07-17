@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -5,7 +6,7 @@ import { collection, addDoc, getDocs, Timestamp, doc, getDoc, updateDoc, deleteD
 import { db } from '@/lib/firebase';
 import type { Member } from '@/lib/types';
 
-export async function addUser(formData: FormData) {
+export async function addUser(restaurantId: string, formData: FormData) {
   const newUser: Omit<Member, 'id'> = {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
@@ -16,7 +17,7 @@ export async function addUser(formData: FormData) {
   };
 
   try {
-    await addDoc(collection(db, 'members'), {
+    await addDoc(collection(db, 'restaurants', restaurantId, 'members'), {
       ...newUser,
       joined: Timestamp.fromDate(new Date(newUser.joined)), // Store as Firestore Timestamp
     });
@@ -33,7 +34,7 @@ export async function addUser(formData: FormData) {
   }
 }
 
-export async function updateUser(id: string, formData: FormData) {
+export async function updateUser(restaurantId: string, id: string, formData: FormData) {
     const userUpdates = {
         name: formData.get('name') as string,
         email: formData.get('email') as string,
@@ -41,7 +42,7 @@ export async function updateUser(id: string, formData: FormData) {
     };
 
     try {
-        const userRef = doc(db, 'members', id);
+        const userRef = doc(db, 'restaurants', restaurantId, 'members', id);
         await updateDoc(userRef, userUpdates);
         revalidatePath('/admin/users');
         revalidatePath('/');
@@ -57,9 +58,9 @@ export async function updateUser(id: string, formData: FormData) {
     }
 }
 
-export async function deleteUser(id: string) {
+export async function deleteUser(restaurantId: string, id: string) {
     try {
-        await deleteDoc(doc(db, 'members', id));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'members', id));
         revalidatePath('/admin/users');
         revalidatePath('/');
         revalidatePath('/members');
@@ -73,9 +74,10 @@ export async function deleteUser(id: string) {
     }
 }
 
-export async function getUsers(): Promise<Member[]> {
+export async function getUsers(restaurantId: string): Promise<Member[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'members'));
+    if (!restaurantId) return [];
+    const querySnapshot = await getDocs(collection(db, 'restaurants', restaurantId, 'members'));
     const members: Member[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
@@ -96,9 +98,9 @@ export async function getUsers(): Promise<Member[]> {
   }
 }
 
-export async function getMember(id: string): Promise<Member | null> {
+export async function getMember(restaurantId: string, id: string): Promise<Member | null> {
     try {
-        const docRef = doc(db, 'members', id);
+        const docRef = doc(db, 'restaurants', restaurantId, 'members', id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {

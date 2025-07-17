@@ -69,6 +69,7 @@ interface OrderProgressProps {
   onCompleteOrder: (orderId: string) => void;
   onClearOrder: (orderId: string) => void;
   tables: RestaurantTable[];
+  restaurantId: string;
 }
 
 const statusConfig: Record<
@@ -90,12 +91,14 @@ const PENDING_DURATION = 2 * 60 * 1000; // 2 minutes
 
 function OrderCard({
   order,
+  restaurantId,
   onCompleteOrder,
   onClearOrder,
   onEditItem,
   onCancelItem,
 }: {
   order: ActiveOrder;
+  restaurantId: string;
   onCompleteOrder: (id: string) => void;
   onClearOrder: (id: string) => void;
   onEditItem: (orderId: string, item: OrderItem) => void;
@@ -113,7 +116,7 @@ function OrderCard({
   const isPending = order.status === 'Pending' && currentTime.getTime() < pendingEndTime;
 
   const prepStartTime = isPending ? pendingEndTime : startTime;
-  const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
+  const totalDuration = order.totalPreparationTime * 60 * 1000;
   const prepEndTime = prepStartTime + totalDuration;
   const elapsedTime = currentTime.getTime() - prepStartTime;
   
@@ -292,6 +295,7 @@ export default function OrderProgress({
   onCompleteOrder,
   onClearOrder,
   tables,
+  restaurantId,
 }: OrderProgressProps) {
   const [orders, setOrders] = useState<ActiveOrder[]>([]);
   const [filter, setFilter] = useState<"all" | "Dine In" | "Take Away">("all");
@@ -308,10 +312,12 @@ export default function OrderProgress({
   );
 
   useEffect(() => {
+    if (!restaurantId) return;
+    
     const fetchInitialData = async () => {
-      const extras = await getExtras();
+      const extras = await getExtras(restaurantId);
       setAvailableExtras(extras);
-      const menuItems = await getMenuItems();
+      const menuItems = await getMenuItems(restaurantId);
       const map = new Map<string, MenuItem>();
       menuItems.forEach((item) => map.set(item.id, item));
       setMenuItemsMap(map);
@@ -319,7 +325,7 @@ export default function OrderProgress({
     fetchInitialData();
 
     const q = query(
-      collection(db, "orders"),
+      collection(db, "restaurants", restaurantId, "orders"),
       where("status", "in", ["Pending", "Preparing", "Ready", "Completed"])
     );
     const unsubscribe = onSnapshot(
@@ -352,7 +358,7 @@ export default function OrderProgress({
     );
 
     return () => unsubscribe();
-  }, [toast]);
+  }, [restaurantId, toast]);
 
   useEffect(() => {
     if (filter !== "Dine In") {
@@ -379,7 +385,7 @@ export default function OrderProgress({
   };
 
   const handleCancelItem = async (orderId: string, item: OrderItem) => {
-    const result = await cancelOrderItem(orderId, item.lineItemId);
+    const result = await cancelOrderItem(restaurantId, orderId, item.lineItemId);
     if (result.success) {
       toast({
         title: "Item Cancelled",
@@ -409,7 +415,7 @@ export default function OrderProgress({
       lineItemId: `${item.id}-${Date.now()}`,
     };
 
-    const result = await editOrderItem(orderId, item.lineItemId, updatedItem);
+    const result = await editOrderItem(restaurantId, orderId, item.lineItemId, updatedItem);
 
     if (result.success) {
       toast({
@@ -512,6 +518,7 @@ export default function OrderProgress({
                   <OrderCard
                     key={order.id}
                     order={order}
+                    restaurantId={restaurantId}
                     onCompleteOrder={onCompleteOrder}
                     onClearOrder={onClearOrder}
                     onEditItem={handleEditItem}

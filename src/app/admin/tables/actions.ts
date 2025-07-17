@@ -6,13 +6,13 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase
 import { db } from '@/lib/firebase';
 import type { RestaurantTable } from '@/lib/types';
 
-export async function addTable(formData: FormData) {
+export async function addTable(restaurantId: string, formData: FormData) {
   const newTable: Omit<RestaurantTable, 'id'> = {
     name: formData.get('name') as string,
   };
 
   try {
-    await addDoc(collection(db, 'tables'), newTable);
+    await addDoc(collection(db, 'restaurants', restaurantId, 'tables'), newTable);
     revalidatePath('/admin/tables');
     revalidatePath('/'); // For POS
     return { success: true };
@@ -25,13 +25,13 @@ export async function addTable(formData: FormData) {
   }
 }
 
-export async function updateTable(id: string, formData: FormData) {
+export async function updateTable(restaurantId: string, id: string, formData: FormData) {
     const tableUpdates = {
         name: formData.get('name') as string,
     };
 
     try {
-        const tableRef = doc(db, 'tables', id);
+        const tableRef = doc(db, 'restaurants', restaurantId, 'tables', id);
         await updateDoc(tableRef, tableUpdates);
         revalidatePath('/admin/tables');
         revalidatePath('/');
@@ -45,9 +45,9 @@ export async function updateTable(id: string, formData: FormData) {
     }
 }
 
-export async function deleteTable(id: string) {
+export async function deleteTable(restaurantId: string, id: string) {
     try {
-        await deleteDoc(doc(db, 'tables', id));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'tables', id));
         revalidatePath('/admin/tables');
         revalidatePath('/');
         return { success: true };
@@ -60,9 +60,10 @@ export async function deleteTable(id: string) {
     }
 }
 
-export async function getTables(): Promise<RestaurantTable[]> {
+export async function getTables(restaurantId: string): Promise<RestaurantTable[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'tables'));
+    if (!restaurantId) return [];
+    const querySnapshot = await getDocs(collection(db, 'restaurants', restaurantId, 'tables'));
     const tables: RestaurantTable[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();

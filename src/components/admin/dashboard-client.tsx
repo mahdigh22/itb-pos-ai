@@ -2,35 +2,47 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { ActiveOrder } from '@/lib/types';
+import type { ActiveOrder, Admin } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { collection, onSnapshot, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { DollarSign, ShoppingCart, Percent, Clock, TrendingUp } from 'lucide-react';
+import { DollarSign, ShoppingCart, Percent, Clock, TrendingUp, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { getOrdersForReports } from '@/app/admin/reports/actions';
 
-export default function DashboardClient({ initialOrders }: { initialOrders: ActiveOrder[] }) {
-    const [orders, setOrders] = useState<ActiveOrder[]>(initialOrders);
+export default function DashboardClient() {
+    const [orders, setOrders] = useState<ActiveOrder[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
     useEffect(() => {
-        const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const liveOrders: ActiveOrder[] = [];
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                liveOrders.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: (data.createdAt as Timestamp).toDate(),
-                } as ActiveOrder);
-            });
-            setOrders(liveOrders);
-        });
+        const adminData = localStorage.getItem('currentAdmin');
+        if (adminData) {
+            const admin = JSON.parse(adminData);
+            setCurrentAdmin(admin);
 
-        return () => unsubscribe();
+            const q = query(collection(db, 'restaurants', admin.restaurantId, 'orders'), orderBy('createdAt', 'desc'));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const liveOrders: ActiveOrder[] = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    liveOrders.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: (data.createdAt as Timestamp).toDate(),
+                    } as ActiveOrder);
+                });
+                setOrders(liveOrders);
+                setIsLoading(false);
+            });
+
+            return () => unsubscribe();
+        } else {
+            setIsLoading(false);
+        }
     }, []);
 
     const reportData = useMemo(() => {
@@ -108,6 +120,10 @@ export default function DashboardClient({ initialOrders }: { initialOrders: Acti
             totalProfit,
         };
     }, [orders]);
+    
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
     
     const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
 

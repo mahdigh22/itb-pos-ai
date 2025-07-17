@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import type { MenuItem, Category, Ingredient } from '@/lib/types';
 
 // Menu Item Actions
-export async function addMenuItem(formData: FormData) {
+export async function addMenuItem(restaurantId: string, formData: FormData) {
   const ingredientLinksString = formData.get('ingredientLinks') as string;
   const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
 
@@ -24,7 +24,7 @@ export async function addMenuItem(formData: FormData) {
   };
 
   try {
-    await addDoc(collection(db, 'menuItems'), newItemData);
+    await addDoc(collection(db, 'restaurants', restaurantId, 'menuItems'), newItemData);
     revalidatePath('/admin/menu');
     revalidatePath('/');
     return { success: true };
@@ -34,7 +34,7 @@ export async function addMenuItem(formData: FormData) {
   }
 }
 
-export async function updateMenuItem(id: string, formData: FormData) {
+export async function updateMenuItem(restaurantId: string, id: string, formData: FormData) {
     const ingredientLinksString = formData.get('ingredientLinks') as string;
     const ingredientLinks = ingredientLinksString ? JSON.parse(ingredientLinksString) : [];
 
@@ -49,7 +49,7 @@ export async function updateMenuItem(id: string, formData: FormData) {
     };
     
     try {
-        await updateDoc(doc(db, 'menuItems', id), itemUpdates);
+        await updateDoc(doc(db, 'restaurants', restaurantId, 'menuItems', id), itemUpdates);
         revalidatePath('/admin/menu');
         revalidatePath('/');
         return { success: true };
@@ -59,9 +59,9 @@ export async function updateMenuItem(id: string, formData: FormData) {
     }
 }
 
-export async function deleteMenuItem(id: string) {
+export async function deleteMenuItem(restaurantId: string, id: string) {
     try {
-        await deleteDoc(doc(db, 'menuItems', id));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'menuItems', id));
         revalidatePath('/admin/menu');
         revalidatePath('/');
         return { success: true };
@@ -72,11 +72,12 @@ export async function deleteMenuItem(id: string) {
 }
 
 
-export async function getMenuItems(): Promise<MenuItem[]> {
+export async function getMenuItems(restaurantId: string): Promise<MenuItem[]> {
   try {
+    if (!restaurantId) return [];
     const [menuItemsSnapshot, ingredientsSnapshot] = await Promise.all([
-        getDocs(collection(db, 'menuItems')),
-        getDocs(collection(db, 'ingredients'))
+        getDocs(collection(db, 'restaurants', restaurantId, 'menuItems')),
+        getDocs(collection(db, 'restaurants', restaurantId, 'ingredients'))
     ]);
 
     const ingredientsMap = new Map<string, Ingredient>();
@@ -110,7 +111,6 @@ export async function getMenuItems(): Promise<MenuItem[]> {
       
       let calculatedCost = 0;
 
-      // Resolve ingredient links
       if (menuItem.ingredientLinks) {
           menuItem.ingredients = menuItem.ingredientLinks
             .map(link => {
@@ -140,13 +140,13 @@ export async function getMenuItems(): Promise<MenuItem[]> {
 }
 
 // Category Actions
-export async function addCategory(formData: FormData) {
+export async function addCategory(restaurantId: string, formData: FormData) {
   const newCategory = {
     name: formData.get('name') as string,
   };
 
   try {
-    await addDoc(collection(db, 'categories'), newCategory);
+    await addDoc(collection(db, 'restaurants', restaurantId, 'categories'), newCategory);
     revalidatePath('/admin/menu');
     revalidatePath('/');
     return { success: true };
@@ -157,12 +157,12 @@ export async function addCategory(formData: FormData) {
 }
 
 
-export async function updateCategory(id: string, formData: FormData) {
+export async function updateCategory(restaurantId: string, id: string, formData: FormData) {
     const categoryUpdates = {
         name: formData.get('name') as string,
     };
     try {
-        await updateDoc(doc(db, 'categories', id), categoryUpdates);
+        await updateDoc(doc(db, 'restaurants', restaurantId, 'categories', id), categoryUpdates);
         revalidatePath('/admin/menu');
         revalidatePath('/');
         return { success: true };
@@ -172,10 +172,9 @@ export async function updateCategory(id: string, formData: FormData) {
     }
 }
 
-export async function deleteCategory(id: string) {
+export async function deleteCategory(restaurantId: string, id: string) {
     try {
-        // TODO: Add logic to handle menu items in this category
-        await deleteDoc(doc(db, 'categories', id));
+        await deleteDoc(doc(db, 'restaurants', restaurantId, 'categories', id));
         revalidatePath('/admin/menu');
         revalidatePath('/');
         return { success: true };
@@ -186,9 +185,10 @@ export async function deleteCategory(id: string) {
 }
 
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(restaurantId: string): Promise<Category[]> {
   try {
-    const querySnapshot = await getDocs(collection(db, 'categories'));
+    if (!restaurantId) return [];
+    const querySnapshot = await getDocs(collection(db, 'restaurants', restaurantId, 'categories'));
     const categories: Category[] = [];
     querySnapshot.forEach((doc) => {
       categories.push({ id: doc.id, ...doc.data() } as Category);

@@ -11,9 +11,10 @@ import {
 import { db } from "@/lib/firebase";
 import type { ActiveOrder } from "@/lib/types";
 
-export async function getOrdersForReports(): Promise<ActiveOrder[]> {
+export async function getOrdersForReports(restaurantId: string): Promise<ActiveOrder[]> {
   try {
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    if (!restaurantId) return [];
+    const q = query(collection(db, "restaurants", restaurantId, "orders"), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const orders: ActiveOrder[] = [];
     querySnapshot.forEach((doc) => {

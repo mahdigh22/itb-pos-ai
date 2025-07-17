@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Package, Users, Hash, ShoppingBag, UtensilsCrossed } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface OpenChecksDisplayProps {
   checks: Check[];
@@ -14,6 +17,7 @@ interface OpenChecksDisplayProps {
   onSelectCheck: (checkId: string) => void;
   priceLists: PriceList[];
   taxRate: number;
+  restaurantId: string;
 }
 
 function calculateTotal(check: Check, priceLists: PriceList[], taxRate: number) {
@@ -36,7 +40,21 @@ function calculateTotal(check: Check, priceLists: PriceList[], taxRate: number) 
 }
 
 
-export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck, priceLists, taxRate }: OpenChecksDisplayProps) {
+export default function OpenChecksDisplay({ checks: initialChecks, activeCheckId, onSelectCheck, priceLists, taxRate, restaurantId }: OpenChecksDisplayProps) {
+  const [checks, setChecks] = useState<Check[]>(initialChecks);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    const q = query(collection(db, "restaurants", restaurantId, "checks"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const liveChecks: Check[] = [];
+        snapshot.forEach(doc => liveChecks.push({id: doc.id, ...doc.data()} as Check));
+        setChecks(liveChecks.sort((a,b) => a.name.localeCompare(b.name)));
+    });
+    return () => unsubscribe();
+  }, [restaurantId]);
+
+
   if (checks.length === 0) {
     return (
         <Card className="h-full flex flex-col items-center justify-center">

@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -14,15 +15,17 @@ interface Settings {
     activePriceListId?: string;
 }
 
-export async function getSettings(): Promise<Settings> {
+export async function getSettings(restaurantId: string): Promise<Settings> {
     try {
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        if (!restaurantId) {
+            throw new Error("Restaurant ID is required to get settings.");
+        }
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             return docSnap.data() as Settings;
         } else {
-            // Default settings if document doesn't exist
             const defaultSettings: Settings = {
                 taxRate: 8.0,
                 priceLists: [
@@ -37,14 +40,13 @@ export async function getSettings(): Promise<Settings> {
         }
     } catch (error) {
         console.error("Error fetching settings: ", error);
-        // Fallback to default settings on error
         return { taxRate: 8.0, priceLists: [], activePriceListId: undefined };
     }
 }
 
-export async function saveTaxRate(newRate: number) {
+export async function saveTaxRate(restaurantId: string, newRate: number) {
     try {
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         await updateDoc(docRef, { taxRate: newRate });
         revalidatePath('/admin/settings');
         return { success: true };
@@ -54,9 +56,9 @@ export async function saveTaxRate(newRate: number) {
     }
 }
 
-export async function saveActivePriceList(priceListId: string | null) {
+export async function saveActivePriceList(restaurantId: string, priceListId: string | null) {
     try {
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         await updateDoc(docRef, { activePriceListId: priceListId || null });
         revalidatePath('/admin/settings');
         revalidatePath('/'); // For POS
@@ -67,7 +69,7 @@ export async function saveActivePriceList(priceListId: string | null) {
     }
 }
 
-export async function addPriceList(formData: FormData) {
+export async function addPriceList(restaurantId: string, formData: FormData) {
     const newPriceList: PriceList = {
         id: `pl-${Date.now()}`,
         name: formData.get('name') as string,
@@ -75,7 +77,7 @@ export async function addPriceList(formData: FormData) {
     };
     
     try {
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         await updateDoc(docRef, {
             priceLists: arrayUnion(newPriceList)
         });
@@ -87,19 +89,19 @@ export async function addPriceList(formData: FormData) {
     }
 }
 
-export async function updatePriceList(id: string, formData: FormData) {
+export async function updatePriceList(restaurantId: string, id: string, formData: FormData) {
     const updatedPriceList: Partial<PriceList> = {
         name: formData.get('name') as string,
         discount: parseFloat(formData.get('discount') as string),
     };
     
     try {
-        const settings = await getSettings();
+        const settings = await getSettings(restaurantId);
         const updatedPriceLists = settings.priceLists.map(pl => 
             pl.id === id ? { ...pl, ...updatedPriceList } : pl
         );
         
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         await updateDoc(docRef, { priceLists: updatedPriceLists });
 
         revalidatePath('/admin/settings');
@@ -110,18 +112,17 @@ export async function updatePriceList(id: string, formData: FormData) {
     }
 }
 
-export async function deletePriceList(id: string) {
+export async function deletePriceList(restaurantId: string, id: string) {
     try {
-        const settings = await getSettings();
+        const settings = await getSettings(restaurantId);
         const updatedPriceLists = settings.priceLists.filter(pl => pl.id !== id);
         
-        const docRef = doc(db, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
         
         const updateData: { priceLists: PriceList[], activePriceListId?: string | null } = {
             priceLists: updatedPriceLists
         };
 
-        // If the deleted price list was the active one, reset it.
         if (settings.activePriceListId === id) {
             updateData.activePriceListId = null;
         }

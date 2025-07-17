@@ -136,10 +136,11 @@ export default function Home() {
     [checks, activeCheckId]
   );
   
-  // Ref for debounced update function
   const debouncedUpdateCheck = useRef(
     debounce((checkId: string, updates: Partial<Omit<Check, 'id'>>) => {
-      updateCheck(checkId, updates);
+      if (currentUser?.restaurantId) {
+        updateCheck(currentUser.restaurantId, checkId, updates);
+      }
     }, 500)
   ).current;
 
@@ -155,7 +156,7 @@ export default function Home() {
       console.error("Failed to parse employee data from localStorage", e);
     }
 
-    if (!employeeData?.id) {
+    if (!employeeData?.id || !employeeData?.restaurantId) {
       setIsLoading(false);
       router.replace("/login");
       return;
@@ -170,6 +171,7 @@ export default function Home() {
     setCurrentUser(employeeData);
     const fetchInitialData = async () => {
       setIsLoading(true);
+      const restaurantId = employeeData.restaurantId;
       const [
         fetchedMembers,
         fetchedMenuItems,
@@ -178,12 +180,12 @@ export default function Home() {
         fetchedSettings,
         fetchedTables,
       ] = await Promise.all([
-        getUsers(),
-        fetchMenuItems(),
-        getCategories(),
-        getExtras(),
-        getSettings(),
-        getTables(),
+        getUsers(restaurantId),
+        fetchMenuItems(restaurantId),
+        getCategories(restaurantId),
+        getExtras(restaurantId),
+        getSettings(restaurantId),
+        getTables(restaurantId),
       ]);
       setMembers(fetchedMembers);
       setMenuItems(fetchedMenuItems);
@@ -198,10 +200,10 @@ export default function Home() {
   }, [router]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.restaurantId) return;
+    const restaurantId = currentUser.restaurantId;
 
-    // Listener for open checks
-    const checksQuery = query(collection(db, "checks"));
+    const checksQuery = query(collection(db, "restaurants", restaurantId, "checks"));
     const unsubscribeChecks = onSnapshot(
       checksQuery,
       async (querySnapshot) => {
@@ -211,12 +213,10 @@ export default function Home() {
         });
         setChecks(liveChecks.sort((a, b) => a.name.localeCompare(b.name)));
 
-        // If no active check is set, or the active check no longer exists, set one.
         if (!activeCheckId || !liveChecks.some((c) => c.id === activeCheckId)) {
           if (liveChecks.length > 0) {
             setActiveCheckId(liveChecks[0].id);
           } else if (currentUser) {
-            // Only create a new check if there are none and user is loaded
             const newCheckData: Omit<Check, "id"> = {
               name: `Check 1`,
               items: [],
@@ -224,8 +224,7 @@ export default function Home() {
               employeeId: currentUser.id,
               employeeName: currentUser.name,
             };
-            const newCheck = await addCheck(newCheckData);
-            // The listener will pick this up and set state, no need to do it twice.
+            const newCheck = await addCheck(restaurantId, newCheckData);
             setActiveCheckId(newCheck.id);
           }
         }
@@ -248,10 +247,8 @@ export default function Home() {
   const updateActiveCheckDetails = async (
     updates: Partial<Omit<Check, "id">>
   ) => {
-    if (!activeCheckId) return;
-
-    // The real-time listener will handle the UI update.
-    await updateCheck(activeCheckId, updates);
+    if (!activeCheckId || !currentUser?.restaurantId) return;
+    await updateCheck(currentUser.restaurantId, activeCheckId, updates);
   };
 
   const handleTableSelect = async (tableId: string) => {
@@ -267,24 +264,30 @@ export default function Home() {
   };
 
   const handleAddItem = (item: MenuItem) => {
-    if (!activeCheck) return;
-
-    // A simple check to see if customizations object is empty
-    const hasCustomizations = (orderItem: OrderItem) => {
-        const customs = orderItem.customizations;
-        return customs && (customs.added.length > 0 || customs.removed.length > 0);
-    }
+    if (!activeCheck || !currentUser?.restaurantId) return;
+  
+    const restaurantId = currentUser.restaurantId;
+    const customizationsAreEqual = (a: any, b: any) => {
+      const aAdded = a.added.map((i: any) => i.id).sort();
+      const bAdded = b.added.map((i: any) => i.id).sort();
+      const aRemoved = a.removed.map((i: any) => i.id).sort();
+      const bRemoved = b.removed.map((i: any) => i.id).sort();
+  
+      return aAdded.join(',') === bAdded.join(',') && aRemoved.join(',') === bRemoved.join(',');
+    };
 
     const existingItemIndex = activeCheck.items.findIndex(
-      (orderItem) => orderItem.id === item.id && !hasCustomizations(orderItem)
+      (orderItem) =>
+        orderItem.id === item.id &&
+        customizationsAreEqual(orderItem.customizations, { added: [], removed: [] })
     );
-
+  
     let newItems: OrderItem[];
-
+  
     if (existingItemIndex > -1) {
       newItems = activeCheck.items.map((orderItem, index) => {
         if (index === existingItemIndex) {
-          return { ...orderItem, quantity: orderItem.quantity + 1, status: 'new' as const };
+          return { ...orderItem, quantity: orderItem.quantity + 1, status: "new" as const };
         }
         return orderItem;
       });
@@ -298,20 +301,17 @@ export default function Home() {
       };
       newItems = [...activeCheck.items, newOrderItem];
     }
-
-    // Optimistic Update
+  
     const updatedChecks = checks.map((c) =>
       c.id === activeCheck.id ? { ...c, items: newItems } : c
     );
     setChecks(updatedChecks);
-
-    // Debounced Server Update
+  
     debouncedUpdateCheck(activeCheck.id, { items: newItems });
   };
-
-
+  
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
-    if (!activeCheck) return;
+    if (!activeCheck || !currentUser?.restaurantId) return;
     debouncedUpdateCheck.cancel();
     if (quantity < 1) {
       await handleRemoveItem(lineItemId);
@@ -322,46 +322,49 @@ export default function Home() {
         ? { ...item, quantity, status: "new" as const }
         : item
     );
-    await updateCheck(activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
   };
 
   const handleRemoveItem = async (lineItemId: string) => {
-    if (!activeCheck) return;
+    if (!activeCheck || !currentUser?.restaurantId) return;
     debouncedUpdateCheck.cancel();
     const newItems = activeCheck.items.filter(
       (item) => item.lineItemId !== lineItemId
     );
-    await updateCheck(activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
   };
 
   const handleClearCheck = async () => {
-    if (!activeCheck) return;
+    if (!activeCheck || !currentUser?.restaurantId) return;
     debouncedUpdateCheck.cancel();
-    await updateCheck(activeCheck.id, { items: [] });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: [] });
   };
 
   const handleStartCustomization = (itemToCustomize: OrderItem) => {
-    if (!activeCheck) return;
+    if (!activeCheck || !currentUser?.restaurantId) return;
     debouncedUpdateCheck.cancel();
     setCustomizingItem(itemToCustomize);
   };
+  
 
   const handleUpdateCustomization = async (
     lineItemId: string,
     customizations: { added: Extra[]; removed: { id: string; name: string }[] }
   ) => {
-    if (!activeCheck) return;
+    if (!activeCheck || !currentUser?.restaurantId) return;
+
     const newItems = activeCheck.items.map((item) =>
       item.lineItemId === lineItemId
         ? { ...item, customizations, status: "new" as const }
         : item
     );
-    await updateCheck(activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
     setCustomizingItem(null);
   };
 
   const handleNewCheck = async () => {
-    if (!currentUser) return;
+    if (!currentUser?.restaurantId) return;
+    const restaurantId = currentUser.restaurantId;
     const emptyCheck = checks.find((c) => c.items.length === 0);
 
     if (emptyCheck) {
@@ -381,9 +384,7 @@ export default function Home() {
       employeeId: currentUser.id,
       employeeName: currentUser.name,
     };
-    const newCheck = await addCheck(newCheckData);
-
-    // The listener will add the check to state, just need to switch to it.
+    const newCheck = await addCheck(restaurantId, newCheckData);
     setActiveCheckId(newCheck.id);
 
     toast({
@@ -402,7 +403,7 @@ export default function Home() {
   };
 
   const handleSendToKitchen = async () => {
-    if (!activeCheckId || !activeCheck || !currentUser) return;
+    if (!activeCheckId || !activeCheck || !currentUser?.restaurantId) return;
 
     if (!activeCheck.orderType) {
       toast({
@@ -416,7 +417,7 @@ export default function Home() {
     debouncedUpdateCheck.cancel();
     
     const originalCheckName = activeCheck.name;
-    const result = await sendNewItemsToKitchen(activeCheckId);
+    const result = await sendNewItemsToKitchen(currentUser.restaurantId, activeCheckId);
 
     if (result.success) {
       toast({
@@ -433,7 +434,7 @@ export default function Home() {
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
         const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [], priceListId: settings?.activePriceListId, employeeId: currentUser.id, employeeName: currentUser.name };
-        const newCheck = await addCheck(newCheckData);
+        const newCheck = await addCheck(currentUser.restaurantId, newCheckData);
         setActiveCheckId(newCheck.id);
         toast({ title: "New Check Started", description: "The previous check is available in 'Open Checks'." });
       }
@@ -443,13 +444,12 @@ export default function Home() {
   };
 
   const handleFinalizeAndPay = async () => {
-    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0) return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0 || !currentUser?.restaurantId) return;
       
     debouncedUpdateCheck.cancel();
     const originalCheckName = activeCheck.name;
     
-    await deleteCheck(activeCheckId);
-    // The listener will automatically remove the check from state and select a new one.
+    await deleteCheck(currentUser.restaurantId, activeCheckId);
     toast({
       title: "Bill Closed",
       description: `${originalCheckName}'s bill has been paid and closed.`,
@@ -458,30 +458,30 @@ export default function Home() {
   };
 
   const handleCloseCheck = () => {
-    if (!activeCheck?.orderType) {
+    if (activeCheck?.orderType === 'Take Away') {
       toast({
-        variant: "destructive",
-        title: "Order Type Required",
-        description:
-          "Please select Dine In or Take Away before closing the check.",
+          variant: 'destructive',
+          title: 'Invalid Action',
+          description: 'Takeaway orders close when marked complete. Please use "Send to Kitchen".',
       });
       return;
     }
 
-    if (activeCheck.orderType === 'Take Away') {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid Action',
-            description: 'For Take Away orders, please use "Send to Kitchen". The check will close when the order is marked complete.',
-        });
-        return;
+    if (!activeCheck?.orderType) {
+      toast({
+        variant: "destructive",
+        title: "Order Type Required",
+        description: "Please select Dine In or Take Away before closing the check.",
+      });
+      return;
     }
 
     setCloseCheckAlertOpen(true);
   };
 
   const handleCompleteOrder = async (orderId: string) => {
-    await updateOrderStatus(orderId, "Completed");
+    if (!currentUser?.restaurantId) return;
+    await updateOrderStatus(currentUser.restaurantId, orderId, "Completed");
     toast({
       title: "Order Completed",
       description: "The order has been marked as complete.",
@@ -489,7 +489,8 @@ export default function Home() {
   };
 
   const handleClearOrder = async (orderId: string) => {
-    await archiveOrder(orderId);
+    if (!currentUser?.restaurantId) return;
+    await archiveOrder(currentUser.restaurantId, orderId);
     toast({
       title: "Order Cleared",
       description: "The completed order has been removed from the view.",
@@ -498,6 +499,7 @@ export default function Home() {
 
   const handleLogout = () => {
     localStorage.removeItem("currentEmployee");
+    setCurrentUser(null);
     router.push("/login");
   };
 
@@ -509,10 +511,7 @@ export default function Home() {
     );
   }
 
-  const closeCheckAlertDescription =
-    activeCheck?.orderType === "Dine In"
-      ? "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?"
-      : "This action is not applicable for Take Away orders from this screen.";
+  const closeCheckAlertDescription = "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?";
 
   return (
     <>
@@ -641,6 +640,7 @@ export default function Home() {
               onSelectCheck={handleSelectCheckAndSwitchTab}
               priceLists={settings.priceLists}
               taxRate={settings.taxRate}
+              restaurantId={currentUser.restaurantId}
             />
           </TabsContent>
 
@@ -652,6 +652,7 @@ export default function Home() {
               onCompleteOrder={handleCompleteOrder}
               onClearOrder={handleClearOrder}
               tables={tables}
+              restaurantId={currentUser.restaurantId}
             />
           </TabsContent>
 
