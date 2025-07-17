@@ -1,6 +1,5 @@
 
 
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -463,13 +462,52 @@ export async function cancelOrderItem(orderId: string, lineItemId: string) {
 
 export async function editOrderItem(orderId: string, oldLineItemId: string, newItem: OrderItem) {
     const orderRef = doc(db, "orders", orderId);
+
     try {
         await runTransaction(db, async (transaction) => {
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) throw new Error("Order not found.");
             
             const orderData = orderDoc.data() as ActiveOrder;
-            
+            const oldItem = orderData.items.find(i => i.lineItemId === oldLineItemId);
+
+            if (!oldItem) throw new Error("Original item to edit not found in order.");
+
+            // Calculate stock adjustments
+            const stockAdjustments = new Map<string, number>();
+            const quantity = oldItem.quantity; // Both old and new item have same quantity
+
+            // Ingredients/extras added in the new item
+            newItem.customizations.added.forEach(extra => {
+                extra.ingredientLinks?.forEach(link => {
+                    stockAdjustments.set(link.ingredientId, (stockAdjustments.get(link.ingredientId) || 0) - (link.quantity * quantity));
+                });
+            });
+            // Ingredients removed in the new item
+            newItem.customizations.removed.forEach(removedIng => {
+                const link = newItem.ingredientLinks.find(l => l.ingredientId === removedIng.id);
+                if (link) {
+                    stockAdjustments.set(link.ingredientId, (stockAdjustments.get(link.ingredientId) || 0) + (link.quantity * quantity));
+                }
+            });
+
+            // Apply stock adjustments
+            if (stockAdjustments.size > 0) {
+                const ingredientIds = Array.from(stockAdjustments.keys());
+                const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
+                const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+
+                for (let i = 0; i < ingredientDocs.length; i++) {
+                    const ingDoc = ingredientDocs[i];
+                    if (ingDoc.exists()) {
+                        const adjustment = stockAdjustments.get(ingDoc.id) || 0;
+                        const newStock = (ingDoc.data().stock || 0) + adjustment;
+                        if (newStock < 0) throw new Error(`Insufficient stock for ${ingDoc.data().name}.`);
+                        transaction.update(ingDoc.ref, { stock: newStock });
+                    }
+                }
+            }
+
             // Mark old item as edited and add the new one
             const itemsWithoutOld = orderData.items.map(item => 
                 item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
@@ -493,12 +531,14 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
             transaction.update(orderRef, { items: updatedItems });
         });
         revalidatePath('/');
+        revalidatePath('/admin/ingredients');
         return { success: true };
     } catch (e) {
         console.error("Error editing order item: ", e);
         return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
     }
 }
+
 
 // Helper function to recalculate order total, assuming it might be needed in other places.
 // It needs access to settings to get the tax rate.
