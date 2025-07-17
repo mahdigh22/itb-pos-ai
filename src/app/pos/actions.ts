@@ -465,46 +465,77 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
 
     try {
         await runTransaction(db, async (transaction) => {
+            // --- GATHER ALL READS FIRST ---
             const orderDoc = await transaction.get(orderRef);
             if (!orderDoc.exists()) throw new Error("Order not found.");
-            
             const orderData = orderDoc.data() as ActiveOrder;
+            
             const oldItem = orderData.items.find(i => i.lineItemId === oldLineItemId);
-
             if (!oldItem) throw new Error("Original item to edit not found in order.");
 
-            // Calculate stock adjustments
+            // Find source check if it exists
+            let checkRef = null;
+            let checkDoc = null;
+            if (orderData.sourceCheckId) {
+                checkRef = doc(db, "checks", orderData.sourceCheckId);
+                checkDoc = await transaction.get(checkRef);
+            }
+            
+            // Calculate stock adjustments and gather ingredient IDs
             const stockAdjustments = new Map<string, number>();
-            const quantity = oldItem.quantity; // Both old and new item have same quantity
+            const quantity = oldItem.quantity;
 
-            // Ingredients/extras added in the new item
-            newItem.customizations.added.forEach(extra => {
-                extra.ingredientLinks?.forEach(link => {
-                    stockAdjustments.set(link.ingredientId, (stockAdjustments.get(link.ingredientId) || 0) - (link.quantity * quantity));
-                });
-            });
-            // Ingredients removed in the new item
-            newItem.customizations.removed.forEach(removedIng => {
-                const link = newItem.ingredientLinks.find(l => l.ingredientId === removedIng.id);
-                if (link) {
-                    stockAdjustments.set(link.ingredientId, (stockAdjustments.get(link.ingredientId) || 0) + (link.quantity * quantity));
+            const oldIngredients = new Map<string, number>();
+            oldItem.ingredientLinks.forEach(link => {
+                if (!oldItem.customizations.removed.some(r => r.id === link.ingredientId)) {
+                    oldIngredients.set(link.ingredientId, (oldIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
                 }
             });
+            oldItem.customizations.added.forEach(extra => {
+                extra.ingredientLinks?.forEach(link => {
+                    oldIngredients.set(link.ingredientId, (oldIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
+                });
+            });
 
-            // Apply stock adjustments
+            const newIngredients = new Map<string, number>();
+            newItem.ingredientLinks.forEach(link => {
+                if (!newItem.customizations.removed.some(r => r.id === link.ingredientId)) {
+                    newIngredients.set(link.ingredientId, (newIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
+                }
+            });
+            newItem.customizations.added.forEach(extra => {
+                extra.ingredientLinks?.forEach(link => {
+                    newIngredients.set(link.ingredientId, (newIngredients.get(link.ingredientId) || 0) + (link.quantity * quantity));
+                });
+            });
+
+            const allIngredientIds = new Set([...oldIngredients.keys(), ...newIngredients.keys()]);
+
+            for (const id of allIngredientIds) {
+                const oldQty = oldIngredients.get(id) || 0;
+                const newQty = newIngredients.get(id) || 0;
+                if (oldQty !== newQty) {
+                    stockAdjustments.set(id, oldQty - newQty); // Positive value means stock goes up
+                }
+            }
+            
+            // Fetch all required ingredient documents
+            let ingredientDocs: any[] = [];
             if (stockAdjustments.size > 0) {
                 const ingredientIds = Array.from(stockAdjustments.keys());
                 const ingredientRefs = ingredientIds.map(id => doc(db, 'ingredients', id));
-                const ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+                ingredientDocs = await Promise.all(ingredientRefs.map(ref => transaction.get(ref)));
+            }
 
-                for (let i = 0; i < ingredientDocs.length; i++) {
-                    const ingDoc = ingredientDocs[i];
-                    if (ingDoc.exists()) {
-                        const adjustment = stockAdjustments.get(ingDoc.id) || 0;
-                        const newStock = (ingDoc.data().stock || 0) + adjustment;
-                        if (newStock < 0) throw new Error(`Insufficient stock for ${ingDoc.data().name}.`);
-                        transaction.update(ingDoc.ref, { stock: newStock });
-                    }
+            // --- PERFORM ALL WRITES LAST ---
+
+            // Apply stock adjustments
+            for (const ingDoc of ingredientDocs) {
+                if (ingDoc.exists()) {
+                    const adjustment = stockAdjustments.get(ingDoc.id) || 0;
+                    const newStock = (ingDoc.data().stock || 0) + adjustment;
+                    if (newStock < 0) throw new Error(`Insufficient stock for ${ingDoc.data().name}.`);
+                    transaction.update(ingDoc.ref, { stock: newStock });
                 }
             }
 
@@ -515,21 +546,18 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
             const updatedItems = [...itemsWithoutOld, newItem];
 
             // Sync with check
-            if (orderData.sourceCheckId) {
-                const checkRef = doc(db, "checks", orderData.sourceCheckId);
-                const checkDoc = await transaction.get(checkRef);
-                if (checkDoc.exists()) {
-                    const checkData = checkDoc.data() as Check;
-                    const updatedCheckItems = checkData.items.map(item => 
-                        item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
-                    );
-                    const finalCheckItems = [...updatedCheckItems, newItem];
-                    transaction.update(checkRef, { items: finalCheckItems });
-                }
+            if (checkDoc && checkDoc.exists() && checkRef) {
+                const checkData = checkDoc.data() as Check;
+                const updatedCheckItems = checkData.items.map(item => 
+                    item.lineItemId === oldLineItemId ? { ...item, status: 'edited' as const } : item
+                );
+                const finalCheckItems = [...updatedCheckItems, newItem];
+                transaction.update(checkRef, { items: finalCheckItems });
             }
 
             transaction.update(orderRef, { items: updatedItems });
         });
+        
         revalidatePath('/');
         revalidatePath('/admin/ingredients');
         return { success: true };
@@ -538,6 +566,7 @@ export async function editOrderItem(orderId: string, oldLineItemId: string, newI
         return { success: false, error: e instanceof Error ? e.message : "An unknown error occurred." };
     }
 }
+
 
 
 // Helper function to recalculate order total, assuming it might be needed in other places.
