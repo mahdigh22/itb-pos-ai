@@ -3,16 +3,14 @@
 
 import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import ItbIcon from '@/components/itb-icon';
 import { loginAdmin } from './actions';
 import { Loader2 } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 
 export default function AdminLoginPage() {
   const [isPending, startTransition] = useTransition();
@@ -80,15 +78,6 @@ export default function AdminLoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex-col gap-4">
-            <Separator />
-            <div className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
-                    Create a new restaurant
-                </Link>
-            </div>
-        </CardFooter>
       </Card>
     </div>
   );
