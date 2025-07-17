@@ -4,8 +4,11 @@
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Employee } from '@/lib/types';
+import { ensureDefaultRestaurant } from '@/lib/data';
 
 export async function loginEmployee(formData: FormData) {
+  await ensureDefaultRestaurant();
+
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -14,13 +17,11 @@ export async function loginEmployee(formData: FormData) {
   }
 
   try {
-    // First, get all restaurants
     const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
     if (restaurantsSnapshot.empty) {
-      return { success: false, error: 'No restaurants configured in the system.' };
+      return { success: false, error: 'No restaurants configured in the system. Please log in as an admin first.' };
     }
 
-    // Iterate over each restaurant and check for the employee
     for (const restaurantDoc of restaurantsSnapshot.docs) {
       const restaurantId = restaurantDoc.id;
       const employeesCollectionRef = collection(db, 'restaurants', restaurantId, 'employees');
@@ -32,7 +33,6 @@ export async function loginEmployee(formData: FormData) {
         const employeeDoc = querySnapshot.docs[0];
         const employeeData = employeeDoc.data();
 
-        // Now, verify the password in the application code.
         if (employeeData.password === password) {
           const employee: Omit<Employee, 'password'> = {
             id: employeeDoc.id,
@@ -44,13 +44,11 @@ export async function loginEmployee(formData: FormData) {
           };
           return { success: true, employee };
         } else {
-          // Found email but password was wrong. Since emails should be unique, we can stop here.
           return { success: false, error: 'Invalid password.' };
         }
       }
     }
 
-    // If we get here, it means we iterated through all restaurants and found no matching email.
     return { success: false, error: 'No employee found with that email.' };
 
   } catch (e) {
