@@ -71,7 +71,7 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                             className={cn(
                                 'cursor-pointer transition-all hover:shadow-lg',
                                 isActive ? 'ring-2 ring-primary shadow-lg' : 'hover:border-primary/50',
-                                isTakeAway ? 'bg-secondary/50 border-secondary' : 'bg-card'
+                                isTakeAway ? 'bg-secondary' : 'bg-card'
                             )}
                         >
                             <CardHeader className="pb-2">
