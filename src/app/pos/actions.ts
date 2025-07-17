@@ -221,7 +221,7 @@ export async function sendNewItemsToKitchen(checkId: string) {
 
             const newOrderData = {
                 items: newSanitizedItems,
-                status: 'Preparing' as OrderStatus,
+                status: 'Pending' as OrderStatus,
                 total: total,
                 createdAt: Timestamp.now(),
                 sourceCheckId: finalCheckDataForOrder.id,
@@ -307,7 +307,7 @@ export async function getOrders(): Promise<ActiveOrder[]> {
   try {
     const q = query(
         collection(db, 'orders'), 
-        where('status', 'in', ['Preparing', 'Ready', 'Completed']),
+        where('status', 'in', ['Pending', 'Preparing', 'Ready', 'Completed']),
         orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);

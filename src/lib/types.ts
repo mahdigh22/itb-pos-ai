@@ -79,7 +79,7 @@ export interface Member {
   avatarHint: string;
 }
 
-export type OrderStatus = "Preparing" | "Ready" | "Completed" | "Archived";
+export type OrderStatus = "Pending" | "Preparing" | "Ready" | "Completed" | "Archived";
 
 // This is an order that has been sent to the kitchen
 export interface ActiveOrder {

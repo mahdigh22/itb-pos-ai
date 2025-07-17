@@ -24,6 +24,7 @@ import {
   MoreVertical,
   Edit,
   Ban,
+  Hourglass,
 } from "lucide-react";
 import type {
   ActiveOrder,
@@ -48,7 +49,6 @@ import {
   query,
   where,
   Timestamp,
-  getDoc,
   doc as firestoreDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -79,11 +79,14 @@ const statusConfig: Record<
     badgeVariant: "default" | "secondary" | "outline" | "destructive";
   }
 > = {
+  Pending: { text: "Pending", icon: Hourglass, badgeVariant: "secondary" },
   Preparing: { text: "Preparing", icon: Soup, badgeVariant: "secondary" },
   Ready: { text: "Ready", icon: Package, badgeVariant: "outline" },
   Completed: { text: "Completed", icon: CheckCircle, badgeVariant: "default" },
   Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
+
+const PENDING_DURATION = 2 * 60 * 1000; // 2 minutes
 
 function OrderCard({
   order,
@@ -106,9 +109,14 @@ function OrderCard({
   }, []);
 
   const startTime = new Date(order.createdAt).getTime();
+  const pendingEndTime = startTime + PENDING_DURATION;
+  const isPending = order.status === 'Pending' && currentTime.getTime() < pendingEndTime;
+
+  const prepStartTime = isPending ? pendingEndTime : startTime;
   const totalDuration = order.totalPreparationTime * 60 * 1000; // in milliseconds
-  const endTime = startTime + totalDuration;
-  const elapsedTime = currentTime.getTime() - startTime;
+  const prepEndTime = prepStartTime + totalDuration;
+  const elapsedTime = currentTime.getTime() - prepStartTime;
+  
   const activeItems = order.items.filter(
     (i) => i.status !== "cancelled" && i.status !== "edited"
   );
@@ -119,13 +127,12 @@ function OrderCard({
   if (order.status === "Completed" || order.status === "Archived") {
     currentStatus = "Completed";
     progress = 100;
+  } else if (isPending) {
+    currentStatus = "Pending";
+    progress = 0;
   } else {
     progress = Math.min(100, (elapsedTime / totalDuration) * 100);
-    if (progress >= 100) {
-      currentStatus = "Ready";
-    } else {
-      currentStatus = "Preparing";
-    }
+    currentStatus = progress >= 100 ? "Ready" : "Preparing";
   }
 
   const config = statusConfig[currentStatus];
@@ -238,7 +245,7 @@ function OrderCard({
               </div>
             </div>
 
-            {order.status === "Preparing" &&
+            {isPending &&
               item.status !== "cancelled" &&
               item.status !== "edited" && (
                 <DropdownMenu>
@@ -265,13 +272,13 @@ function OrderCard({
           </div>
         ))}
       </div>
-      {activeItems.length > 0 && (
+      {activeItems.length > 0 && currentStatus !== "Pending" && (
         <div>
           <Progress value={progress} className="h-2" />
           <p className="text-xs text-muted-foreground mt-1.5 text-right">
             {currentStatus === "Preparing" &&
-              endTime > currentTime.getTime() &&
-              `Ready in approx. ${formatDistanceToNowStrict(endTime)}`}
+              prepEndTime > currentTime.getTime() &&
+              `Ready in approx. ${formatDistanceToNowStrict(prepEndTime)}`}
             {currentStatus === "Ready" && "Ready for pickup!"}
             {currentStatus === "Completed" && "Order collected."}
           </p>
@@ -313,7 +320,7 @@ export default function OrderProgress({
 
     const q = query(
       collection(db, "orders"),
-      where("status", "in", ["Preparing", "Ready", "Completed"])
+      where("status", "in", ["Pending", "Preparing", "Ready", "Completed"])
     );
     const unsubscribe = onSnapshot(
       q,
