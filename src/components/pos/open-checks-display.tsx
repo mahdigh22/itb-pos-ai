@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import type { Check, PriceList } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Package, Users, Utensils, Hash, ShoppingBag } from 'lucide-react';
+import { Package, Users, Utensils, Hash, ShoppingBag, UtensilsCrossed } from 'lucide-react';
 
 interface OpenChecksDisplayProps {
   checks: Check[];
@@ -60,6 +61,7 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                 {checks.map((check) => {
                     const isActive = check.id === activeCheckId;
                     const { total } = calculateTotal(check, priceLists, taxRate);
+                    const Icon = check.orderType === 'Dine In' ? UtensilsCrossed : ShoppingBag;
 
                     return (
                         <Card
@@ -72,7 +74,7 @@ export default function OpenChecksDisplay({ checks, activeCheckId, onSelectCheck
                         >
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                                    {check.orderType === 'Dine In' ? <Utensils className="h-5 w-5 text-muted-foreground" /> : <ShoppingBag className="h-5 w-5 text-muted-foreground" />}
+                                    <Icon className="h-5 w-5 text-muted-foreground" />
                                     {check.name}
                                 </CardTitle>
                             </CardHeader>

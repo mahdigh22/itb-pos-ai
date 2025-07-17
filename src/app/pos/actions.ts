@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -272,6 +273,36 @@ export async function sendNewItemsToKitchen(checkId: string) {
     }
 }
 
+export async function updateOrderStatus(orderId: string, status: OrderStatus) {
+    const orderRef = doc(db, 'orders', orderId);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Order not found.");
+            }
+
+            transaction.update(orderRef, { status });
+
+            // If a Take Away order is completed, delete its source check
+            const orderData = orderDoc.data();
+            if (status === 'Completed' && orderData.orderType === 'Take Away' && orderData.sourceCheckId) {
+                const checkRef = doc(db, 'checks', orderData.sourceCheckId);
+                transaction.delete(checkRef);
+            }
+        });
+
+        revalidatePath('/');
+        return { success: true };
+    } catch (e) {
+        console.error("Error updating order status: ", e);
+        if (e instanceof Error) {
+            return { success: false, error: e.message };
+        }
+        return { success: false, error: 'Failed to update order status.' };
+    }
+}
+
 
 export async function getOrders(): Promise<ActiveOrder[]> {
   try {
@@ -351,17 +382,7 @@ export async function addOrder(orderData: Omit<ActiveOrder, 'id' | 'createdAt'> 
     }
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-    try {
-        const orderRef = doc(db, 'orders', orderId);
-        await updateDoc(orderRef, { status });
-        revalidatePath('/');
-        return { success: true };
-    } catch (e) {
-        console.error("Error updating order status: ", e);
-        return { success: false, error: 'Failed to update order status.' };
-    }
-}
+
 
 export async function archiveOrder(orderId: string) {
     try {

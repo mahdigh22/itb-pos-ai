@@ -540,41 +540,26 @@ export default function OrderSummary({
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-2 pt-6 border-t">
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={onSendToKitchen}
+            disabled={!hasNewItems}
+          >
+            <Send className="mr-2 h-4 w-4" /> Send to Kitchen
+          </Button>
+
           {activeCheck.orderType === "Dine In" && (
-            <>
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={onSendToKitchen}
-                disabled={!hasNewItems}
-              >
-                <Send className="mr-2 h-4 w-4" /> Send to Kitchen
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={onCloseCheck}
-                disabled={order.length === 0 || hasNewItems}
-              >
-                <CreditCard className="mr-2 h-4 w-4" /> Close & Pay Bill
-              </Button>
-            </>
-          )}
-          {activeCheck.orderType === "Take Away" && (
             <Button
               className="w-full"
-              size="lg"
+              variant="outline"
               onClick={onCloseCheck}
-              disabled={order.length === 0}
+              disabled={order.length === 0 || hasNewItems}
             >
-              <CreditCard className="mr-2 h-4 w-4" /> Finalize & Pay
+              <CreditCard className="mr-2 h-4 w-4" /> Close & Pay Bill
             </Button>
           )}
-          {!activeCheck.orderType && (
-            <Button className="w-full" size="lg" disabled>
-              Select an Order Type
-            </Button>
-          )}
+
           <Button variant="outline" className="w-full" onClick={onNewCheck}>
             <FilePlus className="mr-2 h-4 w-4" /> New Check
           </Button>

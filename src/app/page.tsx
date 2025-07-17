@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -14,7 +15,6 @@ import { getSettings } from "@/app/admin/settings/actions";
 import { getTables } from "@/app/admin/tables/actions";
 import {
   sendNewItemsToKitchen,
-  addOrder,
   updateOrderStatus,
   archiveOrder,
   addCheck,
@@ -346,7 +346,7 @@ export default function Home() {
       const otherItems = order.filter(
         (i) => i.lineItemId !== itemToCustomize.lineItemId
       );
-      const originalItem = {
+      const originalItem: OrderItem = {
         ...itemToCustomize,
         quantity: itemToCustomize.quantity - 1,
         status: "new" as const,
@@ -423,15 +423,19 @@ export default function Home() {
 
   const handleSendToKitchen = async () => {
     if (!activeCheckId || !activeCheck || !currentUser) return;
-    debouncedUpdateCheck.cancel();
 
-    if (activeCheck.orderType === "Take Away") {
-      await handleFinalizeAndPay();
+    if (!activeCheck.orderType) {
+      toast({
+        variant: "destructive",
+        title: "Order Type Required",
+        description: "Please select Dine In or Take Away before sending to kitchen.",
+      });
       return;
     }
 
+    debouncedUpdateCheck.cancel();
+    
     const originalCheckName = activeCheck.name;
-
     const result = await sendNewItemsToKitchen(activeCheckId);
 
     if (result.success) {
@@ -440,119 +444,35 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
-      // The check listener will update the checks state automatically.
-      // Now, we need to decide which check to switch to.
       const currentChecks = checks;
-      const emptyCheck = currentChecks.find(
-        (c) => c.items.length === 0 && c.id !== activeCheckId
-      );
+      const emptyCheck = currentChecks.find(c => c.items.length === 0 && c.id !== activeCheckId);
 
       if (emptyCheck) {
         setActiveCheckId(emptyCheck.id);
-        toast({
-          title: "Switched to Empty Check",
-          description: "The previous check is available in 'Open Checks'.",
-        });
+        toast({ title: "Switched to Empty Check", description: "The previous check is available in 'Open Checks'." });
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
-        const newCheckData: Omit<Check, "id"> = {
-          name: newCheckName,
-          items: [],
-          priceListId: settings?.activePriceListId,
-          employeeId: currentUser.id,
-          employeeName: currentUser.name,
-        };
+        const newCheckData: Omit<Check, 'id'> = { name: newCheckName, items: [], priceListId: settings?.activePriceListId, employeeId: currentUser.id, employeeName: currentUser.name };
         const newCheck = await addCheck(newCheckData);
         setActiveCheckId(newCheck.id);
-        toast({
-          title: "New Check Started",
-          description: "The previous check is available in 'Open Checks'.",
-        });
+        toast({ title: "New Check Started", description: "The previous check is available in 'Open Checks'." });
       }
     } else {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: result.error || "Could not send items to kitchen.",
-      });
+      toast({ variant: "destructive", title: "Error", description: result.error || "Could not send items to kitchen." });
     }
   };
 
   const handleFinalizeAndPay = async () => {
-    if (
-      !activeCheck ||
-      !activeCheckId ||
-      activeCheck.items.length === 0 ||
-      !activeCheck.orderType ||
-      !settings ||
-      !currentUser
-    )
-      return;
+    if (!activeCheck || !activeCheckId || activeCheck.items.length === 0) return;
       
     debouncedUpdateCheck.cancel();
-
     const originalCheckName = activeCheck.name;
-
-    if (activeCheck.orderType === "Dine In") {
-      await deleteCheck(activeCheckId);
-      // The listener will automatically remove the check from state and select a new one.
-      toast({
-        title: "Bill Closed",
-        description: `${originalCheckName}'s bill has been paid and closed.`,
-      });
-      setCloseCheckAlertOpen(false);
-      return;
-    }
-
-    const subtotal = activeCheck.items.reduce((acc, item) => {
-      const extrasPrice =
-        item.customizations?.added.reduce(
-          (extraAcc, extra) => extraAcc + extra.price,
-          0
-        ) || 0;
-      const totalItemPrice = (item.price + extrasPrice) * item.quantity;
-      return acc + totalItemPrice;
-    }, 0);
-
-    const selectedPriceList = settings.priceLists.find(
-      (pl) => pl.id === activeCheck.priceListId
-    );
-    const discountPercentage = selectedPriceList?.discount || 0;
-    const discountAmount = subtotal * (discountPercentage / 100);
-    const discountedSubtotal = subtotal - discountAmount;
-    const tax = discountedSubtotal * (settings.taxRate / 100);
-    const total = discountedSubtotal + tax;
-
-    const totalPreparationTime = activeCheck.items.reduce(
-      (acc, item) => acc + (item.preparationTime || 5) * item.quantity,
-      0
-    );
-
-    const newOrderData: Omit<ActiveOrder, "id" | "createdAt"> & {
-      createdAt: Date;
-    } = {
-      items: [...activeCheck.items],
-      status: "Preparing",
-      total: total,
-      createdAt: new Date(),
-      checkName: activeCheck.name,
-      totalPreparationTime,
-      orderType: activeCheck.orderType,
-      tableId: activeCheck.tableId,
-      tableName: activeCheck.tableName,
-      customerName: activeCheck.customerName,
-      priceListId: activeCheck.priceListId,
-      discountApplied: discountPercentage,
-      employeeId: currentUser.id,
-      employeeName: currentUser.name,
-    };
-
-    await addOrder(newOrderData);
+    
     await deleteCheck(activeCheckId);
-
+    // The listener will automatically remove the check from state and select a new one.
     toast({
-      title: "Order Sent & Closed!",
-      description: `${originalCheckName}'s order sent and check is closed.`,
+      title: "Bill Closed",
+      description: `${originalCheckName}'s bill has been paid and closed.`,
     });
     setCloseCheckAlertOpen(false);
   };
@@ -567,6 +487,16 @@ export default function Home() {
       });
       return;
     }
+
+    if (activeCheck.orderType === 'Take Away') {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Action',
+            description: 'For Take Away orders, please use "Send to Kitchen". The check will close when the order is marked complete.',
+        });
+        return;
+    }
+
     setCloseCheckAlertOpen(true);
   };
 
@@ -601,8 +531,8 @@ export default function Home() {
 
   const closeCheckAlertDescription =
     activeCheck?.orderType === "Dine In"
-      ? "This will close the bill for this table. This assumes the customer has paid. Are you sure?"
-      : "This will finalize the entire check, send it as one order, and close it. This action is for final payment. Are you sure?";
+      ? "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?"
+      : "This action is not applicable for Take Away orders from this screen.";
 
   return (
     <>
