@@ -56,7 +56,7 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
           {categories.map((category) => (
             <TabsContent key={category.id} value={category.id} className="mt-4 flex-1 min-h-0">
               <ScrollArea className="h-full">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pr-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 pr-3">
                   {menuItems
                     .filter((item) => item.category === category.id)
                     .map((item) => (
@@ -65,7 +65,7 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
                         onClick={() => onAddItem(item)}
                         className="group flex flex-col overflow-hidden rounded-lg border-2 border-transparent transition-all hover:border-primary hover:shadow-lg cursor-pointer"
                       >
-                        <div className="relative w-full h-40">
+                        <div className="relative w-full h-32">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
@@ -73,18 +73,18 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <CardHeader className="flex-grow pb-2">
-                          <CardTitle className="font-headline text-lg">{item.name}</CardTitle>
-                          <CardDescription className="text-sm text-muted-foreground pt-1 line-clamp-2">
+                        <CardHeader className="flex-grow p-4 pb-1">
+                          <CardTitle className="font-headline text-base">{item.name}</CardTitle>
+                          <CardDescription className="text-xs text-muted-foreground pt-1 line-clamp-2">
                             {item.description}
                           </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                          <div className="flex justify-between items-center pt-2">
-                            <p className="font-bold text-xl text-primary">
+                        <CardContent className="p-4 pt-2">
+                          <div className="flex justify-between items-center">
+                            <p className="font-bold text-lg text-primary">
                               ${item.price.toFixed(2)}
                             </p>
-                            <PlusCircle className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <PlusCircle className="h-7 w-7 text-muted-foreground group-hover:text-primary transition-colors" />
                           </div>
                         </CardContent>
                       </Card>
