@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Card,
@@ -109,14 +110,19 @@ export default function OrderSummary({
   );
 
   const subtotal = activeItems.reduce((acc, item) => {
-    const extrasPrice =
-      item.customizations?.added.reduce(
+    // Calculate the base price for the items
+    const baseItemPrice = item.price * item.quantity;
+    
+    // Calculate the total price for all added extras for this line item
+    const extrasPrice = item.customizations?.added.reduce(
         (extraAcc, extra) => extraAcc + extra.price,
         0
       ) || 0;
-    const totalItemPrice = (item.price + extrasPrice) * item.quantity;
-    return acc + totalItemPrice;
+
+    // The subtotal is the sum of the base item prices and the extra prices
+    return acc + baseItemPrice + extrasPrice;
   }, 0);
+
 
   const selectedPriceList = priceLists.find(
     (pl) => pl.id === activeCheck?.priceListId
@@ -264,13 +270,13 @@ export default function OrderSummary({
                       </h4>
                       <div className="space-y-2 text-sm pl-1">
                         {sentItems.map((item) => {
-                          const extrasPrice =
-                            item.customizations?.added.reduce(
-                              (acc, extra) => acc + extra.price,
-                              0
-                            ) || 0;
-                          const totalItemPrice =
-                            (item.price + extrasPrice) * item.quantity;
+                           const baseItemPrice = item.price * item.quantity;
+                            const extrasPrice =
+                              item.customizations?.added.reduce(
+                                (acc, extra) => acc + extra.price,
+                                0
+                              ) || 0;
+                            const totalItemPrice = baseItemPrice + extrasPrice;
                           return (
                             <div
                               key={item.lineItemId}
@@ -329,13 +335,13 @@ export default function OrderSummary({
                       )}
                       <div className="space-y-2">
                         {newItems.map((item) => {
+                          const baseItemPrice = item.price * item.quantity;
                           const extrasPrice =
                             item.customizations?.added.reduce(
                               (acc, extra) => acc + extra.price,
                               0
                             ) || 0;
-                          const totalItemPrice =
-                            (item.price + extrasPrice) * item.quantity;
+                          const totalItemPrice = baseItemPrice + extrasPrice;
 
                           return (
                             <div
