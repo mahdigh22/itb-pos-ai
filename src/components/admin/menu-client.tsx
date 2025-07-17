@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useOptimistic, useEffect } from "react";
+import { useState, useOptimistic, useEffect, useTransition } from "react";
 import {
   Card,
   CardHeader,
@@ -340,6 +340,7 @@ function MenuItemFormDialog({
 export default function MenuClient() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -435,15 +436,17 @@ export default function MenuClient() {
 
   const handleItemDelete = async () => {
     if (!deletingItem || !currentAdmin) return;
-    manageOptimisticMenuItems({ action: "delete", item: deletingItem });
-    setDeletingItem(null);
-    const result = await deleteMenuItem(currentAdmin.restaurantId, deletingItem.id);
-    if (!result.success) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
-    } else {
-      toast({ title: "Menu Item Deleted" });
-      setMenuItems(prev => prev.filter(item => item.id !== deletingItem.id));
-    }
+    startTransition(async () => {
+        manageOptimisticMenuItems({ action: "delete", item: deletingItem });
+        setDeletingItem(null);
+        const result = await deleteMenuItem(currentAdmin.restaurantId, deletingItem.id);
+        if (!result.success) {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        } else {
+        toast({ title: "Menu Item Deleted" });
+        setMenuItems(prev => prev.filter(item => item.id !== deletingItem.id));
+        }
+    });
   };
 
   const handleCategoryAddSubmit = async (formData: FormData) => {
@@ -452,16 +455,18 @@ export default function MenuClient() {
       id: `optimistic-${Date.now()}`,
       name: formData.get("name") as string,
     };
-    manageOptimisticCategories({ action: "add", category: newCategory });
-    setCategoryAddDialogOpen(false);
-    const result = await addCategory(currentAdmin.restaurantId, formData);
-    if (!result.success) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
-    } else {
-      toast({ title: "Category Added" });
-      const data = await getCategories(currentAdmin.restaurantId);
-      setCategories(data);
-    }
+    startTransition(async () => {
+        manageOptimisticCategories({ action: "add", category: newCategory });
+        setCategoryAddDialogOpen(false);
+        const result = await addCategory(currentAdmin.restaurantId, formData);
+        if (!result.success) {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        } else {
+        toast({ title: "Category Added" });
+        const data = await getCategories(currentAdmin.restaurantId);
+        setCategories(data);
+        }
+    });
   };
 
   const handleCategoryEditSubmit = async (formData: FormData) => {
@@ -479,15 +484,17 @@ export default function MenuClient() {
 
   const handleCategoryDelete = async () => {
     if (!deletingCategory || !currentAdmin) return;
-    manageOptimisticCategories({ action: "delete", category: deletingCategory });
-    setDeletingCategory(null);
-    const result = await deleteCategory(currentAdmin.restaurantId, deletingCategory.id);
-    if (!result.success) {
-      toast({ variant: "destructive", title: "Error", description: result.error });
-    } else {
-      toast({ title: "Category Deleted" });
-      setCategories(prev => prev.filter(cat => cat.id !== deletingCategory.id));
-    }
+    startTransition(async () => {
+        manageOptimisticCategories({ action: "delete", category: deletingCategory });
+        setDeletingCategory(null);
+        const result = await deleteCategory(currentAdmin.restaurantId, deletingCategory.id);
+        if (!result.success) {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        } else {
+        toast({ title: "Category Deleted" });
+        setCategories(prev => prev.filter(cat => cat.id !== deletingCategory.id));
+        }
+    });
   };
 
   if (isLoading) {
@@ -542,7 +549,7 @@ export default function MenuClient() {
                     : "text-green-600 dark:text-green-400";
 
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={isPending && item.id.startsWith('optimistic') ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {
@@ -612,7 +619,7 @@ export default function MenuClient() {
             </TableHeader>
             <TableBody>
               {optimisticCategories.map((category) => (
-                <TableRow key={category.id}>
+                <TableRow key={category.id} className={isPending && category.id.startsWith('optimistic') ? 'opacity-50' : ''}>
                   <TableCell className="font-medium">{category.name}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
