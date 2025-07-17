@@ -122,6 +122,7 @@ export interface Employee {
   password?: string;
   role: "Manager" | "Server" | "Chef";
   startDate: string; // ISO date string
+  restaurantId: string; // New field for multi-tenancy
 }
 
 export interface Admin {
@@ -129,6 +130,7 @@ export interface Admin {
   name: string;
   email: string;
   password?: string;
+  restaurantId: string; // New field for multi-tenancy
 }
 
 export interface PriceList {

@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="admin@default.com"
                 required
                 disabled={isPending}
               />
