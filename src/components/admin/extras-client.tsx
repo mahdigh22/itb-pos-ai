@@ -22,7 +22,7 @@ type IngredientLink = {
   quantity: number;
 };
 
-function ExtraForm({ extra, ingredients, onFormSubmit, onCancel }) {
+function ExtraForm({ extra, ingredients, onFormSubmit, onCancel }: { extra?: Extra | null, ingredients: Ingredient[], onFormSubmit: (data: FormData) => void, onCancel: () => void }) {
     const [ingredientLinks, setIngredientLinks] = useState<IngredientLink[]>([]);
     
     useEffect(() => {
@@ -131,6 +131,7 @@ export default function ExtrasClient({ initialExtras, availableIngredients }: { 
             id: `optimistic-${Date.now()}`,
             name: formData.get('name') as string,
             price: parseFloat(formData.get('price') as string) || 0,
+            ingredientLinks: JSON.parse(formData.get('ingredientLinks') as string || '[]'),
         };
         
         setAddDialogOpen(false);
