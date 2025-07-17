@@ -10,32 +10,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import ItbIcon from '@/components/itb-icon';
-import { loginAdmin } from './actions';
+import { signupAdmin } from './actions';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-export default function AdminLoginPage() {
+export default function AdminSignupPage() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = (formData: FormData) => {
+  const handleSignup = (formData: FormData) => {
     startTransition(async () => {
-      const result = await loginAdmin(formData);
+      const result = await signupAdmin(formData);
       
       if (result.success && result.admin) {
         localStorage.setItem('currentAdmin', JSON.stringify(result.admin));
         
         toast({
-          title: 'Admin Login Successful',
-          description: `Welcome, ${result.admin.name}!`,
+          title: 'Account Created!',
+          description: `Welcome, ${result.admin.name}! Your restaurant is ready.`,
         });
         router.push('/admin');
       } else {
         toast({
           variant: 'destructive',
-          title: 'Login Failed',
-          description: result.error || 'Incorrect email or password.',
+          title: 'Sign-up Failed',
+          description: result.error || 'Could not create account.',
         });
       }
     });
@@ -43,49 +43,46 @@ export default function AdminLoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <Card className="w-full max-w-sm mx-auto shadow-2xl">
+      <Card className="w-full max-w-md mx-auto shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
             <ItbIcon className="h-10 w-10" />
-            <CardTitle className="text-3xl font-headline text-primary">Backoffice</CardTitle>
+            <CardTitle className="text-3xl font-headline text-primary">Create Restaurant</CardTitle>
           </div>
-          <CardDescription>Enter your admin credentials to access the portal.</CardDescription>
+          <CardDescription>Set up your restaurant and administrator account.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleLogin} className="space-y-4">
+          <form action={handleSignup} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="admin@default.com"
-                required
-                disabled={isPending}
-              />
+              <Label htmlFor="restaurantName">Restaurant Name</Label>
+              <Input id="restaurantName" name="restaurantName" placeholder="e.g., The Salty Spoon" required disabled={isPending} />
+            </div>
+            <Separator />
+            <p className="text-sm font-medium text-muted-foreground pt-2">Administrator Details</p>
+             <div className="space-y-2">
+              <Label htmlFor="adminName">Your Full Name</Label>
+              <Input id="adminName" name="adminName" placeholder="e.g., Alex Doe" required disabled={isPending} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Your Email</Label>
+              <Input id="email" name="email" type="email" placeholder="you@example.com" required disabled={isPending} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                disabled={isPending}
-              />
+              <Input id="password" name="password" type="password" required disabled={isPending} />
             </div>
             <Button type="submit" className="w-full h-12 text-lg mt-4" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              Login
+              Create & Login
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex-col gap-4">
+         <CardFooter className="flex-col gap-4">
             <Separator />
             <div className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link href="/admin/signup" className="font-semibold text-primary hover:underline">
-                    Create a new restaurant
+                Already have an account?{' '}
+                <Link href="/admin/login" className="font-semibold text-primary hover:underline">
+                    Login here
                 </Link>
             </div>
         </CardFooter>

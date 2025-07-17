@@ -7,7 +7,8 @@ import type { Employee } from '@/lib/types';
 import { ensureDefaultRestaurant } from '@/lib/data';
 
 export async function loginEmployee(formData: FormData) {
-  await ensureDefaultRestaurant();
+  // We no longer want to auto-create a restaurant from the employee login page.
+  // Let's ensure one exists, but the primary creation path is via admin login/signup.
 
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -19,7 +20,14 @@ export async function loginEmployee(formData: FormData) {
   try {
     const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
     if (restaurantsSnapshot.empty) {
-      return { success: false, error: 'No restaurants configured in the system. Please log in as an admin first.' };
+      // Create a default restaurant if none exist, useful for first-time setup.
+      await ensureDefaultRestaurant();
+      // After creation, re-fetch to get the list (which will now have one).
+      const newRestaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
+      if (newRestaurantsSnapshot.empty) {
+        return { success: false, error: 'System not initialized. Please log in as an admin first.' };
+      }
+      return { success: false, error: 'System has been initialized. Please try logging in again.' };
     }
 
     for (const restaurantDoc of restaurantsSnapshot.docs) {
@@ -44,11 +52,13 @@ export async function loginEmployee(formData: FormData) {
           };
           return { success: true, employee };
         } else {
+          // Found the email but password doesn't match. We can stop searching.
           return { success: false, error: 'Invalid password.' };
         }
       }
     }
 
+    // Looped through all restaurants and didn't find the email.
     return { success: false, error: 'No employee found with that email.' };
 
   } catch (e) {
