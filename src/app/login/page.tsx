@@ -8,9 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import ItbIcon from '@/components/itb-icon';
 import { loginEmployee } from './actions';
-import { Loader2, Languages } from 'lucide-react';
+import { Loader2, Languages, UtensilsCrossed } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -109,7 +108,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm mx-auto shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
-            <ItbIcon className="h-10 w-10" />
+            <UtensilsCrossed className="h-10 w-10 text-primary" />
             <CardTitle className="text-3xl font-headline text-primary">{t('posTitle')}</CardTitle>
           </div>
           <CardDescription>{t('posDescription')}</CardDescription>

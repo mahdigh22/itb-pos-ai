@@ -9,9 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import ItbIcon from '@/components/itb-icon';
 import { signupAdmin } from './actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 export default function AdminSignupPage() {
@@ -46,7 +45,7 @@ export default function AdminSignupPage() {
       <Card className="w-full max-w-md mx-auto shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-3 mb-2">
-            <ItbIcon className="h-10 w-10" />
+            <UtensilsCrossed className="h-10 w-10 text-primary" />
             <CardTitle className="text-3xl font-headline text-primary">Create Restaurant</CardTitle>
           </div>
           <CardDescription>Set up your restaurant and administrator account.</CardDescription>

@@ -62,10 +62,10 @@ import {
   ClipboardCheck,
   UserCircle,
   Languages,
+  UtensilsCrossed,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import ItbIcon from "@/components/itb-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -666,8 +666,8 @@ export default function Home() {
                   href="/"
                   className="flex items-center gap-2 text-lg font-headline font-semibold"
                 >
-                  <ItbIcon className="h-8 w-8" />
-                  <span className="text-xl text-primary font-bold">{t('posTitle')}</span>
+                  <UtensilsCrossed className="h-8 w-8 text-primary" />
+                  <span className="text-xl text-primary font-bold">{restaurantName}</span>
                 </Link>
 
                 <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">

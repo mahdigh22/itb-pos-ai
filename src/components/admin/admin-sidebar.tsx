@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square, BarChart, Languages } from "lucide-react";
+import { LayoutGrid, BookOpen, Users, Briefcase, Settings, LogOut, List, Sparkles, Square, BarChart, Languages, UtensilsCrossed } from "lucide-react";
 import {
     Sidebar,
     SidebarHeader,
@@ -15,12 +15,15 @@ import {
     SidebarFooter,
     SidebarTrigger,
 } from "@/components/ui/sidebar";
-import ItbIcon from "../itb-icon";
 import { ThemeToggle } from "../theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { Button } from "../ui/button";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { useState, useEffect } from "react";
+import type { Admin } from "@/lib/types";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation('common');
@@ -53,6 +56,21 @@ export default function AdminSidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const { t } = useTranslation('common');
+    const [restaurantName, setRestaurantName] = useState("Backoffice");
+
+    useEffect(() => {
+        const fetchRestaurantName = async () => {
+            const adminData = localStorage.getItem('currentAdmin');
+            if(adminData){
+                const admin: Admin = JSON.parse(adminData);
+                const restaurantDoc = await getDoc(doc(db, "restaurants", admin.restaurantId));
+                if(restaurantDoc.exists()){
+                    setRestaurantName(restaurantDoc.data().name);
+                }
+            }
+        };
+        fetchRestaurantName();
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('currentAdmin');
@@ -75,9 +93,9 @@ export default function AdminSidebar() {
         <Sidebar>
             <SidebarHeader>
                  <div className="flex items-center gap-2 p-2">
-                    <ItbIcon className="h-8 w-8 flex-shrink-0" />
+                    <UtensilsCrossed className="h-8 w-8 flex-shrink-0 text-primary" />
                     <div className="group-data-[collapsible=icon]:hidden group-data-[collapsible=offcanvas]:hidden">
-                        <h1 className="text-lg font-headline font-semibold text-sidebar-primary">{t('backofficeTitle')}</h1>
+                        <h1 className="text-lg font-headline font-semibold text-sidebar-primary">{restaurantName}</h1>
                     </div>
                 </div>
             </SidebarHeader>
