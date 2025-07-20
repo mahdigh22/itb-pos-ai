@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -147,6 +146,7 @@ const SidebarProvider = React.forwardRef<
             )}
             ref={ref}
             {...props}
+            data-state={isMobile ? "mobile" : state}
           >
             {children}
           </div>
@@ -216,7 +216,8 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className={cn("hidden md:flex flex-col h-full bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+        className={cn("hidden md:flex flex-col h-full bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out fixed top-0",
+         "ltr:left-0 rtl:right-0",
          state === 'expanded' ? 'w-[--sidebar-width]' : 'w-[--sidebar-width-icon]',
          className
         )}
@@ -675,5 +676,3 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
-    
