@@ -1,9 +1,22 @@
 
 'use server';
 
-import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Admin } from '@/lib/types';
+
+async function isEmailInUse(email: string): Promise<boolean> {
+    const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
+    for (const restaurantDoc of restaurantsSnapshot.docs) {
+        const adminsCollectionRef = collection(db, 'restaurants', restaurantDoc.id, 'admins');
+        const q = query(adminsCollectionRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return true;
+        }
+    }
+    return false;
+}
 
 export async function signupAdmin(formData: FormData) {
   const restaurantName = formData.get('restaurantName') as string;
@@ -14,25 +27,27 @@ export async function signupAdmin(formData: FormData) {
   if (!restaurantName || !adminName || !email || !password) {
     return { success: false, error: 'All fields are required.' };
   }
+  
+  const emailExists = await isEmailInUse(email);
+  if (emailExists) {
+      return { success: false, error: 'This email address is already in use.' };
+  }
 
   try {
-    // 1. Create the new restaurant document
     const restaurantRef = await addDoc(collection(db, 'restaurants'), {
       name: restaurantName,
       createdAt: new Date(),
     });
     const restaurantId = restaurantRef.id;
 
-    // 2. Create the admin user within the new restaurant's 'admins' sub-collection
     const adminRef = doc(collection(db, 'restaurants', restaurantId, 'admins'));
     await setDoc(adminRef, {
       name: adminName,
       email: email,
-      password: password, // In a real app, this should be hashed!
+      password: password, 
     });
     const adminId = adminRef.id;
 
-    // 3. Prepare admin object to return for auto-login
     const admin: Omit<Admin, 'password'> = {
         id: adminId,
         name: adminName,
