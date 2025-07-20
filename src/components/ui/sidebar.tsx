@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -658,7 +659,6 @@ export {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInput,
