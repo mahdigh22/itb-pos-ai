@@ -61,6 +61,7 @@ import {
   LayoutGrid,
   ClipboardCheck,
   UserCircle,
+  Languages,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,42 @@ import {
 import { db } from "@/lib/firebase";
 import Bill from "@/components/pos/bill";
 import { useTranslation } from "react-i18next";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+
+
+function LanguageSwitcher() {
+  const { i18n, t } = useTranslation('common');
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
+  
+   useEffect(() => {
+    document.documentElement.lang = i18n.language;
+    document.documentElement.dir = i18n.dir(i18n.language);
+  }, [i18n.language, i18n]);
+
+  return (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
+                            <Languages className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 // Debounce function
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
@@ -644,6 +681,7 @@ export default function Home() {
 
                 <div className="flex items-center gap-2">
                   <ThemeToggle />
+                  <LanguageSwitcher />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-2">

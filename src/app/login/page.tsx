@@ -10,34 +10,44 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import ItbIcon from '@/components/itb-icon';
 import { loginEmployee } from './actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 function LanguageSwitcher() {
-  const { i18n } = useTranslation();
-  const currentLanguage = i18n.language;
+  const { i18n, t } = useTranslation('common');
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
 
   useEffect(() => {
-    document.documentElement.lang = currentLanguage;
-    document.documentElement.dir = i18n.dir(currentLanguage);
-  }, [currentLanguage, i18n]);
+    document.documentElement.lang = i18n.language;
+    document.documentElement.dir = i18n.dir(i18n.language);
+  }, [i18n.language, i18n]);
 
   return (
-     <div className="absolute top-4 right-4">
-        <Select value={currentLanguage} onValueChange={changeLanguage}>
-            <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Language" />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="ar">العربية</SelectItem>
-            </SelectContent>
-        </Select>
+    <div className="absolute top-4 right-4">
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
+                                <Languages className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     </div>
   );
 }
