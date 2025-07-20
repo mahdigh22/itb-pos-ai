@@ -1,0 +1,11 @@
+{
+    "backofficeTitle": "Backoffice",
+    "backofficeDescription": "Enter your admin credentials to access the portal.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "loginButton": "Login",
+    "loginSuccessTitle": "Admin Login Successful",
+    "loginSuccessDescription": "Welcome, {{name}}!",
+    "loginFailedTitle": "Login Failed",
+    "loginFailedDescription": "Incorrect email or password."
+}

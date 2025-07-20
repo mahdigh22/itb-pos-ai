@@ -1,0 +1,11 @@
+{
+    "backofficeTitle": "المكتب الخلفي",
+    "backofficeDescription": "أدخل بيانات اعتماد المسؤول للوصول إلى البوابة.",
+    "emailLabel": "البريد الإلكتروني",
+    "passwordLabel": "كلمة المرور",
+    "loginButton": "تسجيل الدخول",
+    "loginSuccessTitle": "تم تسجيل دخول المسؤول بنجاح",
+    "loginSuccessDescription": "مرحباً بك، {{name}}!",
+    "loginFailedTitle": "فشل تسجيل الدخول",
+    "loginFailedDescription": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+}
