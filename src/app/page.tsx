@@ -281,6 +281,22 @@ export default function Home() {
     };
     fetchInitialData();
   }, [router, i18n]);
+  
+  useEffect(() => {
+    if (!currentUser?.restaurantId) return;
+
+    const settingsDocRef = doc(db, "restaurants", currentUser.restaurantId, "settings", "main");
+    const unsubscribe = onSnapshot(settingsDocRef, (doc) => {
+      if (doc.exists()) {
+        const newSettings = doc.data() as { defaultLanguage: 'en' | 'ar' };
+        if (newSettings.defaultLanguage && !localStorage.getItem('i18nextLng')) {
+          i18n.changeLanguage(newSettings.defaultLanguage);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.restaurantId, i18n]);
 
   useEffect(() => {
     if (!currentUser?.restaurantId) return;
