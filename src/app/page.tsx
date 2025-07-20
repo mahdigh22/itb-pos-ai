@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -77,8 +78,11 @@ import {
   query,
   where,
   Timestamp,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import Bill from "@/components/pos/bill";
 
 // Debounce function
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
@@ -110,6 +114,9 @@ export default function Home() {
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(
     null
   );
+  
+  const [billToPrint, setBillToPrint] = useState<Check | null>(null);
+  const billRef = useRef<HTMLDivElement>(null);
 
   const [checks, setChecks] = useState<Check[]>([]);
   const [activeCheckId, setActiveCheckId] = useState<string | null>(null);
@@ -124,6 +131,7 @@ export default function Home() {
     priceLists: PriceList[];
     activePriceListId?: string;
   } | null>(null);
+  const [restaurantName, setRestaurantName] = useState('');
 
   const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState("pos");
@@ -140,6 +148,34 @@ export default function Home() {
       }
     }, 500)
   ).current;
+  
+  useEffect(() => {
+    const handlePrint = async () => {
+        if (billToPrint) {
+            await new Promise(resolve => setTimeout(resolve, 100)); // allow component to render
+            window.print();
+        }
+    };
+    handlePrint();
+  }, [billToPrint]);
+
+  useEffect(() => {
+    const afterPrint = () => {
+      if (billToPrint) {
+        // If it was a Dine In order, finalize it after printing
+        if (billToPrint.orderType === 'Dine In' && currentUser?.restaurantId) {
+            deleteCheck(currentUser.restaurantId, billToPrint.id);
+            toast({
+                title: "Bill Closed",
+                description: `${billToPrint.name}'s bill has been paid and closed.`,
+            });
+        }
+        setBillToPrint(null);
+      }
+    };
+    window.addEventListener('afterprint', afterPrint);
+    return () => window.removeEventListener('afterprint', afterPrint);
+  }, [billToPrint, currentUser?.restaurantId, toast]);
 
   useEffect(() => {
     let employeeData = null;
@@ -175,6 +211,7 @@ export default function Home() {
         fetchedExtras,
         fetchedSettings,
         fetchedTables,
+        restaurantDoc,
       ] = await Promise.all([
         getUsers(restaurantId),
         fetchMenuItems(restaurantId),
@@ -182,6 +219,7 @@ export default function Home() {
         getExtras(restaurantId),
         getSettings(restaurantId),
         getTables(restaurantId),
+        getDoc(doc(db, 'restaurants', restaurantId))
       ]);
       setMembers(fetchedMembers);
       setMenuItems(fetchedMenuItems);
@@ -189,6 +227,9 @@ export default function Home() {
       setAvailableExtras(fetchedExtras);
       setSettings(fetchedSettings);
       setTables(fetchedTables);
+      if (restaurantDoc.exists()) {
+        setRestaurantName(restaurantDoc.data().name);
+      }
 
       setIsLoading(false);
     };
@@ -442,6 +483,10 @@ export default function Home() {
         description: `New items for ${originalCheckName} sent to the kitchen.`,
       });
 
+      if (activeCheck.orderType === 'Take Away') {
+        setBillToPrint(activeCheck);
+      }
+      
       const currentChecks = checks;
       const emptyCheck = currentChecks.find(
         (c) => c.items.length === 0 && c.id !== activeCheckId
@@ -478,25 +523,12 @@ export default function Home() {
     }
   };
 
-  const handleFinalizeAndPay = async () => {
-    if (
-      !activeCheck ||
-      !activeCheckId ||
-      activeCheck.items.length === 0 ||
-      !currentUser?.restaurantId
-    )
-      return;
-
-    debouncedUpdateCheck.cancel();
-    const originalCheckName = activeCheck.name;
-
-    await deleteCheck(currentUser.restaurantId, activeCheckId);
-    toast({
-      title: "Bill Closed",
-      description: `${originalCheckName}'s bill has been paid and closed.`,
-    });
+  const handleFinalizeAndPay = () => {
+    if (!activeCheck) return;
+    setBillToPrint(activeCheck);
     setCloseCheckAlertOpen(false);
   };
+  
 
   const handleCloseCheck = () => {
     if (activeCheck?.orderType === "Take Away") {
@@ -504,7 +536,7 @@ export default function Home() {
         variant: "destructive",
         title: "Invalid Action",
         description:
-          'Takeaway orders close when marked complete. Please use "Send to Kitchen".',
+          'Takeaway orders close when sent. Use "Send to Kitchen" to print bill.',
       });
       return;
     }
@@ -555,176 +587,183 @@ export default function Home() {
   }
 
   const closeCheckAlertDescription =
-    "This will close the bill for this table. This assumes the customer has paid and all items have been served. Are you sure?";
+    "This will print the bill and close the check. This assumes the customer has paid. Are you sure?";
 
   return (
     <>
-      <Tabs
-        defaultValue="pos"
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full h-full flex flex-col"
-      >
-        <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-between h-16">
-              <Link
-                href="/"
-                className="flex items-center gap-2 text-lg font-headline font-semibold"
-              >
-                <ItbIcon className="h-8 w-8" />
-                <span className="text-xl text-primary font-bold">Members</span>
-              </Link>
-
-              <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
-                <TabsTrigger
-                  value="pos"
-                  className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Point of Sale
-                </TabsTrigger>
-                <TabsTrigger
-                  value="checks"
-                  className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  <ClipboardCheck className="h-5 w-5" />
-                  Open Checks
-                </TabsTrigger>
-                <TabsTrigger
-                  value="progress"
-                  className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  <ClipboardList className="h-5 w-5" />
-                  Order Progress
-                </TabsTrigger>
-                <TabsTrigger
-                  value="members"
-                  className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  <Users className="h-5 w-5" />
-                  Members
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2">
-                      <UserCircle className="h-5 w-5" />
-                      <span className="hidden md:inline">
-                        {currentUser.name}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>
-                      My Account ({currentUser.role})
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {currentUser.role === "Manager" && (
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin">
-                          <LayoutGrid className="mr-2 h-4 w-4" />
-                          <span>Go to Admin</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
-          <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
-              <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
-                <MenuDisplay
-                  categories={categories}
-                  menuItems={menuItems}
-                  onAddItem={handleAddItem}
-                />
-              </div>
-              <div className="lg:col-span-2 xl:col-span-1 h-full">
-                <OrderSummary
-                  activeCheck={activeCheck}
-                  checks={checks}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onRemoveItem={handleRemoveItem}
-                  onNewCheck={handleNewCheck}
-                  onSendToKitchen={handleSendToKitchen}
-                  onCloseCheck={handleCloseCheck}
-                  onClearCheck={handleClearCheck}
-                  onCustomizeItem={handleStartCustomization}
-                  onSwitchCheck={handleSwitchCheck}
-                  onUpdateCheckDetails={updateActiveCheckDetails}
-                  onTableSelect={handleTableSelect}
-                  priceLists={settings.priceLists}
-                  taxRate={settings.taxRate}
-                  tables={tables}
-                  availableExtras={availableExtras}
-                />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="checks" className="flex-grow min-h-0 h-full mt-0">
-            <OpenChecksDisplay
-              checks={checks}
-              activeCheckId={activeCheckId}
-              onSelectCheck={handleSelectCheckAndSwitchTab}
-              priceLists={settings.priceLists}
-              taxRate={settings.taxRate}
-              restaurantId={currentUser.restaurantId}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="progress"
-            className="flex-grow min-h-0 h-full mt-0"
-          >
-            <OrderProgress
-              onCompleteOrder={handleCompleteOrder}
-              onClearOrder={handleClearOrder}
-              tables={tables}
-              restaurantId={currentUser.restaurantId}
-            />
-          </TabsContent>
-
-          <TabsContent value="members" className="h-full mt-0">
-            <MembersList members={members} />
-          </TabsContent>
-        </div>
-
-        <AlertDialog
-          open={isCloseCheckAlertOpen}
-          onOpenChange={setCloseCheckAlertOpen}
+      <div className="print-only">
+        {billToPrint && settings && (
+            <Bill ref={billRef} check={billToPrint} priceLists={settings.priceLists} taxRate={settings.taxRate} restaurantName={restaurantName} />
+        )}
+      </div>
+      <div className="no-print h-full flex flex-col">
+        <Tabs
+          defaultValue="pos"
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full h-full flex flex-col"
         >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-headline">
-                Confirm Action
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {closeCheckAlertDescription}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleFinalizeAndPay}>
-                Yes, Confirm
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </Tabs>
+          <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
+            <div className="container mx-auto px-4">
+              <div className="flex items-center justify-between h-16">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2 text-lg font-headline font-semibold"
+                >
+                  <ItbIcon className="h-8 w-8" />
+                  <span className="text-xl text-primary font-bold">Members</span>
+                </Link>
+
+                <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
+                  <TabsTrigger
+                    value="pos"
+                    className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    Point of Sale
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="checks"
+                    className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    <ClipboardCheck className="h-5 w-5" />
+                    Open Checks
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="progress"
+                    className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    <ClipboardList className="h-5 w-5" />
+                    Order Progress
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="members"
+                    className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    <Users className="h-5 w-5" />
+                    Members
+                  </TabsTrigger>
+                </TabsList>
+
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center gap-2">
+                        <UserCircle className="h-5 w-5" />
+                        <span className="hidden md:inline">
+                          {currentUser.name}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>
+                        My Account ({currentUser.role})
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {currentUser.role === "Manager" && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin">
+                            <LayoutGrid className="mr-2 h-4 w-4" />
+                            <span>Go to Admin</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
+            <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
+                <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
+                  <MenuDisplay
+                    categories={categories}
+                    menuItems={menuItems}
+                    onAddItem={handleAddItem}
+                  />
+                </div>
+                <div className="lg:col-span-2 xl:col-span-1 h-full">
+                  <OrderSummary
+                    activeCheck={activeCheck}
+                    checks={checks}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    onRemoveItem={handleRemoveItem}
+                    onNewCheck={handleNewCheck}
+                    onSendToKitchen={handleSendToKitchen}
+                    onCloseCheck={handleCloseCheck}
+                    onClearCheck={handleClearCheck}
+                    onCustomizeItem={handleStartCustomization}
+                    onSwitchCheck={handleSwitchCheck}
+                    onUpdateCheckDetails={updateActiveCheckDetails}
+                    onTableSelect={handleTableSelect}
+                    priceLists={settings.priceLists}
+                    taxRate={settings.taxRate}
+                    tables={tables}
+                    availableExtras={availableExtras}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="checks" className="flex-grow min-h-0 h-full mt-0">
+              <OpenChecksDisplay
+                checks={checks}
+                activeCheckId={activeCheckId}
+                onSelectCheck={handleSelectCheckAndSwitchTab}
+                priceLists={settings.priceLists}
+                taxRate={settings.taxRate}
+                restaurantId={currentUser.restaurantId}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="progress"
+              className="flex-grow min-h-0 h-full mt-0"
+            >
+              <OrderProgress
+                onCompleteOrder={handleCompleteOrder}
+                onClearOrder={handleClearOrder}
+                tables={tables}
+                restaurantId={currentUser.restaurantId}
+              />
+            </TabsContent>
+
+            <TabsContent value="members" className="h-full mt-0">
+              <MembersList members={members} />
+            </TabsContent>
+          </div>
+
+          <AlertDialog
+            open={isCloseCheckAlertOpen}
+            onOpenChange={setCloseCheckAlertOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-headline">
+                  Confirm Action
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {closeCheckAlertDescription}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleFinalizeAndPay}>
+                  Yes, Print & Close
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Tabs>
+      </div>
       {customizingItem && (
         <CustomizeItemDialog
           item={customizingItem}

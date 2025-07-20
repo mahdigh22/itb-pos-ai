@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -81,4 +82,24 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+  .print-only {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  body {
+    background-color: white;
+  }
+}
+
+@page {
+  size: 80mm auto; /* Common thermal printer width */
+  margin: 0;
 }
