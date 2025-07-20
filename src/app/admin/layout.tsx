@@ -55,7 +55,7 @@ export default function AdminLayout({
       <div className="flex h-screen bg-background">
         <AdminSidebar />
         <main className={cn(
-          "flex-1 p-8 overflow-y-auto transition-all duration-300 ease-in-out",
+          "p-8 overflow-y-auto transition-all duration-300 ease-in-out",
           "group-data-[state=expanded]/sidebar-wrapper:md:ml-64",
           "group-data-[state=collapsed]/sidebar-wrapper:md:ml-14",
           "group-data-[state=expanded]/sidebar-wrapper:rtl:md:mr-64",
