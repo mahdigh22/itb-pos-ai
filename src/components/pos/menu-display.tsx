@@ -7,6 +7,7 @@ import type { Category, MenuItem } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
 import Link from 'next/link';
 import { Button } from '../ui/button';
+import { useTranslation } from 'react-i18next';
 
 interface MenuDisplayProps {
   categories: Category[];
@@ -15,19 +16,21 @@ interface MenuDisplayProps {
 }
 
 export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDisplayProps) {
+  const { t } = useTranslation('common');
+  
   if (categories.length === 0) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="font-headline">Menu</CardTitle>
-          <CardDescription>Select items to add to the order</CardDescription>
+          <CardTitle className="font-headline">{t('menu')}</CardTitle>
+          <CardDescription>{t('menuDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 justify-center items-center text-center text-muted-foreground">
             <BookOpen className="w-16 h-16 mb-4"/>
-            <p className="font-semibold text-lg">Your menu is empty.</p>
-            <p className="text-sm mb-4">Add categories and items in the backoffice to get started.</p>
+            <p className="font-semibold text-lg">{t('menuEmpty')}</p>
+            <p className="text-sm mb-4">{t('menuEmptyDescription')}</p>
             <Button asChild>
-                <Link href="/admin/menu">Go to Menu Management</Link>
+                <Link href="/admin/menu">{t('goToMenuManagement')}</Link>
             </Button>
         </CardContent>
       </Card>
@@ -37,8 +40,8 @@ export default function MenuDisplay({ categories, menuItems, onAddItem }: MenuDi
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="font-headline">Menu</CardTitle>
-        <CardDescription>Select items to add to the order</CardDescription>
+        <CardTitle className="font-headline">{t('menu')}</CardTitle>
+        <CardDescription>{t('menuDescription')}</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0">
         <Tabs defaultValue={categories[0].id} className="w-full flex-1 flex flex-col min-h-0">

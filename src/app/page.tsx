@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -83,6 +84,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Bill from "@/components/pos/bill";
+import { useTranslation } from "react-i18next";
 
 // Debounce function
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
@@ -107,6 +109,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 
 export default function Home() {
   const router = useRouter();
+  const { t } = useTranslation('common');
 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -166,8 +169,8 @@ export default function Home() {
         if (billToPrint.orderType === 'Dine In' && currentUser?.restaurantId) {
             deleteCheck(currentUser.restaurantId, billToPrint.id);
             toast({
-                title: "Bill Closed",
-                description: `${billToPrint.name}'s bill has been paid and closed.`,
+                title: t('billClosedTitle'),
+                description: t('billClosedDescription', { name: billToPrint.name }),
             });
         }
         setBillToPrint(null);
@@ -175,7 +178,7 @@ export default function Home() {
     };
     window.addEventListener('afterprint', afterPrint);
     return () => window.removeEventListener('afterprint', afterPrint);
-  }, [billToPrint, currentUser?.restaurantId, toast]);
+  }, [billToPrint, currentUser?.restaurantId, toast, t]);
 
   useEffect(() => {
     let employeeData = null;
@@ -272,8 +275,8 @@ export default function Home() {
         console.error("Error in checks snapshot listener: ", error);
         toast({
           variant: "destructive",
-          title: "Real-time Error",
-          description: "Could not fetch live check updates.",
+          title: t('realTimeError'),
+          description: t('realTimeChecksError'),
         });
       }
     );
@@ -281,7 +284,7 @@ export default function Home() {
     return () => {
       unsubscribeChecks();
     };
-  }, [toast, activeCheckId, currentUser, settings]);
+  }, [toast, activeCheckId, currentUser, settings, t]);
 
   const updateActiveCheckDetails = async (
     updates: Partial<Omit<Check, "id">>
@@ -424,8 +427,8 @@ export default function Home() {
     if (emptyCheck) {
       setActiveCheckId(emptyCheck.id);
       toast({
-        title: "Switched to Empty Check",
-        description: `Now editing ${emptyCheck.name}.`,
+        title: t('switchedToEmptyCheck'),
+        description: t('switchedToEmptyCheckDescription', { name: emptyCheck.name }),
       });
       return;
     }
@@ -442,8 +445,8 @@ export default function Home() {
     setActiveCheckId(newCheck.id);
 
     toast({
-      title: "New Check Started",
-      description: `Switched to ${newCheck.name}.`,
+      title: t('newCheckStarted'),
+      description: t('switchedToCheck', { name: newCheck.name }),
     });
   };
 
@@ -462,9 +465,8 @@ export default function Home() {
     if (!activeCheck.orderType) {
       toast({
         variant: "destructive",
-        title: "Order Type Required",
-        description:
-          "Please select Dine In or Take Away before sending to kitchen.",
+        title: t('orderTypeRequired'),
+        description: t('orderTypeRequiredDescription'),
       });
       return;
     }
@@ -479,8 +481,8 @@ export default function Home() {
 
     if (result.success) {
       toast({
-        title: "Items Sent!",
-        description: `New items for ${originalCheckName} sent to the kitchen.`,
+        title: t('itemsSent'),
+        description: t('itemsSentDescription', { name: originalCheckName }),
       });
 
       if (activeCheck.orderType === 'Take Away') {
@@ -495,8 +497,8 @@ export default function Home() {
       if (emptyCheck) {
         setActiveCheckId(emptyCheck.id);
         toast({
-          title: "Switched to Empty Check",
-          description: "The previous check is available in 'Open Checks'.",
+          title: t('switchedToEmptyCheck'),
+          description: t('previousCheckInOpen'),
         });
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
@@ -510,15 +512,15 @@ export default function Home() {
         const newCheck = await addCheck(currentUser.restaurantId, newCheckData);
         setActiveCheckId(newCheck.id);
         toast({
-          title: "New Check Started",
-          description: "The previous check is available in 'Open Checks'.",
+          title: t('newCheckStarted'),
+          description: t('previousCheckInOpen'),
         });
       }
     } else {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: result.error || "Could not send items to kitchen.",
+        title: t('error'),
+        description: result.error || t('sendToKitchenError'),
       });
     }
   };
@@ -534,9 +536,8 @@ export default function Home() {
     if (activeCheck?.orderType === "Take Away") {
       toast({
         variant: "destructive",
-        title: "Invalid Action",
-        description:
-          'Takeaway orders close when sent. Use "Send to Kitchen" to print bill.',
+        title: t('invalidAction'),
+        description: t('takeAwayCloseError'),
       });
       return;
     }
@@ -544,9 +545,8 @@ export default function Home() {
     if (!activeCheck?.orderType) {
       toast({
         variant: "destructive",
-        title: "Order Type Required",
-        description:
-          "Please select Dine In or Take Away before closing the check.",
+        title: t('orderTypeRequired'),
+        description: t('orderTypeBeforeCloseError'),
       });
       return;
     }
@@ -558,8 +558,8 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await updateOrderStatus(currentUser.restaurantId, orderId, "Completed");
     toast({
-      title: "Order Completed",
-      description: "The order has been marked as complete.",
+      title: t('orderCompleted'),
+      description: t('orderCompletedDescription'),
     });
   };
 
@@ -567,8 +567,8 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await archiveOrder(currentUser.restaurantId, orderId);
     toast({
-      title: "Order Cleared",
-      description: "The completed order has been removed from the view.",
+      title: t('orderCleared'),
+      description: t('orderClearedDescription'),
     });
   };
 
@@ -585,9 +585,6 @@ export default function Home() {
       </div>
     );
   }
-
-  const closeCheckAlertDescription =
-    "This will print the bill and close the check. This assumes the customer has paid. Are you sure?";
 
   return (
     <>
@@ -611,7 +608,7 @@ export default function Home() {
                   className="flex items-center gap-2 text-lg font-headline font-semibold"
                 >
                   <ItbIcon className="h-8 w-8" />
-                  <span className="text-xl text-primary font-bold">Members</span>
+                  <span className="text-xl text-primary font-bold">{t('posTitle')}</span>
                 </Link>
 
                 <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
@@ -620,28 +617,28 @@ export default function Home() {
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <LayoutDashboard className="h-5 w-5" />
-                    Point of Sale
+                    {t('pointOfSale')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="checks"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardCheck className="h-5 w-5" />
-                    Open Checks
+                    {t('openChecks')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="progress"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardList className="h-5 w-5" />
-                    Order Progress
+                    {t('orderProgress')}
                   </TabsTrigger>
                   <TabsTrigger
                     value="members"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <Users className="h-5 w-5" />
-                    Members
+                    {t('members')}
                   </TabsTrigger>
                 </TabsList>
 
@@ -658,20 +655,20 @@ export default function Home() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>
-                        My Account ({currentUser.role})
+                        {t('myAccount', { role: currentUser.role })}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {currentUser.role === "Manager" && (
                         <DropdownMenuItem asChild>
                           <Link href="/admin">
                             <LayoutGrid className="mr-2 h-4 w-4" />
-                            <span>Go to Admin</span>
+                            <span>{t('goToAdmin')}</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>{t('logout')}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -748,16 +745,16 @@ export default function Home() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-headline">
-                  Confirm Action
+                  {t('confirmAction')}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {closeCheckAlertDescription}
+                  {t('finalizeAndPayConfirmation')}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleFinalizeAndPay}>
-                  Yes, Print & Close
+                  {t('yesPrintAndClose')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

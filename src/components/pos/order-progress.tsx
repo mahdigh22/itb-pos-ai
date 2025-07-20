@@ -64,6 +64,7 @@ import CustomizeItemDialog from "./customize-item-dialog";
 import { editOrderItem, cancelOrderItem } from "@/app/pos/actions";
 import { getExtras } from "@/app/admin/extras/actions";
 import { getMenuItems } from "@/app/admin/menu/actions";
+import { useTranslation } from "react-i18next";
 
 interface OrderProgressProps {
   onCompleteOrder: (orderId: string) => void;
@@ -80,11 +81,11 @@ const statusConfig: Record<
     badgeVariant: "default" | "secondary" | "outline" | "destructive";
   }
 > = {
-  Pending: { text: "Pending", icon: Hourglass, badgeVariant: "secondary" },
-  Preparing: { text: "Preparing", icon: Soup, badgeVariant: "secondary" },
-  Ready: { text: "Ready", icon: Package, badgeVariant: "outline" },
-  Completed: { text: "Completed", icon: CheckCircle, badgeVariant: "default" },
-  Archived: { text: "Archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
+  Pending: { text: "pending", icon: Hourglass, badgeVariant: "secondary" },
+  Preparing: { text: "preparing", icon: Soup, badgeVariant: "secondary" },
+  Ready: { text: "ready", icon: Package, badgeVariant: "outline" },
+  Completed: { text: "completed", icon: CheckCircle, badgeVariant: "default" },
+  Archived: { text: "archived", icon: CheckCircle, badgeVariant: "default" }, // Should not be visible
 };
 
 const PENDING_DURATION = 2 * 60 * 1000; // 2 minutes
@@ -104,6 +105,7 @@ function OrderCard({
   onEditItem: (orderId: string, item: OrderItem) => void;
   onCancelItem: (orderId: string, item: OrderItem) => void;
 }) {
+  const { t } = useTranslation('common');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -157,15 +159,15 @@ function OrderCard({
           </div>
           <p className="text-sm text-muted-foreground pl-6">
             {order.orderType === "Dine In" &&
-              `Table: ${order.tableName || "N/A"}`}
+              `${t('table')}: ${order.tableName || "N/A"}`}
             {order.orderType === "Take Away" &&
-              `For ${order.customerName || "N/A"}`}
+              `${t('customer')}: ${order.customerName || "N/A"}`}
             {" · "}
-            Total: ${order.total.toFixed(2)}
+            {t('total')}: ${order.total.toFixed(2)}
             {order.discountApplied && order.discountApplied > 0 && (
               <span className="text-green-600 dark:text-green-400 font-medium">
                 {" "}
-                ({order.discountApplied}% off)
+                ({order.discountApplied}% {t('off')})
               </span>
             )}
           </p>
@@ -182,11 +184,11 @@ function OrderCard({
             )}
           >
             <config.icon className="h-3 w-3 mr-1.5" />
-            {config.text}
+            {t(config.text)}
           </Badge>
           {currentStatus === "Ready" && (
             <Button size="sm" onClick={() => onCompleteOrder(order.id)}>
-              <CheckCircle className="h-4 w-4 mr-2" /> Mark Completed
+              <CheckCircle className="h-4 w-4 mr-2" /> {t('markCompleted')}
             </Button>
           )}
           {currentStatus === "Completed" && (
@@ -197,7 +199,7 @@ function OrderCard({
               onClick={() => onClearOrder(order.id)}
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">Clear Order</span>
+              <span className="sr-only">{t('clearOrder')}</span>
             </Button>
           )}
         </div>
@@ -219,10 +221,10 @@ function OrderCard({
                 <span className="font-medium">{item.quantity}x</span>
                 <span>{item.name}</span>
                  {item.status === 'edited' && (
-                  <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">Edited</Badge>
+                  <Badge variant="outline" className="h-5 text-xs font-normal border-amber-500 text-amber-500">{t('edited')}</Badge>
                 )}
                 {item.status === 'cancelled' && (
-                  <Badge variant="outline" className="h-5 text-xs font-normal border-red-500 text-red-500">Cancelled</Badge>
+                  <Badge variant="outline" className="h-5 text-xs font-normal border-red-500 text-red-500">{t('cancelled')}</Badge>
                 )}
               </div>
               <div className="flex-grow flex flex-wrap gap-1 mt-1">
@@ -261,13 +263,13 @@ function OrderCard({
                     <DropdownMenuItem
                       onClick={() => onEditItem(order.id, item)}
                     >
-                      <Edit className="mr-2 h-4 w-4" /> Edit
+                      <Edit className="mr-2 h-4 w-4" /> {t('edit')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-destructive"
                       onClick={() => onCancelItem(order.id, item)}
                     >
-                      <Ban className="mr-2 h-4 w-4" /> Cancel Item
+                      <Ban className="mr-2 h-4 w-4" /> {t('cancelItem')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -281,9 +283,9 @@ function OrderCard({
           <p className="text-xs text-muted-foreground mt-1.5 text-right">
             {currentStatus === "Preparing" &&
               prepEndTime > currentTime.getTime() &&
-              `Ready in approx. ${formatDistanceToNowStrict(prepEndTime)}`}
-            {currentStatus === "Ready" && "Ready for pickup!"}
-            {currentStatus === "Completed" && "Order collected."}
+              `${t('readyIn')} approx. ${formatDistanceToNowStrict(prepEndTime)}`}
+            {currentStatus === "Ready" && t('readyForPickup')}
+            {currentStatus === "Completed" && t('orderCollected')}
           </p>
         </div>
       )}
@@ -301,6 +303,7 @@ export default function OrderProgress({
   const [filter, setFilter] = useState<"all" | "Dine In" | "Take Away">("all");
   const [selectedTableId, setSelectedTableId] = useState<string>("all");
   const { toast } = useToast();
+  const { t } = useTranslation('common');
 
   const [customizingItem, setCustomizingItem] = useState<{
     orderId: string;
@@ -350,15 +353,14 @@ export default function OrderProgress({
         console.error("Error in orders snapshot listener: ", error);
         toast({
           variant: "destructive",
-          title: "Real-time Update Error",
-          description:
-            "Could not fetch live order updates. Please check console for details.",
+          title: t('realTimeError'),
+          description: t('realTimeOrdersError'),
         });
       }
     );
 
     return () => unsubscribe();
-  }, [restaurantId, toast]);
+  }, [restaurantId, toast, t]);
 
   useEffect(() => {
     if (filter !== "Dine In") {
@@ -371,8 +373,8 @@ export default function OrderProgress({
     if (!fullMenuItemData) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not find original menu item details to edit.",
+        title: t('error'),
+        description: t('menuItemDetailsError'),
       });
       return;
     }
@@ -388,13 +390,13 @@ export default function OrderProgress({
     const result = await cancelOrderItem(restaurantId, orderId, item.lineItemId);
     if (result.success) {
       toast({
-        title: "Item Cancelled",
-        description: `${item.name} has been cancelled from the order.`,
+        title: t('itemCancelled'),
+        description: t('itemCancelledDescription', { name: item.name }),
       });
     } else {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t('error'),
         description: result.error,
       });
     }
@@ -419,13 +421,13 @@ export default function OrderProgress({
 
     if (result.success) {
       toast({
-        title: "Item Edited",
-        description: `Changes to ${item.name} have been sent to the kitchen.`,
+        title: t('itemEdited'),
+        description: t('itemEditedDescription', { name: item.name }),
       });
     } else {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t('error'),
         description: result.error,
       });
     }
@@ -456,9 +458,9 @@ export default function OrderProgress({
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
             <div>
-              <CardTitle className="font-headline">Order Progress</CardTitle>
+              <CardTitle className="font-headline">{t('orderProgress')}</CardTitle>
               <CardDescription>
-                Track active and recently completed orders in real-time.
+                {t('orderProgressDescription')}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -467,12 +469,12 @@ export default function OrderProgress({
                 onValueChange={(value) => setFilter(value as any)}
               >
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
+                  <SelectValue placeholder={t('filterByType')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Orders</SelectItem>
-                  <SelectItem value="Dine In">Dine In</SelectItem>
-                  <SelectItem value="Take Away">Take Away</SelectItem>
+                  <SelectItem value="all">{t('allOrders')}</SelectItem>
+                  <SelectItem value="Dine In">{t('dineIn')}</SelectItem>
+                  <SelectItem value="Take Away">{t('takeAway')}</SelectItem>
                 </SelectContent>
               </Select>
               {filter === "Dine In" && (
@@ -481,10 +483,10 @@ export default function OrderProgress({
                   onValueChange={setSelectedTableId}
                 >
                   <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by table" />
+                    <SelectValue placeholder={t('filterByTable')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Tables</SelectItem>
+                    <SelectItem value="all">{t('allTables')}</SelectItem>
                     {tables.map((table) => (
                       <SelectItem key={table.id} value={table.id}>
                         {table.name}
@@ -500,16 +502,16 @@ export default function OrderProgress({
           {visibleOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
               <ClipboardList className="w-16 h-16 mb-4" />
-              <p className="font-semibold">No active orders</p>
+              <p className="font-semibold">{t('noActiveOrders')}</p>
               <p className="text-sm">
-                Place a new order to see its progress here.
+                {t('noActiveOrdersDescription')}
               </p>
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center">
               <ClipboardList className="w-16 h-16 mb-4" />
-              <p className="font-semibold text-lg">No orders match filter</p>
-              <p className="text-sm">Try adjusting your filter settings.</p>
+              <p className="font-semibold text-lg">{t('noOrdersMatchFilter')}</p>
+              <p className="text-sm">{t('noOrdersMatchFilterDescription')}</p>
             </div>
           ) : (
             <ScrollArea className="h-full w-full pr-4">

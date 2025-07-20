@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,6 +15,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useTranslation } from "react-i18next";
 
 interface CustomizeItemDialogProps {
   item: OrderItem | null;
@@ -31,6 +33,7 @@ export default function CustomizeItemDialog({
   onSave,
   onClose,
 }: CustomizeItemDialogProps) {
+  const { t } = useTranslation('common');
   const [removed, setRemoved] = useState<{ id: string; name: string }[]>([]);
   const [added, setAdded] = useState<Extra[]>([]);
 
@@ -74,16 +77,16 @@ export default function CustomizeItemDialog({
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="font-headline">
-            Customize: {item.name}
+            {t('customizeItemTitle', { name: item.name })}
           </DialogTitle>
           <DialogDescription>
-            Add or remove ingredients to make it just right.
+            {t('customizeItemDescription')}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto pr-4">
           {optionalIngredients.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-semibold">Optional Ingredients</h4>
+              <h4 className="font-semibold">{t('optionalIngredients')}</h4>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {optionalIngredients.map((ingredient) => (
                   <div
@@ -113,7 +116,7 @@ export default function CustomizeItemDialog({
           )}
           {availableExtras.length > 0 && (
             <div className="space-y-3">
-              <h4 className="font-semibold">Add Extras</h4>
+              <h4 className="font-semibold">{t('addExtras')}</h4>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {availableExtras.map((extra) => (
                   <div key={extra.id} className="flex items-center space-x-2">
@@ -141,10 +144,10 @@ export default function CustomizeItemDialog({
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button type="button" onClick={handleSave}>
-            Save Changes
+            {t('saveChanges')}
           </Button>
         </DialogFooter>
       </DialogContent>
