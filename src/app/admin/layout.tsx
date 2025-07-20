@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/admin/admin-sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import type { Admin } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AdminLayout({
   children,
@@ -19,7 +19,7 @@ export default function AdminLayout({
 
   useEffect(() => {
    
-    if (pathname === '/admin/login') {
+    if (pathname === '/admin/login' || pathname === '/admin/signup') {
         setIsAdminLoaded(true);
         return;
     }
@@ -37,8 +37,7 @@ export default function AdminLayout({
     }
   }, [router, pathname]);
 
-  // If we are on the login page, just render children without the layout shell.
-  if (pathname === '/admin/login') {
+  if (pathname === '/admin/login' || pathname === '/admin/signup') {
     return <>{children}</>;
   }
   
@@ -54,7 +53,11 @@ export default function AdminLayout({
     <SidebarProvider>
       <div className="flex h-screen bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className={cn(
+          "flex-1 p-4 md:p-8 overflow-y-auto transition-all duration-300 ease-in-out",
+          "group-data-[state=expanded]/sidebar-wrapper:md:ml-64",
+          "group-data-[state=collapsed]/sidebar-wrapper:md:ml-14"
+        )}>
           {children}
         </main>
       </div>

@@ -10,6 +10,7 @@ import { Package, Users, Hash, ShoppingBag, UtensilsCrossed } from 'lucide-react
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useTranslation } from 'react-i18next';
 
 interface OpenChecksDisplayProps {
   checks: Check[];
@@ -42,6 +43,7 @@ function calculateTotal(check: Check, priceLists: PriceList[], taxRate: number) 
 
 export default function OpenChecksDisplay({ checks: initialChecks, activeCheckId, onSelectCheck, priceLists, taxRate, restaurantId }: OpenChecksDisplayProps) {
   const [checks, setChecks] = useState<Check[]>(initialChecks);
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -60,8 +62,8 @@ export default function OpenChecksDisplay({ checks: initialChecks, activeCheckId
         <Card className="h-full flex flex-col items-center justify-center">
             <div className="text-center text-muted-foreground flex-grow flex flex-col justify-center items-center h-full">
                 <Package className="w-16 h-16 mb-4" />
-                <p className="font-semibold text-lg">No Open Checks</p>
-                <p className="text-sm">Create a new check in the Point of Sale tab.</p>
+                <p className="font-semibold text-lg">{t('noOpenChecks')}</p>
+                <p className="text-sm">{t('noOpenChecksDescription')}</p>
             </div>
       </Card>
     );
@@ -70,8 +72,8 @@ export default function OpenChecksDisplay({ checks: initialChecks, activeCheckId
   return (
     <Card className="h-full flex flex-col">
         <CardHeader>
-            <CardTitle className="font-headline">Open Checks</CardTitle>
-            <CardDescription>Select a check to view or add items.</CardDescription>
+            <CardTitle className="font-headline">{t('openChecks')}</CardTitle>
+            <CardDescription>{t('openChecksDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow min-h-0">
             <ScrollArea className="h-full pr-4">
@@ -112,7 +114,7 @@ export default function OpenChecksDisplay({ checks: initialChecks, activeCheckId
                                    </div>
                                )}
                                 <div>
-                                    <span>{check.items.length} {check.items.length === 1 ? 'item' : 'items'}</span>
+                                    <span>{check.items.length} {t(check.items.length === 1 ? 'item' : 'items')}</span>
                                 </div>
                             </CardContent>
                             <CardFooter>

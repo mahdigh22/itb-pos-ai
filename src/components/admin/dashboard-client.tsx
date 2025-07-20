@@ -12,8 +12,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { DollarSign, ShoppingCart, Percent, Clock, TrendingUp, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getOrdersForReports } from '@/app/admin/reports/actions';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardClient() {
+    const { t } = useTranslation('common');
     const [orders, setOrders] = useState<ActiveOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
@@ -128,30 +130,30 @@ export default function DashboardClient() {
     const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
 
     const chartConfig = {
-        revenue: { label: "Revenue", color: "hsl(var(--chart-1))" },
-        'Dine In': { label: "Dine In", color: "hsl(var(--chart-1))" },
-        'Take Away': { label: "Take Away", color: "hsl(var(--chart-2))" },
-        'Unknown': { label: "Unknown", color: "hsl(var(--chart-3))" }
+        revenue: { label: t('revenue'), color: "hsl(var(--chart-1))" },
+        'Dine In': { label: t('dineIn'), color: "hsl(var(--chart-1))" },
+        'Take Away': { label: t('takeAway'), color: "hsl(var(--chart-2))" },
+        'Unknown': { label: t('unknown'), color: "hsl(var(--chart-3))" }
     };
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
-                <p className="text-muted-foreground">A real-time overview of your restaurant's performance.</p>
+                <h1 className="text-3xl font-bold font-headline">{t('dashboard')}</h1>
+                <p className="text-muted-foreground">{t('dashboardDescription')}</p>
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Revenue</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalRevenue.toFixed(2)}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Profit</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalProfit.toFixed(2)}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.totalOrders}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Order Value</CardTitle><Percent className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.averageOrderValue.toFixed(2)}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Avg. Prep Time</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.averagePrepTime.toFixed(1)} min</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalRevenue.toFixed(2)}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{t('totalProfit')}</CardTitle><TrendingUp className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.totalProfit.toFixed(2)}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{t('totalOrders')}</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.totalOrders}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{t('avgOrderValue')}</CardTitle><Percent className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">${reportData.averageOrderValue.toFixed(2)}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">{t('avgPrepTime')}</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{reportData.averagePrepTime.toFixed(1)} {t('minutes')}</div></CardContent></Card>
             </div>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="lg:col-span-4">
-                    <CardHeader><CardTitle>Revenue Over Time</CardTitle><CardDescription>Showing revenue for the last 30 days.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle>{t('revenueOverTime')}</CardTitle><CardDescription>{t('revenueLast30Days')}</CardDescription></CardHeader>
                     <CardContent className="pl-2">
                         <ChartContainer config={chartConfig} className="h-[250px] w-full">
                            <ResponsiveContainer>
@@ -167,7 +169,7 @@ export default function DashboardClient() {
                     </CardContent>
                 </Card>
                 <Card className="lg:col-span-3">
-                    <CardHeader><CardTitle>Order Types</CardTitle><CardDescription>Breakdown of orders by type.</CardDescription></CardHeader>
+                    <CardHeader><CardTitle>{t('orderTypes')}</CardTitle><CardDescription>{t('orderTypesBreakdown')}</CardDescription></CardHeader>
                     <CardContent className="flex items-center justify-center">
                         <ChartContainer config={chartConfig} className="h-[200px] w-full max-w-[300px]">
                             <ResponsiveContainer>
@@ -188,16 +190,16 @@ export default function DashboardClient() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Top Selling Items</CardTitle>
-                    <CardDescription>Your most popular menu items by quantity sold.</CardDescription>
+                    <CardTitle>{t('topSellingItems')}</CardTitle>
+                    <CardDescription>{t('topSellingItemsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Item Name</TableHead>
-                                <TableHead className="text-right">Quantity Sold</TableHead>
-                                <TableHead className="text-right">Total Revenue</TableHead>
+                                <TableHead>{t('itemName')}</TableHead>
+                                <TableHead className="text-right">{t('quantitySold')}</TableHead>
+                                <TableHead className="text-right">{t('totalRevenue')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -210,7 +212,7 @@ export default function DashboardClient() {
                             ))}
                              {reportData.sortedTopItems.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center">No sales data available yet.</TableCell>
+                                    <TableCell colSpan={3} className="h-24 text-center">{t('noSalesData')}</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

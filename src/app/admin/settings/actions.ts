@@ -13,6 +13,7 @@ interface Settings {
     taxRate: number;
     priceLists: PriceList[];
     activePriceListId?: string;
+    defaultLanguage: 'en' | 'ar';
 }
 
 export async function getSettings(restaurantId: string): Promise<Settings> {
@@ -24,7 +25,13 @@ export async function getSettings(restaurantId: string): Promise<Settings> {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return docSnap.data() as Settings;
+            const data = docSnap.data();
+            return {
+                taxRate: data.taxRate ?? 0,
+                priceLists: data.priceLists ?? [],
+                activePriceListId: data.activePriceListId,
+                defaultLanguage: data.defaultLanguage ?? 'en',
+            }
         } else {
             const defaultSettings: Settings = {
                 taxRate: 8.5,
@@ -34,13 +41,14 @@ export async function getSettings(restaurantId: string): Promise<Settings> {
                     { id: 'pl-3', name: 'Employee Discount', discount: 50 },
                 ],
                 activePriceListId: 'pl-1',
+                defaultLanguage: 'en',
             };
             await setDoc(docRef, defaultSettings);
             return defaultSettings;
         }
     } catch (error) {
         console.error("Error fetching settings: ", error);
-        return { taxRate: 0, priceLists: [], activePriceListId: undefined };
+        return { taxRate: 0, priceLists: [], activePriceListId: undefined, defaultLanguage: 'en' };
     }
 }
 
@@ -55,6 +63,19 @@ export async function saveTaxRate(restaurantId: string, newRate: number) {
         return { success: false, error: 'Failed to save tax rate.' };
     }
 }
+
+export async function saveDefaultLanguage(restaurantId: string, language: 'en' | 'ar') {
+    try {
+        const docRef = doc(db, 'restaurants', restaurantId, SETTINGS_COLLECTION, MAIN_SETTINGS_DOC);
+        await updateDoc(docRef, { defaultLanguage: language });
+        revalidatePath('/admin/settings');
+        return { success: true };
+    } catch (error) {
+        console.error("Error saving default language: ", error);
+        return { success: false, error: 'Failed to save default language.' };
+    }
+}
+
 
 export async function saveActivePriceList(restaurantId: string, priceListId: string | null) {
     try {
