@@ -2,7 +2,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, updateDoc, getDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Admin } from '@/lib/types';
 
@@ -12,7 +12,6 @@ interface Restaurant {
   admins: Admin[];
 }
 
-// Hardcoded password for super admin access
 const SUPER_ADMIN_PASSWORD = 'superadmin';
 
 export async function verifySuperAdminPassword(password: string) {
@@ -63,7 +62,6 @@ export async function createRestaurant(formData: FormData) {
 
 export async function deleteRestaurant(restaurantId: string) {
     try {
-        // This is a simplified delete. In a real app, you'd also delete all sub-collections (orders, menuitems, etc.)
         await deleteDoc(doc(db, 'restaurants', restaurantId));
         revalidatePath('/superadmin');
         return { success: true };
@@ -73,16 +71,37 @@ export async function deleteRestaurant(restaurantId: string) {
     }
 }
 
+async function isEmailInUse(email: string, exclude?: { restaurantId: string; adminId: string }): Promise<boolean> {
+    const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
+    for (const restaurantDoc of restaurantsSnapshot.docs) {
+        const adminsCollectionRef = collection(db, 'restaurants', restaurantDoc.id, 'admins');
+        const q = query(adminsCollectionRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+        for (const adminDoc of querySnapshot.docs) {
+            if (exclude && exclude.restaurantId === restaurantDoc.id && exclude.adminId === adminDoc.id) {
+                continue;
+            }
+            return true;
+        }
+    }
+    return false;
+}
 
 export async function addRestaurantAdmin(restaurantId: string, formData: FormData) {
+  const email = formData.get('email') as string;
   const adminData = {
     name: formData.get('name') as string,
-    email: formData.get('email') as string,
+    email: email,
     password: formData.get('password') as string,
   };
   
   if (!adminData.name || !adminData.email || !adminData.password) {
       return { success: false, error: "All fields are required." };
+  }
+
+  const emailExists = await isEmailInUse(email);
+  if (emailExists) {
+      return { success: false, error: 'This email address is already in use.' };
   }
 
   try {
@@ -96,13 +115,19 @@ export async function addRestaurantAdmin(restaurantId: string, formData: FormDat
 }
 
 export async function updateRestaurantAdmin(restaurantId: string, adminId: string, formData: FormData) {
+  const email = formData.get('email') as string;
   const adminUpdates: Partial<Admin> = {
     name: formData.get('name') as string,
-    email: formData.get('email') as string,
+    email: email,
   };
   const password = formData.get('password') as string;
   if (password) {
       adminUpdates.password = password;
+  }
+  
+  const emailExists = await isEmailInUse(email, { restaurantId, adminId });
+  if (emailExists) {
+      return { success: false, error: 'This email address is already in use by another admin.' };
   }
 
   try {
