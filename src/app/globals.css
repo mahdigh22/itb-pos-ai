@@ -84,12 +84,16 @@
   }
 }
 
+.print-only {
+  display: none;
+}
+
 @media print {
   .no-print {
-    display: none;
+    display: none !important;
   }
   .print-only {
-    display: block;
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
