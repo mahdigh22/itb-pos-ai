@@ -1,15 +1,11 @@
 
 'use server';
 
-import { collection, query, where, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Admin } from '@/lib/types';
-import { ensureDefaultRestaurant } from '@/lib/data';
-
 
 export async function loginAdmin(formData: FormData) {
-  const restaurantId = await ensureDefaultRestaurant(); 
-
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
 
@@ -18,32 +14,40 @@ export async function loginAdmin(formData: FormData) {
   }
 
   try {
-    const q = query(
-      collection(db, 'restaurants', restaurantId, 'admins'),
-      where('email', '==', email)
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      return { success: false, error: 'Invalid admin email.' };
+    const restaurantsSnapshot = await getDocs(collection(db, 'restaurants'));
+    if (restaurantsSnapshot.empty) {
+        return { success: false, error: 'No restaurants have been configured in the system. Please contact the super administrator.' };
     }
 
-    const adminDoc = querySnapshot.docs[0];
-    const adminData = adminDoc.data();
+    for (const restaurantDoc of restaurantsSnapshot.docs) {
+      const restaurantId = restaurantDoc.id;
+      const adminsCollectionRef = collection(db, 'restaurants', restaurantId, 'admins');
+      
+      const q = query(adminsCollectionRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
 
-    if (adminData.password !== password) {
-        return { success: false, error: 'Invalid password.' };
+      if (!querySnapshot.empty) {
+        const adminDoc = querySnapshot.docs[0];
+        const adminData = adminDoc.data();
+
+        if (adminData.password === password) {
+          const admin: Omit<Admin, 'password'> = {
+            id: adminDoc.id,
+            name: adminData.name,
+            email: adminData.email,
+            restaurantId: restaurantId,
+          };
+          return { success: true, admin };
+        } else {
+          // Found the email but password doesn't match for this restaurant's admin.
+          // We can stop and return error as emails should be unique across admins.
+          return { success: false, error: 'Invalid password.' };
+        }
+      }
     }
-    
-    const admin: Omit<Admin, 'password'> = {
-        id: adminDoc.id,
-        name: adminData.name,
-        email: adminData.email,
-        restaurantId: restaurantId,
-    };
 
-    return { success: true, admin };
+    // Looped through all restaurants and didn't find the email.
+    return { success: false, error: 'No admin found with that email.' };
 
   } catch (e) {
     console.error('Admin login error:', e);
