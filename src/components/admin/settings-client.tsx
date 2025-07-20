@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useOptimistic, useEffect } from 'react';
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList, getSettings } from '@/app/admin/settings/actions';
 import type { PriceList, Admin } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
+import { useTranslation } from 'react-i18next';
 
 interface Settings {
     taxRate: number;
@@ -23,14 +25,15 @@ interface Settings {
 }
 
 function PriceListForm({ priceList, onFormSubmit, onCancel }: { priceList?: PriceList | null, onFormSubmit: (data: FormData) => void, onCancel: () => void }) {
+    const { t } = useTranslation('common');
     return (
         <form onSubmit={(e) => { e.preventDefault(); onFormSubmit(new FormData(e.currentTarget)); }} className="space-y-4">
             <input type="hidden" name="id" value={priceList?.id || ''} />
-            <div className="space-y-2"><Label htmlFor="pl-name">Price List Name</Label><Input id="pl-name" name="name" placeholder="e.g. VIP Members" required defaultValue={priceList?.name}/></div>
-            <div className="space-y-2"><Label htmlFor="pl-discount">Discount (%)</Label><Input id="pl-discount" name="discount" type="number" placeholder="15" required defaultValue={priceList?.discount} /></div>
+            <div className="space-y-2"><Label htmlFor="pl-name">{t('priceListName')}</Label><Input id="pl-name" name="name" placeholder={t('vipMembers')} required defaultValue={priceList?.name}/></div>
+            <div className="space-y-2"><Label htmlFor="pl-discount">{t('discountPercentage')}</Label><Input id="pl-discount" name="discount" type="number" placeholder="15" required defaultValue={priceList?.discount} /></div>
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button type="submit">{priceList ? 'Save Changes' : 'Add Price List'}</Button>
+                <Button type="button" variant="outline" onClick={onCancel}>{t('cancel')}</Button>
+                <Button type="submit">{priceList ? t('saveChanges') : t('addPriceList')}</Button>
             </DialogFooter>
         </form>
     );
@@ -38,6 +41,7 @@ function PriceListForm({ priceList, onFormSubmit, onCancel }: { priceList?: Pric
 
 export default function SettingsClient() {
     const { toast } = useToast();
+    const { t } = useTranslation('common');
     const [settings, setSettings] = useState<Settings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
@@ -67,9 +71,9 @@ export default function SettingsClient() {
         setIsSavingTax(true);
         const result = await saveTaxRate(currentAdmin.restaurantId, settings.taxRate);
         if (result.success) {
-            toast({ title: 'Settings Saved', description: 'Tax rate has been updated.' });
+            toast({ title: t('settingsSaved'), description: t('taxRateUpdated') });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
             const data = await getSettings(currentAdmin.restaurantId);
             setSettings(data);
         }
@@ -84,9 +88,9 @@ export default function SettingsClient() {
         
         const result = await saveActivePriceList(currentAdmin.restaurantId, finalId);
         if (result.success) {
-            toast({ title: 'Settings Saved', description: 'Active price list has been updated.' });
+            toast({ title: t('settingsSaved'), description: t('activePriceListUpdated') });
         } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
             setSettings(s => s ? ({ ...s, activePriceListId: oldId }) : null);
         }
     };
@@ -96,9 +100,9 @@ export default function SettingsClient() {
         setAddDialogOpen(false);
         const result = await addPriceList(currentAdmin.restaurantId, formData);
         if (!result.success) {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
         } else {
-            toast({ title: 'Price List Added' });
+            toast({ title: t('priceListAdded') });
             const data = await getSettings(currentAdmin.restaurantId);
             setSettings(data);
         }
@@ -109,9 +113,9 @@ export default function SettingsClient() {
         setEditingPriceList(null);
         const result = await updatePriceList(currentAdmin.restaurantId, editingPriceList.id, formData);
         if (!result.success) {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
         } else {
-            toast({ title: 'Price List Updated' });
+            toast({ title: t('priceListUpdated') });
             const data = await getSettings(currentAdmin.restaurantId);
             setSettings(data);
         }
@@ -122,9 +126,9 @@ export default function SettingsClient() {
         setDeletingPriceList(null);
         const result = await deletePriceList(currentAdmin.restaurantId, deletingPriceList.id);
         if (!result.success) {
-            toast({ variant: 'destructive', title: 'Error', description: result.error });
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
         } else {
-            toast({ title: 'Price List Deleted' });
+            toast({ title: t('priceListDeleted') });
             const data = await getSettings(currentAdmin.restaurantId);
             setSettings(data);
         }
@@ -138,17 +142,17 @@ export default function SettingsClient() {
     return (
         <div className="space-y-6">
              <div>
-                <h1 className="text-3xl font-bold font-headline">System Settings</h1>
-                <p className="text-muted-foreground">Manage general application settings from the database.</p>
+                <h1 className="text-3xl font-bold font-headline">{t('systemSettings')}</h1>
+                <p className="text-muted-foreground">{t('systemSettingsDescription')}</p>
             </div>
             <Card>
                 <CardHeader>
-                    <CardTitle>Taxes & Defaults</CardTitle>
-                    <CardDescription>Manage tax rates and default price lists for new checks.</CardDescription>
+                    <CardTitle>{t('taxesAndDefaults')}</CardTitle>
+                    <CardDescription>{t('taxesAndDefaultsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                        <Label htmlFor="tax-rate">Default Tax Rate (%)</Label>
+                        <Label htmlFor="tax-rate">{t('defaultTaxRate')}</Label>
                         <Input 
                             id="tax-rate" 
                             type="number" 
@@ -156,20 +160,20 @@ export default function SettingsClient() {
                             onChange={(e) => setSettings(s => s ? { ...s, taxRate: parseFloat(e.target.value) || 0 } : null)} 
                         />
                          <Button className="mt-2" onClick={handleSaveTax} disabled={isSavingTax}>
-                            {isSavingTax ? 'Saving...' : 'Save Tax Rate'}
+                            {isSavingTax ? t('saving') : t('saveTaxRate')}
                         </Button>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="active-price-list">Default Price List for New Checks</Label>
+                        <Label htmlFor="active-price-list">{t('defaultPriceList')}</Label>
                         <Select
                             value={settings.activePriceListId || 'none'}
                             onValueChange={handleActivePriceListChange}
                         >
                             <SelectTrigger id="active-price-list">
-                                <SelectValue placeholder="Select a default..." />
+                                <SelectValue placeholder={t('selectDefault')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">None (No Discount)</SelectItem>
+                                <SelectItem value="none">{t('noneNoDiscount')}</SelectItem>
                                 {settings.priceLists.map((pl) => (
                                     <SelectItem key={pl.id} value={pl.id}>
                                         {pl.name} ({pl.discount}%)
@@ -183,14 +187,14 @@ export default function SettingsClient() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>Manage Price Lists</CardTitle>
-                        <CardDescription>Create or edit price lists (e.g., Happy Hour, Employee Discount).</CardDescription>
+                        <CardTitle>{t('managePriceLists')}</CardTitle>
+                        <CardDescription>{t('managePriceListsDescription')}</CardDescription>
                     </div>
-                    <Button variant="outline" onClick={() => setAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> Add Price List</Button>
+                    <Button variant="outline" onClick={() => setAddDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" /> {t('addPriceList')}</Button>
                 </CardHeader>
                 <CardContent>
                    <Table>
-                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Discount</TableHead><TableHead><span className="sr-only">Actions</span></TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>{t('name')}</TableHead><TableHead>{t('discount')}</TableHead><TableHead><span className="sr-only">{t('actions')}</span></TableHead></TableRow></TableHeader>
                         <TableBody>
                             {settings.priceLists.map((pl) => (
                                 <TableRow key={pl.id}>
@@ -200,8 +204,8 @@ export default function SettingsClient() {
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setEditingPriceList(pl)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingPriceList(pl)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => setEditingPriceList(pl)}><Edit className="mr-2 h-4 w-4"/> {t('edit')}</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => setDeletingPriceList(pl)}><Trash2 className="mr-2 h-4 w-4"/> {t('delete')}</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -214,14 +218,14 @@ export default function SettingsClient() {
 
             <Dialog open={isAddDialogOpen} onOpenChange={setAddDialogOpen}>
                 <DialogContent className="sm:max-w-sm">
-                    <DialogHeader><DialogTitle>Add New Price List</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{t('addNewPriceList')}</DialogTitle></DialogHeader>
                     <PriceListForm onFormSubmit={handleAddPriceList} onCancel={() => setAddDialogOpen(false)} priceList={null} />
                 </DialogContent>
             </Dialog>
 
             <Dialog open={!!editingPriceList} onOpenChange={(isOpen) => !isOpen && setEditingPriceList(null)}>
                 <DialogContent className="sm:max-w-sm">
-                    <DialogHeader><DialogTitle>Edit Price List</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{t('editPriceList')}</DialogTitle></DialogHeader>
                     <PriceListForm priceList={editingPriceList} onFormSubmit={handleEditPriceList} onCancel={() => setEditingPriceList(null)} />
                 </DialogContent>
             </Dialog>
@@ -229,14 +233,14 @@ export default function SettingsClient() {
             <AlertDialog open={!!deletingPriceList} onOpenChange={(isOpen) => !isOpen && setDeletingPriceList(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the price list: <span className="font-bold">{deletingPriceList?.name}</span>.
+                            {t('deletePriceListConfirmation', { name: deletingPriceList?.name })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeletePriceList}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeletePriceList}>{t('delete')}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
