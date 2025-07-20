@@ -146,7 +146,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 
 export default function Home() {
   const router = useRouter();
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -170,6 +170,7 @@ export default function Home() {
     taxRate: number;
     priceLists: PriceList[];
     activePriceListId?: string;
+    defaultLanguage: 'en' | 'ar';
   } | null>(null);
   const [restaurantName, setRestaurantName] = useState('');
 
@@ -267,6 +268,11 @@ export default function Home() {
       setAvailableExtras(fetchedExtras);
       setSettings(fetchedSettings);
       setTables(fetchedTables);
+
+      if (fetchedSettings && !localStorage.getItem('i18nextLng')) {
+        i18n.changeLanguage(fetchedSettings.defaultLanguage);
+      }
+      
       if (restaurantDoc.exists()) {
         setRestaurantName(restaurantDoc.data().name);
       }
@@ -274,7 +280,7 @@ export default function Home() {
       setIsLoading(false);
     };
     fetchInitialData();
-  }, [router]);
+  }, [router, i18n]);
 
   useEffect(() => {
     if (!currentUser?.restaurantId) return;

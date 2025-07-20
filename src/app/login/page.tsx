@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { getSettings } from '../admin/settings/actions';
+import { ensureDefaultRestaurant } from '@/lib/data';
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation('common');
@@ -59,8 +61,21 @@ export default function LoginPage() {
   const { t, i18n } = useTranslation('common');
 
   useEffect(() => {
+    const setLanguage = async () => {
+        const restaurantId = await ensureDefaultRestaurant();
+        const settings = await getSettings(restaurantId);
+        if (settings && !localStorage.getItem('i18nextLng')) {
+            i18n.changeLanguage(settings.defaultLanguage);
+        } else {
+            document.documentElement.dir = i18n.dir(i18n.language);
+        }
+    };
+    setLanguage();
+  }, [i18n]);
+
+  useEffect(() => {
     document.documentElement.dir = i18n.dir(i18n.language);
-  }, [i18n, i18n.language]);
+  }, [i18n.language, i18n]);
 
   const handleLogin = (formData: FormData) => {
     startTransition(async () => {

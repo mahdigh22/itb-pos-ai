@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlusCircle, MoreHorizontal, Trash2, Edit, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList, getSettings } from '@/app/admin/settings/actions';
+import { saveTaxRate, addPriceList, updatePriceList, deletePriceList, saveActivePriceList, getSettings, saveDefaultLanguage } from '@/app/admin/settings/actions';
 import type { PriceList, Admin } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription } from "@/components/ui/alert-dialog";
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,7 @@ interface Settings {
     taxRate: number;
     priceLists: PriceList[];
     activePriceListId?: string;
+    defaultLanguage: 'en' | 'ar';
 }
 
 function PriceListForm({ priceList, onFormSubmit, onCancel }: { priceList?: PriceList | null, onFormSubmit: (data: FormData) => void, onCancel: () => void }) {
@@ -79,6 +80,21 @@ export default function SettingsClient() {
         }
         setIsSavingTax(false);
     };
+
+    const handleDefaultLanguageChange = async (newLang: 'en' | 'ar') => {
+        if (!settings || !currentAdmin) return;
+        const oldLang = settings.defaultLanguage;
+        setSettings(s => s ? ({ ...s, defaultLanguage: newLang }) : null);
+
+        const result = await saveDefaultLanguage(currentAdmin.restaurantId, newLang);
+        if (result.success) {
+            toast({ title: t('settingsSaved'), description: t('defaultLanguageUpdated') });
+        } else {
+            toast({ variant: 'destructive', title: t('error'), description: result.error });
+            setSettings(s => s ? ({ ...s, defaultLanguage: oldLang }) : null);
+        }
+    };
+
 
     const handleActivePriceListChange = async (newId: string) => {
         if (!settings || !currentAdmin) return;
@@ -150,7 +166,7 @@ export default function SettingsClient() {
                     <CardTitle>{t('taxesAndDefaults')}</CardTitle>
                     <CardDescription>{t('taxesAndDefaultsDescription')}</CardDescription>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-8">
+                <CardContent className="grid md:grid-cols-3 gap-8">
                     <div className="space-y-2">
                         <Label htmlFor="tax-rate">{t('defaultTaxRate')}</Label>
                         <Input 
@@ -162,6 +178,21 @@ export default function SettingsClient() {
                          <Button className="mt-2" onClick={handleSaveTax} disabled={isSavingTax}>
                             {isSavingTax ? t('saving') : t('saveTaxRate')}
                         </Button>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="default-language">{t('defaultLanguage')}</Label>
+                        <Select
+                            value={settings.defaultLanguage || 'en'}
+                            onValueChange={(value: 'en' | 'ar') => handleDefaultLanguageChange(value)}
+                        >
+                            <SelectTrigger id="default-language">
+                                <SelectValue placeholder={t('selectDefaultLanguage')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="en">English</SelectItem>
+                                <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="active-price-list">{t('defaultPriceList')}</Label>
