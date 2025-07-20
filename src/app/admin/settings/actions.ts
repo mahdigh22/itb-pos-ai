@@ -27,7 +27,7 @@ export async function getSettings(restaurantId: string): Promise<Settings> {
             return docSnap.data() as Settings;
         } else {
             const defaultSettings: Settings = {
-                taxRate: 0,
+                taxRate: 8.5,
                 priceLists: [
                     { id: 'pl-1', name: 'Default', discount: 0 },
                     { id: 'pl-2', name: 'Happy Hour', discount: 20 },
