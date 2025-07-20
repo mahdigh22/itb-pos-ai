@@ -1,10 +1,10 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/admin/admin-sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import type { Admin } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +37,6 @@ export default function AdminLayout({
     }
   }, [router, pathname]);
 
-  // If we are on the login page, just render children without the layout shell.
   if (pathname === '/admin/login' || pathname === '/admin/signup') {
     return <>{children}</>;
   }
@@ -55,11 +54,9 @@ export default function AdminLayout({
       <div className="flex h-screen bg-background">
         <AdminSidebar />
         <main className={cn(
-          "p-8 overflow-y-auto transition-all duration-300 ease-in-out",
+          "flex-1 p-4 md:p-8 overflow-y-auto transition-all duration-300 ease-in-out",
           "group-data-[state=expanded]/sidebar-wrapper:md:ml-64",
-          "group-data-[state=collapsed]/sidebar-wrapper:md:ml-14",
-          "group-data-[state=expanded]/sidebar-wrapper:rtl:md:mr-64",
-          "group-data-[state=collapsed]/sidebar-wrapper:rtl:md:mr-14"
+          "group-data-[state=collapsed]/sidebar-wrapper:md:ml-14"
         )}>
           {children}
         </main>
