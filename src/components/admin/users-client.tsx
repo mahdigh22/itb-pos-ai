@@ -52,7 +52,7 @@ export default function UsersClient() {
     const [deletingUser, setDeletingUser] = useState<Member | null>(null);
 
     useEffect(() => {
-        const adminData = localStorage.getItem('currentAdmin');
+        const adminData = sessionStorage.getItem('currentAdmin');
         if (adminData) {
             const admin = JSON.parse(adminData);
             setCurrentAdmin(admin);

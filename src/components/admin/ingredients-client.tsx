@@ -72,7 +72,7 @@ export default function IngredientsClient() {
     const [deletingIngredient, setDeletingIngredient] = useState<Ingredient | null>(null);
 
      useEffect(() => {
-        const adminData = localStorage.getItem('currentAdmin');
+        const adminData = sessionStorage.getItem('currentAdmin');
         if (adminData) {
             const admin = JSON.parse(adminData);
             setCurrentAdmin(admin);

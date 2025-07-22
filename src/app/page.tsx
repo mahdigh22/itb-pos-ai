@@ -239,12 +239,12 @@ export default function Home() {
   useEffect(() => {
     let employeeData = null;
     try {
-      const storedEmployee = localStorage.getItem("currentEmployee");
+      const storedEmployee = sessionStorage.getItem("currentEmployee");
       if (storedEmployee) {
         employeeData = JSON.parse(storedEmployee);
       }
     } catch (e) {
-      console.error("Failed to parse employee data from localStorage", e);
+      console.error("Failed to parse employee data from sessionStorage", e);
     }
 
     if (!employeeData?.id || !employeeData?.restaurantId) {
@@ -287,7 +287,7 @@ export default function Home() {
       setSettings(fetchedSettings);
       setTables(fetchedTables);
 
-      if (fetchedSettings && !localStorage.getItem("i18nextLng")) {
+      if (fetchedSettings && !sessionStorage.getItem("i18nextLng")) {
         i18n.changeLanguage(fetchedSettings.defaultLanguage);
       }
 
@@ -315,7 +315,7 @@ export default function Home() {
         const newSettings = doc.data() as { defaultLanguage: "en" | "ar" };
         if (
           newSettings.defaultLanguage &&
-          !localStorage.getItem("i18nextLng")
+          !sessionStorage.getItem("i18nextLng")
         ) {
           i18n.changeLanguage(newSettings.defaultLanguage);
         }
@@ -351,6 +351,7 @@ export default function Home() {
               priceListId: settings?.activePriceListId,
               employeeId: currentUser.id,
               employeeName: currentUser.name,
+              orderType: "Take Away",
             };
             const newCheck = await addCheck(restaurantId, newCheckData);
             setActiveCheckId(newCheck.id);
@@ -530,6 +531,7 @@ export default function Home() {
       priceListId: settings?.activePriceListId,
       employeeId: currentUser.id,
       employeeName: currentUser.name,
+      orderType: "Take Away",
     };
     const newCheck = await addCheck(restaurantId, newCheckData);
     setActiveCheckId(newCheck.id);
@@ -595,6 +597,7 @@ export default function Home() {
         const newCheckData: Omit<Check, "id"> = {
           name: newCheckName,
           items: [],
+          orderType: "Take Away",
           priceListId: settings?.activePriceListId,
           employeeId: currentUser.id,
           employeeName: currentUser.name,
@@ -663,7 +666,7 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("currentEmployee");
+    sessionStorage.removeItem("currentEmployee");
     setCurrentUser(null);
     router.push("/login");
   };
@@ -779,8 +782,11 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="flex-grow min-h-0  p-2 md:p-3 w-full" >
-            <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0 w-full">
+          <div className="flex-grow min-h-0  p-2 md:p-3 w-full">
+            <TabsContent
+              value="pos"
+              className="flex-grow min-h-0 h-full mt-0 w-full"
+            >
               <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-2 h-full">
                 <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
                   <MenuDisplay
