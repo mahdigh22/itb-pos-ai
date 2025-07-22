@@ -364,7 +364,7 @@ export default function Home() {
     }
   };
 
-  const handleAddItem = (item: MenuItem) => {
+  const handleAddItem = async(item: MenuItem) => {
     if (!activeCheck || !currentUser?.restaurantId) return;
 
     const restaurantId = currentUser.restaurantId;
@@ -418,7 +418,7 @@ export default function Home() {
     );
     setChecks(updatedChecks);
 
-    debouncedUpdateCheck(activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId,activeCheck.id, { items: newItems });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
