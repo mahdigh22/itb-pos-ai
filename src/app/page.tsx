@@ -779,9 +779,9 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
-            <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
-              <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
+          <div className="flex-grow min-h-0  p-2 md:p-3 w-full" >
+            <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0 w-full">
+              <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-2 h-full">
                 <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
                   <MenuDisplay
                     categories={categories}
