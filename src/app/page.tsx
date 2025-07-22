@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -86,39 +84,59 @@ import {
 import { db } from "@/lib/firebase";
 import Bill from "@/components/pos/bill";
 import { useTranslation } from "react-i18next";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 function LanguageSwitcher() {
-  const { i18n, t } = useTranslation('common');
+  const { i18n, t } = useTranslation("common");
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
-  
-   useEffect(() => {
+
+  useEffect(() => {
     document.documentElement.lang = i18n.language;
     document.documentElement.dir = i18n.dir(i18n.language);
   }, [i18n.language, i18n]);
 
   return (
     <TooltipProvider>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
-                            <Languages className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
-        </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("changeLanguage")}
+              >
+                <Languages className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => changeLanguage("en")}
+                disabled={i18n.language === "en"}
+              >
+                English
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => changeLanguage("ar")}
+                disabled={i18n.language === "ar"}
+              >
+                العربية
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="center">
+          {t("changeLanguage")}
+        </TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 }
@@ -146,7 +164,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 
 export default function Home() {
   const router = useRouter();
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation("common");
 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -154,7 +172,7 @@ export default function Home() {
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(
     null
   );
-  
+
   const [billToPrint, setBillToPrint] = useState<Check | null>(null);
   const billRef = useRef<HTMLDivElement>(null);
 
@@ -170,9 +188,9 @@ export default function Home() {
     taxRate: number;
     priceLists: PriceList[];
     activePriceListId?: string;
-    defaultLanguage: 'en' | 'ar';
+    defaultLanguage: "en" | "ar";
   } | null>(null);
-  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantName, setRestaurantName] = useState("");
 
   const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState("pos");
@@ -189,13 +207,13 @@ export default function Home() {
       }
     }, 500)
   ).current;
-  
+
   useEffect(() => {
     const handlePrint = async () => {
-        if (billToPrint) {
-            await new Promise(resolve => setTimeout(resolve, 100)); // allow component to render
-            window.print();
-        }
+      if (billToPrint) {
+        await new Promise((resolve) => setTimeout(resolve, 100)); // allow component to render
+        window.print();
+      }
     };
     handlePrint();
   }, [billToPrint]);
@@ -204,18 +222,18 @@ export default function Home() {
     const afterPrint = () => {
       if (billToPrint) {
         // If it was a Dine In order, finalize it after printing
-        if (billToPrint.orderType === 'Dine In' && currentUser?.restaurantId) {
-            deleteCheck(currentUser.restaurantId, billToPrint.id);
-            toast({
-                title: t('billClosedTitle'),
-                description: t('billClosedDescription', { name: billToPrint.name }),
-            });
+        if (billToPrint.orderType === "Dine In" && currentUser?.restaurantId) {
+          deleteCheck(currentUser.restaurantId, billToPrint.id);
+          toast({
+            title: t("billClosedTitle"),
+            description: t("billClosedDescription", { name: billToPrint.name }),
+          });
         }
         setBillToPrint(null);
       }
     };
-    window.addEventListener('afterprint', afterPrint);
-    return () => window.removeEventListener('afterprint', afterPrint);
+    window.addEventListener("afterprint", afterPrint);
+    return () => window.removeEventListener("afterprint", afterPrint);
   }, [billToPrint, currentUser?.restaurantId, toast, t]);
 
   useEffect(() => {
@@ -260,7 +278,7 @@ export default function Home() {
         getExtras(restaurantId),
         getSettings(restaurantId),
         getTables(restaurantId),
-        getDoc(doc(db, 'restaurants', restaurantId))
+        getDoc(doc(db, "restaurants", restaurantId)),
       ]);
       setMembers(fetchedMembers);
       setMenuItems(fetchedMenuItems);
@@ -269,10 +287,10 @@ export default function Home() {
       setSettings(fetchedSettings);
       setTables(fetchedTables);
 
-      if (fetchedSettings && !localStorage.getItem('i18nextLng')) {
+      if (fetchedSettings && !localStorage.getItem("i18nextLng")) {
         i18n.changeLanguage(fetchedSettings.defaultLanguage);
       }
-      
+
       if (restaurantDoc.exists()) {
         setRestaurantName(restaurantDoc.data().name);
       }
@@ -281,15 +299,24 @@ export default function Home() {
     };
     fetchInitialData();
   }, [router, i18n]);
-  
+
   useEffect(() => {
     if (!currentUser?.restaurantId) return;
 
-    const settingsDocRef = doc(db, "restaurants", currentUser.restaurantId, "settings", "main");
+    const settingsDocRef = doc(
+      db,
+      "restaurants",
+      currentUser.restaurantId,
+      "settings",
+      "main"
+    );
     const unsubscribe = onSnapshot(settingsDocRef, (doc) => {
       if (doc.exists()) {
-        const newSettings = doc.data() as { defaultLanguage: 'en' | 'ar' };
-        if (newSettings.defaultLanguage && !localStorage.getItem('i18nextLng')) {
+        const newSettings = doc.data() as { defaultLanguage: "en" | "ar" };
+        if (
+          newSettings.defaultLanguage &&
+          !localStorage.getItem("i18nextLng")
+        ) {
           i18n.changeLanguage(newSettings.defaultLanguage);
         }
       }
@@ -334,8 +361,8 @@ export default function Home() {
         console.error("Error in checks snapshot listener: ", error);
         toast({
           variant: "destructive",
-          title: t('realTimeError'),
-          description: t('realTimeChecksError'),
+          title: t("realTimeError"),
+          description: t("realTimeChecksError"),
         });
       }
     );
@@ -364,7 +391,7 @@ export default function Home() {
     }
   };
 
-  const handleAddItem = async(item: MenuItem) => {
+  const handleAddItem = async (item: MenuItem) => {
     if (!activeCheck || !currentUser?.restaurantId) return;
 
     const restaurantId = currentUser.restaurantId;
@@ -418,7 +445,9 @@ export default function Home() {
     );
     setChecks(updatedChecks);
 
-    await updateCheck(currentUser.restaurantId,activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, {
+      items: newItems,
+    });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
@@ -486,8 +515,10 @@ export default function Home() {
     if (emptyCheck) {
       setActiveCheckId(emptyCheck.id);
       toast({
-        title: t('switchedToEmptyCheck'),
-        description: t('switchedToEmptyCheckDescription', { name: emptyCheck.name }),
+        title: t("switchedToEmptyCheck"),
+        description: t("switchedToEmptyCheckDescription", {
+          name: emptyCheck.name,
+        }),
       });
       return;
     }
@@ -504,8 +535,8 @@ export default function Home() {
     setActiveCheckId(newCheck.id);
 
     toast({
-      title: t('newCheckStarted'),
-      description: t('switchedToCheck', { name: newCheck.name }),
+      title: t("newCheckStarted"),
+      description: t("switchedToCheck", { name: newCheck.name }),
     });
   };
 
@@ -524,8 +555,8 @@ export default function Home() {
     if (!activeCheck.orderType) {
       toast({
         variant: "destructive",
-        title: t('orderTypeRequired'),
-        description: t('orderTypeRequiredDescription'),
+        title: t("orderTypeRequired"),
+        description: t("orderTypeRequiredDescription"),
       });
       return;
     }
@@ -540,14 +571,14 @@ export default function Home() {
 
     if (result.success) {
       toast({
-        title: t('itemsSent'),
-        description: t('itemsSentDescription', { name: originalCheckName }),
+        title: t("itemsSent"),
+        description: t("itemsSentDescription", { name: originalCheckName }),
       });
 
-      if (activeCheck.orderType === 'Take Away') {
+      if (activeCheck.orderType === "Take Away") {
         setBillToPrint(activeCheck);
       }
-      
+
       const currentChecks = checks;
       const emptyCheck = currentChecks.find(
         (c) => c.items.length === 0 && c.id !== activeCheckId
@@ -556,8 +587,8 @@ export default function Home() {
       if (emptyCheck) {
         setActiveCheckId(emptyCheck.id);
         toast({
-          title: t('switchedToEmptyCheck'),
-          description: t('previousCheckInOpen'),
+          title: t("switchedToEmptyCheck"),
+          description: t("previousCheckInOpen"),
         });
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
@@ -571,32 +602,32 @@ export default function Home() {
         const newCheck = await addCheck(currentUser.restaurantId, newCheckData);
         setActiveCheckId(newCheck.id);
         toast({
-          title: t('newCheckStarted'),
-          description: t('previousCheckInOpen'),
+          title: t("newCheckStarted"),
+          description: t("previousCheckInOpen"),
         });
       }
     } else {
       toast({
         variant: "destructive",
-        title: t('error'),
-        description: result.error || t('sendToKitchenError'),
+        title: t("error"),
+        description: result.error || t("sendToKitchenError"),
       });
     }
   };
 
   const handleFinalizeAndPay = () => {
     if (!activeCheck) return;
-    setBillToPrint(activeCheck);
     setCloseCheckAlertOpen(false);
+
+    setBillToPrint(activeCheck);
   };
-  
 
   const handleCloseCheck = () => {
     if (activeCheck?.orderType === "Take Away") {
       toast({
         variant: "destructive",
-        title: t('invalidAction'),
-        description: t('takeAwayCloseError'),
+        title: t("invalidAction"),
+        description: t("takeAwayCloseError"),
       });
       return;
     }
@@ -604,8 +635,8 @@ export default function Home() {
     if (!activeCheck?.orderType) {
       toast({
         variant: "destructive",
-        title: t('orderTypeRequired'),
-        description: t('orderTypeBeforeCloseError'),
+        title: t("orderTypeRequired"),
+        description: t("orderTypeBeforeCloseError"),
       });
       return;
     }
@@ -617,8 +648,8 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await updateOrderStatus(currentUser.restaurantId, orderId, "Completed");
     toast({
-      title: t('orderCompleted'),
-      description: t('orderCompletedDescription'),
+      title: t("orderCompleted"),
+      description: t("orderCompletedDescription"),
     });
   };
 
@@ -626,8 +657,8 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await archiveOrder(currentUser.restaurantId, orderId);
     toast({
-      title: t('orderCleared'),
-      description: t('orderClearedDescription'),
+      title: t("orderCleared"),
+      description: t("orderClearedDescription"),
     });
   };
 
@@ -649,7 +680,13 @@ export default function Home() {
     <>
       <div className="print-only">
         {billToPrint && settings && (
-            <Bill ref={billRef} check={billToPrint} priceLists={settings.priceLists} taxRate={settings.taxRate} restaurantName={restaurantName} />
+          <Bill
+            ref={billRef}
+            check={billToPrint}
+            priceLists={settings.priceLists}
+            taxRate={settings.taxRate}
+            restaurantName={restaurantName}
+          />
         )}
       </div>
       <div className="no-print h-full flex flex-col">
@@ -667,7 +704,9 @@ export default function Home() {
                   className="flex items-center gap-2 text-lg font-headline font-semibold"
                 >
                   <UtensilsCrossed className="h-8 w-8 text-primary" />
-                  <span className="text-xl text-primary font-bold">{restaurantName}</span>
+                  <span className="text-xl text-primary font-bold">
+                    {restaurantName}
+                  </span>
                 </Link>
 
                 <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
@@ -676,28 +715,28 @@ export default function Home() {
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <LayoutDashboard className="h-5 w-5" />
-                    {t('pointOfSale')}
+                    {t("pointOfSale")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="checks"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardCheck className="h-5 w-5" />
-                    {t('openChecks')}
+                    {t("openChecks")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="progress"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardList className="h-5 w-5" />
-                    {t('orderProgress')}
+                    {t("orderProgress")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="members"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <Users className="h-5 w-5" />
-                    {t('members')}
+                    {t("members")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -706,7 +745,10 @@ export default function Home() {
                   <LanguageSwitcher />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        className="flex items-center gap-2"
+                      >
                         <UserCircle className="h-5 w-5" />
                         <span className="hidden md:inline">
                           {currentUser.name}
@@ -715,20 +757,20 @@ export default function Home() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>
-                        {t('myAccount', { role: currentUser.role })}
+                        {t("myAccount", { role: currentUser.role })}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {currentUser.role === "Manager" && (
                         <DropdownMenuItem asChild>
                           <Link href="/admin">
                             <LayoutGrid className="mr-2 h-4 w-4" />
-                            <span>{t('goToAdmin')}</span>
+                            <span>{t("goToAdmin")}</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>{t('logout')}</span>
+                        <span>{t("logout")}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -770,7 +812,10 @@ export default function Home() {
               </div>
             </TabsContent>
 
-            <TabsContent value="checks" className="flex-grow min-h-0 h-full mt-0">
+            <TabsContent
+              value="checks"
+              className="flex-grow min-h-0 h-full mt-0"
+            >
               <OpenChecksDisplay
                 checks={checks}
                 activeCheckId={activeCheckId}
@@ -805,16 +850,16 @@ export default function Home() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-headline">
-                  {t('confirmAction')}
+                  {t("confirmAction")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t('finalizeAndPayConfirmation')}
+                  {t("finalizeAndPayConfirmation")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleFinalizeAndPay}>
-                  {t('yesPrintAndClose')}
+                  {t("yesPrintAndClose")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
