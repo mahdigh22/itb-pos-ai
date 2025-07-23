@@ -1,5 +1,3 @@
-"use client";
-
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,6 +6,7 @@ import TranslationsProvider from "@/components/i18n-provider";
 import { useOnlineSync } from "@/hooks/use-online-sync";
 import { SyncPrompt } from "@/components/syncPrompt";
 import { useEffect } from "react";
+import { ClientServiceWorker } from "@/hooks/use-client-service-worker";
 
 export const metadata = {
   title: "Members",
@@ -19,20 +18,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/service-worker.js")
-          .then((registration) => {
-            console.log("Service Worker registered with scope:", registration.scope);
-          })
-          .catch((error) => {
-            console.log("Service Worker registration failed:", error);
-          });
-      });
-    }
-  }, []);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -67,6 +52,7 @@ export default function RootLayout({
           "font-body antialiased bg-background h-screen flex flex-col"
         )}
       >
+        <ClientServiceWorker />
         <SyncPrompt />
         <TranslationsProvider>
           <ThemeProvider>
