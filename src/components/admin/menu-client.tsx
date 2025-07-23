@@ -358,7 +358,7 @@ export default function MenuClient() {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    const adminData = localStorage.getItem('currentAdmin');
+    const adminData = sessionStorage.getItem('currentAdmin');
     if (adminData) {
         const admin = JSON.parse(adminData);
         setCurrentAdmin(admin);

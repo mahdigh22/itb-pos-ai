@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
@@ -86,17 +84,22 @@ import {
 import { db } from "@/lib/firebase";
 import Bill from "@/components/pos/bill";
 import { useTranslation } from "react-i18next";
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 function LanguageSwitcher() {
-  const { i18n, t } = useTranslation('common');
+  const { i18n, t } = useTranslation("common");
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
 
   useEffect(() => {
+
     document.documentElement.lang = i18n.language;
     document.documentElement.dir = i18n.dir(i18n.language);
   }, [i18n.language, i18n]);
@@ -148,7 +151,7 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
 
 export default function Home() {
   const router = useRouter();
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation("common");
 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -172,9 +175,9 @@ export default function Home() {
     taxRate: number;
     priceLists: PriceList[];
     activePriceListId?: string;
-    defaultLanguage: 'en' | 'ar';
+    defaultLanguage: "en" | "ar";
   } | null>(null);
-  const [restaurantName, setRestaurantName] = useState('');
+  const [restaurantName, setRestaurantName] = useState("");
 
   const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState("pos");
@@ -228,19 +231,19 @@ export default function Home() {
         setBillToPrint(null);
       }
     };
-    window.addEventListener('afterprint', afterPrint);
-    return () => window.removeEventListener('afterprint', afterPrint);
+    window.addEventListener("afterprint", afterPrint);
+    return () => window.removeEventListener("afterprint", afterPrint);
   }, [billToPrint, currentUser?.restaurantId, toast, t]);
 
   useEffect(() => {
     let employeeData = null;
     try {
-      const storedEmployee = localStorage.getItem("currentEmployee");
+      const storedEmployee = sessionStorage.getItem("currentEmployee");
       if (storedEmployee) {
         employeeData = JSON.parse(storedEmployee);
       }
     } catch (e) {
-      console.error("Failed to parse employee data from localStorage", e);
+      console.error("Failed to parse employee data from sessionStorage", e);
     }
 
     if (!employeeData?.id || !employeeData?.restaurantId) {
@@ -274,7 +277,7 @@ export default function Home() {
         getExtras(restaurantId),
         getSettings(restaurantId),
         getTables(restaurantId),
-        getDoc(doc(db, 'restaurants', restaurantId))
+        getDoc(doc(db, "restaurants", restaurantId)),
       ]);
       setMembers(fetchedMembers);
       setMenuItems(fetchedMenuItems);
@@ -283,7 +286,7 @@ export default function Home() {
       setSettings(fetchedSettings);
       setTables(fetchedTables);
 
-      if (fetchedSettings && !localStorage.getItem('i18nextLng')) {
+      if (fetchedSettings && !sessionStorage.getItem("i18nextLng")) {
         i18n.changeLanguage(fetchedSettings.defaultLanguage);
       }
 
@@ -299,11 +302,20 @@ export default function Home() {
   useEffect(() => {
     if (!currentUser?.restaurantId) return;
 
-    const settingsDocRef = doc(db, "restaurants", currentUser.restaurantId, "settings", "main");
+    const settingsDocRef = doc(
+      db,
+      "restaurants",
+      currentUser.restaurantId,
+      "settings",
+      "main"
+    );
     const unsubscribe = onSnapshot(settingsDocRef, (doc) => {
       if (doc.exists()) {
-        const newSettings = doc.data() as { defaultLanguage: 'en' | 'ar' };
-        if (newSettings.defaultLanguage && !localStorage.getItem('i18nextLng')) {
+        const newSettings = doc.data() as { defaultLanguage: "en" | "ar" };
+        if (
+          newSettings.defaultLanguage &&
+          !sessionStorage.getItem("i18nextLng")
+        ) {
           i18n.changeLanguage(newSettings.defaultLanguage);
         }
       }
@@ -338,6 +350,7 @@ export default function Home() {
               priceListId: settings?.activePriceListId,
               employeeId: currentUser.id,
               employeeName: currentUser.name,
+              orderType: "Take Away",
             };
             const newCheck = await addCheck(restaurantId, newCheckData);
             setActiveCheckId(newCheck.id);
@@ -348,8 +361,8 @@ export default function Home() {
         console.error("Error in checks snapshot listener: ", error);
         toast({
           variant: "destructive",
-          title: t('realTimeError'),
-          description: t('realTimeChecksError'),
+          title: t("realTimeError"),
+          description: t("realTimeChecksError"),
         });
       }
     );
@@ -500,8 +513,10 @@ export default function Home() {
     if (emptyCheck) {
       setActiveCheckId(emptyCheck.id);
       toast({
-        title: t('switchedToEmptyCheck'),
-        description: t('switchedToEmptyCheckDescription', { name: emptyCheck.name }),
+        title: t("switchedToEmptyCheck"),
+        description: t("switchedToEmptyCheckDescription", {
+          name: emptyCheck.name,
+        }),
       });
       return;
     }
@@ -513,13 +528,14 @@ export default function Home() {
       priceListId: settings?.activePriceListId,
       employeeId: currentUser.id,
       employeeName: currentUser.name,
+      orderType: "Take Away",
     };
     const newCheck = await addCheck(restaurantId, newCheckData);
     setActiveCheckId(newCheck.id);
 
     toast({
-      title: t('newCheckStarted'),
-      description: t('switchedToCheck', { name: newCheck.name }),
+      title: t("newCheckStarted"),
+      description: t("switchedToCheck", { name: newCheck.name }),
     });
   };
 
@@ -538,8 +554,8 @@ export default function Home() {
     if (!activeCheck.orderType) {
       toast({
         variant: "destructive",
-        title: t('orderTypeRequired'),
-        description: t('orderTypeRequiredDescription'),
+        title: t("orderTypeRequired"),
+        description: t("orderTypeRequiredDescription"),
       });
       return;
     }
@@ -554,11 +570,11 @@ export default function Home() {
 
     if (result.success) {
       toast({
-        title: t('itemsSent'),
-        description: t('itemsSentDescription', { name: originalCheckName }),
+        title: t("itemsSent"),
+        description: t("itemsSentDescription", { name: originalCheckName }),
       });
 
-      if (activeCheck.orderType === 'Take Away') {
+      if (activeCheck.orderType === "Take Away") {
         setBillToPrint(activeCheck);
       }
 
@@ -570,14 +586,15 @@ export default function Home() {
       if (emptyCheck) {
         setActiveCheckId(emptyCheck.id);
         toast({
-          title: t('switchedToEmptyCheck'),
-          description: t('previousCheckInOpen'),
+          title: t("switchedToEmptyCheck"),
+          description: t("previousCheckInOpen"),
         });
       } else {
         const newCheckName = `Check ${currentChecks.length + 1}`;
         const newCheckData: Omit<Check, "id"> = {
           name: newCheckName,
           items: [],
+          orderType: "Take Away",
           priceListId: settings?.activePriceListId,
           employeeId: currentUser.id,
           employeeName: currentUser.name,
@@ -585,23 +602,24 @@ export default function Home() {
         const newCheck = await addCheck(currentUser.restaurantId, newCheckData);
         setActiveCheckId(newCheck.id);
         toast({
-          title: t('newCheckStarted'),
-          description: t('previousCheckInOpen'),
+          title: t("newCheckStarted"),
+          description: t("previousCheckInOpen"),
         });
       }
     } else {
       toast({
         variant: "destructive",
-        title: t('error'),
-        description: result.error || t('sendToKitchenError'),
+        title: t("error"),
+        description: result.error || t("sendToKitchenError"),
       });
     }
   };
 
   const handleFinalizeAndPay = () => {
     if (!activeCheck) return;
-    setBillToPrint(activeCheck);
     setCloseCheckAlertOpen(false);
+
+    setBillToPrint(activeCheck);
   };
 
 
@@ -609,8 +627,8 @@ export default function Home() {
     if (activeCheck?.orderType === "Take Away") {
       toast({
         variant: "destructive",
-        title: t('invalidAction'),
-        description: t('takeAwayCloseError'),
+        title: t("invalidAction"),
+        description: t("takeAwayCloseError"),
       });
       return;
     }
@@ -618,8 +636,8 @@ export default function Home() {
     if (!activeCheck?.orderType) {
       toast({
         variant: "destructive",
-        title: t('orderTypeRequired'),
-        description: t('orderTypeBeforeCloseError'),
+        title: t("orderTypeRequired"),
+        description: t("orderTypeBeforeCloseError"),
       });
       return;
     }
@@ -631,8 +649,8 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await updateOrderStatus(currentUser.restaurantId, orderId, "Completed");
     toast({
-      title: t('orderCompleted'),
-      description: t('orderCompletedDescription'),
+      title: t("orderCompleted"),
+      description: t("orderCompletedDescription"),
     });
   };
 
@@ -640,13 +658,13 @@ export default function Home() {
     if (!currentUser?.restaurantId) return;
     await archiveOrder(currentUser.restaurantId, orderId);
     toast({
-      title: t('orderCleared'),
-      description: t('orderClearedDescription'),
+      title: t("orderCleared"),
+      description: t("orderClearedDescription"),
     });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("currentEmployee");
+    sessionStorage.removeItem("currentEmployee");
     setCurrentUser(null);
     router.push("/login");
   };
@@ -681,7 +699,9 @@ export default function Home() {
                   className="flex items-center gap-2 text-lg font-headline font-semibold"
                 >
                   <UtensilsCrossed className="h-8 w-8 text-primary" />
-                  <span className="text-xl text-primary font-bold">{restaurantName}</span>
+                  <span className="text-xl text-primary font-bold">
+                    {restaurantName}
+                  </span>
                 </Link>
 
                 <TabsList className="inline-grid h-12 w-full max-w-2xl grid-cols-4 bg-muted p-1 rounded-lg">
@@ -690,28 +710,28 @@ export default function Home() {
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <LayoutDashboard className="h-5 w-5" />
-                    {t('pointOfSale')}
+                    {t("pointOfSale")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="checks"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardCheck className="h-5 w-5" />
-                    {t('openChecks')}
+                    {t("openChecks")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="progress"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <ClipboardList className="h-5 w-5" />
-                    {t('orderProgress')}
+                    {t("orderProgress")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="members"
                     className="h-10 text-base gap-2 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <Users className="h-5 w-5" />
-                    {t('members')}
+                    {t("members")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -720,7 +740,10 @@ export default function Home() {
                   <LanguageSwitcher />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        className="flex items-center gap-2"
+                      >
                         <UserCircle className="h-5 w-5" />
                         <span className="hidden md:inline">
                           {currentUser.name}
@@ -729,20 +752,20 @@ export default function Home() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>
-                        {t('myAccount', { role: currentUser.role })}
+                        {t("myAccount", { role: currentUser.role })}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {currentUser.role === "Manager" && (
                         <DropdownMenuItem asChild>
                           <Link href="/admin">
                             <LayoutGrid className="mr-2 h-4 w-4" />
-                            <span>{t('goToAdmin')}</span>
+                            <span>{t("goToAdmin")}</span>
                           </Link>
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>{t('logout')}</span>
+                        <span>{t("logout")}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -751,9 +774,12 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="flex-grow min-h-0 container mx-auto p-4 md:p-8">
-            <TabsContent value="pos" className="flex-grow min-h-0 h-full mt-0">
-              <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-8 h-full">
+          <div className="flex-grow min-h-0  p-2 md:p-3 w-full">
+            <TabsContent
+              value="pos"
+              className="flex-grow min-h-0 h-full mt-0 w-full"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-3 gap-2 h-full">
                 <div className="lg:col-span-3 xl:col-span-2 h-full flex flex-col">
                   <MenuDisplay
                     categories={categories}
@@ -784,7 +810,10 @@ export default function Home() {
               </div>
             </TabsContent>
 
-            <TabsContent value="checks" className="flex-grow min-h-0 h-full mt-0">
+            <TabsContent
+              value="checks"
+              className="flex-grow min-h-0 h-full mt-0"
+            >
               <OpenChecksDisplay
                 checks={checks}
                 activeCheckId={activeCheckId}
@@ -819,16 +848,16 @@ export default function Home() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-headline">
-                  {t('confirmAction')}
+                  {t("confirmAction")}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {t('finalizeAndPayConfirmation')}
+                  {t("finalizeAndPayConfirmation")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
                 <AlertDialogAction onClick={handleFinalizeAndPay}>
-                  {t('yesPrintAndClose')}
+                  {t("yesPrintAndClose")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -63,7 +63,7 @@ export default function LoginPage() {
     const setLanguage = async () => {
         const restaurantId = await ensureDefaultRestaurant();
         const settings = await getSettings(restaurantId);
-        if (settings && !localStorage.getItem('i18nextLng')) {
+        if (settings && !sessionStorage.getItem('i18nextLng')) {
             i18n.changeLanguage(settings.defaultLanguage);
         } else {
             document.documentElement.dir = i18n.dir(i18n.language);
@@ -81,7 +81,7 @@ export default function LoginPage() {
       const result = await loginEmployee(formData);
 
       if (result.success && result.employee) {
-        localStorage.setItem('currentEmployee', JSON.stringify(result.employee));
+        sessionStorage.setItem('currentEmployee', JSON.stringify(result.employee));
         toast({
           title: t('loginSuccessTitle'),
           description: t('welcomeBackDescription', {name: result.employee.name}),

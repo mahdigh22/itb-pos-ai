@@ -60,7 +60,7 @@ export default function AdminSidebar() {
 
     useEffect(() => {
         const fetchRestaurantName = async () => {
-            const adminData = localStorage.getItem('currentAdmin');
+            const adminData = sessionStorage.getItem('currentAdmin');
             if(adminData){
                 const admin: Admin = JSON.parse(adminData);
                 const restaurantDoc = await getDoc(doc(db, "restaurants", admin.restaurantId));
@@ -73,7 +73,7 @@ export default function AdminSidebar() {
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem('currentAdmin');
+        sessionStorage.removeItem('currentAdmin');
         router.push('/admin/login');
     };
 

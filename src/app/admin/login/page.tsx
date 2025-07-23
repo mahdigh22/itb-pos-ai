@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
       const result = await loginAdmin(formData);
       
       if (result.success && result.admin) {
-        localStorage.setItem('currentAdmin', JSON.stringify(result.admin));
+        sessionStorage.setItem('currentAdmin', JSON.stringify(result.admin));
         
         toast({
           title: t('loginSuccessTitle'),

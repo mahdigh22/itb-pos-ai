@@ -25,14 +25,14 @@ export default function AdminLayout({
     }
       
     try {
-      const adminData = localStorage.getItem('currentAdmin');
+      const adminData = sessionStorage.getItem('currentAdmin');
       if (!adminData) {
         router.replace('/admin/login');
       } else {
         setIsAdminLoaded(true);
       }
     } catch (e) {
-      console.error("Failed to access localStorage, redirecting to login.");
+      console.error("Failed to access sessionStorage, redirecting to login.");
       router.replace('/admin/login');
     }
   }, [router, pathname]);
