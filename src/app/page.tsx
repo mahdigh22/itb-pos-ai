@@ -101,17 +101,7 @@ function LanguageSwitcher() {
     document.documentElement.dir = i18n.dir(i18n.language);
   }, [i18n.language, i18n]);
   
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered with scope:', registration.scope);
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-        });
-    });
-  }
+ 
 
   return (
     <TooltipProvider>
@@ -202,6 +192,18 @@ export default function Home() {
     }, 500)
   ).current;
 
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    });
+  }
+  
   useEffect(() => {
     const handlePrint = async () => {
       if (billToPrint) {
