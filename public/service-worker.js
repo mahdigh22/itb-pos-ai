@@ -1,52 +1,76 @@
-// service-worker.js
+const CACHE_NAME = "offline-cache-v1";
 
-const CACHE_NAME = "pos-cache-v1";
-const urlsToCache = [
-  "/", // this works if you have a homepage route (`pages/index.tsx` or `/`)
+const STATIC_ASSETS = [
+  "/", // ✅ This will cache the homepage served from `src/app/page.tsx`
   "/manifest.json",
   "/icon-192x192.svg",
   "/icon-512x512.svg",
-  "/offline.html",
+  // DO NOT add /index.html
 ];
 
-// Install event: Cache essential assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log("Opened cache");
-      return cache.addAll(urlsToCache);
-    })
-  );
-});
-
-// Fetch event: Intercept network requests
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Cache hit - return response
-      if (response) {
-        return response;
-      }
-
-      // No cache hit - fetch from network
-      return fetch(event.request);
-    })
-  );
-});
-
-// Activate event: Clean up old caches
-self.addEventListener("activate", (event) => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            // Delete old caches
-            return caches.delete(cacheName);
-          }
-        })
+        STATIC_ASSETS.map((url) =>
+          cache.add(url).catch((err) =>
+            console.warn(`❌ Failed to cache ${url}`, err)
+          )
+        )
       );
     })
   );
+  self.skipWaiting(); // Activate new SW immediately
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  // Cache-first strategy for static assets
+  if (
+    request.url.includes("/_next/") || // next.js build output
+    request.destination === "image" ||
+    request.destination === "style" ||
+    request.destination === "script"
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        return (
+          cached ||
+          fetch(request).then((response) => {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            return response;
+          })
+        );
+      })
+    );
+    return;
+  }
+
+  // Network-first for HTML pages (like `/`)
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+  }
 });
