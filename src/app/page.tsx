@@ -95,30 +95,42 @@ function LanguageSwitcher() {
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
-  
-   useEffect(() => {
+
+  useEffect(() => {
     document.documentElement.lang = i18n.language;
     document.documentElement.dir = i18n.dir(i18n.language);
   }, [i18n.language, i18n]);
+  
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    });
+  }
 
   return (
     <TooltipProvider>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
-                            <Languages className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
-        </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
+                <Languages className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
+      </Tooltip>
     </TooltipProvider>
   );
 }
@@ -154,7 +166,7 @@ export default function Home() {
   const [customizingItem, setCustomizingItem] = useState<OrderItem | null>(
     null
   );
-  
+
   const [billToPrint, setBillToPrint] = useState<Check | null>(null);
   const billRef = useRef<HTMLDivElement>(null);
 
@@ -189,13 +201,13 @@ export default function Home() {
       }
     }, 500)
   ).current;
-  
+
   useEffect(() => {
     const handlePrint = async () => {
-        if (billToPrint) {
-            await new Promise(resolve => setTimeout(resolve, 100)); // allow component to render
-            window.print();
-        }
+      if (billToPrint) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // allow component to render
+        window.print();
+      }
     };
     handlePrint();
   }, [billToPrint]);
@@ -205,11 +217,11 @@ export default function Home() {
       if (billToPrint) {
         // If it was a Dine In order, finalize it after printing
         if (billToPrint.orderType === 'Dine In' && currentUser?.restaurantId) {
-            deleteCheck(currentUser.restaurantId, billToPrint.id);
-            toast({
-                title: t('billClosedTitle'),
-                description: t('billClosedDescription', { name: billToPrint.name }),
-            });
+          deleteCheck(currentUser.restaurantId, billToPrint.id);
+          toast({
+            title: t('billClosedTitle'),
+            description: t('billClosedDescription', { name: billToPrint.name }),
+          });
         }
         setBillToPrint(null);
       }
@@ -272,7 +284,7 @@ export default function Home() {
       if (fetchedSettings && !localStorage.getItem('i18nextLng')) {
         i18n.changeLanguage(fetchedSettings.defaultLanguage);
       }
-      
+
       if (restaurantDoc.exists()) {
         setRestaurantName(restaurantDoc.data().name);
       }
@@ -281,7 +293,7 @@ export default function Home() {
     };
     fetchInitialData();
   }, [router, i18n]);
-  
+
   useEffect(() => {
     if (!currentUser?.restaurantId) return;
 
@@ -364,7 +376,7 @@ export default function Home() {
     }
   };
 
-  const handleAddItem = async(item: MenuItem) => {
+  const handleAddItem = async (item: MenuItem) => {
     if (!activeCheck || !currentUser?.restaurantId) return;
 
     const restaurantId = currentUser.restaurantId;
@@ -418,7 +430,7 @@ export default function Home() {
     );
     setChecks(updatedChecks);
 
-    await updateCheck(currentUser.restaurantId,activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
@@ -547,7 +559,7 @@ export default function Home() {
       if (activeCheck.orderType === 'Take Away') {
         setBillToPrint(activeCheck);
       }
-      
+
       const currentChecks = checks;
       const emptyCheck = currentChecks.find(
         (c) => c.items.length === 0 && c.id !== activeCheckId
@@ -589,7 +601,7 @@ export default function Home() {
     setBillToPrint(activeCheck);
     setCloseCheckAlertOpen(false);
   };
-  
+
 
   const handleCloseCheck = () => {
     if (activeCheck?.orderType === "Take Away") {
@@ -649,7 +661,7 @@ export default function Home() {
     <>
       <div className="print-only">
         {billToPrint && settings && (
-            <Bill ref={billRef} check={billToPrint} priceLists={settings.priceLists} taxRate={settings.taxRate} restaurantName={restaurantName} />
+          <Bill ref={billRef} check={billToPrint} priceLists={settings.priceLists} taxRate={settings.taxRate} restaurantName={restaurantName} />
         )}
       </div>
       <div className="no-print h-full flex flex-col">
