@@ -27,7 +27,7 @@ import type {
   OrderStatus,
   PriceList,
 } from "@/lib/types";
-import { safeAdd } from "@/lib/offlineSync";
+import { safeAdd, safeUpdate } from "@/lib/offlineSync";
 
 // Check Actions
 export async function getChecks(restaurantId: string): Promise<Check[]> {
@@ -67,7 +67,8 @@ export async function updateCheck(
 ) {
   try {
     const checkRef = doc(db, "restaurants", restaurantId, "checks", checkId);
-    await updateDoc(checkRef, updates);
+    await safeUpdate(`restaurants/${restaurantId}/checks/${checkId}`, updates);
+    // await updateDoc(checkRef, updates);
     return { success: true };
   } catch (e) {
     console.error("Error updating check: ", e);
