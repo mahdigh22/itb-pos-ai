@@ -4,8 +4,8 @@ const CACHE_NAME = "pos-cache-v1";
 const urlsToCache = [
   "/", // this works if you have a homepage route (`pages/index.tsx` or `/`)
   "/manifest.json",
-  "/icon-192x192.png",
-  "/icon-512x512.png",
+  "/icon-192x192.svg",
+  "/icon-512x512.svg",
   "/offline.html",
 ];
 
