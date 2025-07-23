@@ -82,27 +82,15 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
 export const addOrder = async (order: Order) => {
   const db = await initLocalDatabase();
 
-  if (navigator.onLine) {
-    try {
-      // Add to Firebase
-      const docRef = await addDoc(collection(firebaseDb, 'orders'), {
-        ...order,
-        status: 'synced',
-      });
-      // Optionally update local DB with Firebase ID and synced status
-      // If your Order interface in localDatabase.ts has an optional id field
-      // order.id = docRef.id;
-      await db.put('orders', { ...order, status: 'synced' });
-    } catch (error) {
-      console.error('Error adding order to Firebase:', error);
-      // If Firebase write fails, fallback to local storage
-      await db.put('orders', { ...order, status: 'pending_sync' });
-    }
-  } else {
-    // Add to local DB when offline
+  if (!navigator.onLine) {
+    // Add to local DB ONLY when offline
     await db.put('orders', { ...order, status: 'pending_sync' });
   }
+  // When online, the order will be added directly to Firebase
+  // from the component or service handling online order creation.
+  // The syncOrders function will handle pushing offline orders to Firebase.
 };
+
 
 
 export const getOrders = async (): Promise<Order[]> => {
