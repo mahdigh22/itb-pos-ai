@@ -1,4 +1,6 @@
 import { openDB, IDBPDatabase } from 'idb';
+import { collection, addDoc } from 'firebase/firestore'; // Import necessary Firebase functions
+import { db } from './firebase'; // Import your Firebase db instance
 
 const DB_NAME = 'pos_offline_db';
 const DB_VERSION = 1;
@@ -21,7 +23,7 @@ interface Order {
   id: string;
   table: string;
   items: OrderItem[];
-  status: string; // e.g., 'pending_sync', 'synced'
+  status: 'pending_sync' | 'synced'; // e.g., 'pending_sync', 'synced'
   timestamp: number;
   // Add other relevant order properties
 }
@@ -77,8 +79,29 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
 
 export const addOrder = async (order: Order) => {
   const db = await initLocalDatabase();
-  await db.put('orders', order);
+
+  if (navigator.onLine) {
+    try {
+      // Add to Firebase
+      const docRef = await addDoc(collection(db, 'orders'), {
+        ...order,
+        status: 'synced',
+      });
+      // Optionally update local DB with Firebase ID and synced status
+      // If your Order interface in localDatabase.ts has an optional id field
+      // order.id = docRef.id;
+      await db.put('orders', { ...order, status: 'synced' });
+    } catch (error) {
+      console.error('Error adding order to Firebase:', error);
+      // If Firebase write fails, fallback to local storage
+      await db.put('orders', { ...order, status: 'pending_sync' });
+    }
+  } else {
+    // Add to local DB when offline
+    await db.put('orders', { ...order, status: 'pending_sync' });
+  }
 };
+
 
 export const getOrders = async (): Promise<Order[]> => {
   const db = await initLocalDatabase();
