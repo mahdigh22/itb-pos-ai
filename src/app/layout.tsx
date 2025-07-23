@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import TranslationsProvider from "@/components/i18n-provider";
 import { useOnlineSync } from "@/hooks/use-online-sync";
 import { SyncPrompt } from "@/components/syncPrompt";
+import { useEffect } from "react";
 
 export const metadata = {
   title: "Members",
@@ -16,15 +17,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .catch((err) =>
-          console.error("Service Worker registration failed:", err)
-        );
-    });
-  }
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/service-worker.js")
+          .then((registration) => {
+            console.log("Service Worker registered with scope:", registration.scope);
+          })
+          .catch((error) => {
+            console.log("Service Worker registration failed:", error);
+          });
+      });
+    }
+  }, []);
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
