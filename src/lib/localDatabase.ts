@@ -1,5 +1,5 @@
 import { openDB, IDBPDatabase } from 'idb';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore'; // Import necessary Firebase functions
 import { db as firebaseDb } from './firebase'; // Import Firebase db with a different name
 
 const DB_NAME = 'pos_offline_db';
@@ -9,7 +9,13 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
-  // Add other relevant menu item properties
+  // Add other relevant menu item properties like category, image, etc.
+}
+
+export interface RestaurantTable {
+  id: string;
+  name: string;
+  // Add other relevant table properties like status, capacity, etc.
 }
 
 interface OrderItem {
@@ -49,6 +55,10 @@ interface LocalDatabase extends IDBPDatabase {
     key: string;
     value: Check;
   };
+  'tables': {
+    key: string;
+    value: RestaurantTable;
+  };
 }
 
 export const initLocalDatabase = async (): Promise<IDBPDatabase<LocalDatabase>> => {
@@ -64,11 +74,14 @@ export const initLocalDatabase = async (): Promise<IDBPDatabase<LocalDatabase>> 
       if (!db.objectStoreNames.contains('checks')) {
         db.createObjectStore('checks', { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains('tables')) {
+        db.createObjectStore('tables', { keyPath: 'id' });
+      }
     },
   });
 };
 
-
+// Menu Item Functions
 export const addMenuItem = async (item: MenuItem) => {
   const db = await initLocalDatabase();
   await db.put('menuItems', item);
@@ -79,6 +92,38 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
   return db.getAll('menuItems');
 };
 
+export const updateMenuItem = async (item: MenuItem) => {
+  const db = await initLocalDatabase();
+  await db.put('menuItems', item);
+};
+
+export const deleteMenuItem = async (itemId: string) => {
+  const db = await initLocalDatabase();
+  await db.delete('menuItems', itemId);
+};
+
+// Table Functions
+export const addTable = async (table: RestaurantTable) => {
+  const db = await initLocalDatabase();
+  await db.put('tables', table);
+};
+
+export const getTables = async (): Promise<RestaurantTable[]> => {
+  const db = await initLocalDatabase();
+  return db.getAll('tables');
+};
+
+export const updateTable = async (table: RestaurantTable) => {
+  const db = await initLocalDatabase();
+  await db.put('tables', table);
+};
+
+export const deleteTable = async (tableId: string) => {
+  const db = await initLocalDatabase();
+  await db.delete('tables', tableId);
+};
+
+// Order Functions
 export const addOrder = async (order: Order) => {
   const db = await initLocalDatabase();
 
@@ -91,13 +136,12 @@ export const addOrder = async (order: Order) => {
   // The syncOrders function will handle pushing offline orders to Firebase.
 };
 
-
-
 export const getOrders = async (): Promise<Order[]> => {
   const db = await initLocalDatabase();
   return db.getAll('orders');
 };
 
+// Check Functions
 export const addCheck = async (check: Check) => {
   const db = await initLocalDatabase();
   await db.put('checks', check);
@@ -118,6 +162,7 @@ export const deleteCheck = async (checkId: string) => {
   await db.delete('checks', checkId);
 }
 
+// Synchronization Functions
 export const syncOrders = async () => {
   const db = await initLocalDatabase();
   const pendingOrders = await db.getAllFromIndex('orders', 'status', 'pending_sync');
@@ -143,3 +188,6 @@ export const syncOrders = async () => {
     }
   }
 };
+
+// You'll need to implement sync functions for other data types (checks, etc.) as well
+// export const syncChecks = async () => { ... };
