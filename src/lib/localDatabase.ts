@@ -1,6 +1,6 @@
 import { openDB, IDBPDatabase } from 'idb';
-import { collection, addDoc } from 'firebase/firestore'; // Import necessary Firebase functions
-import { db } from './firebase'; // Import your Firebase db instance
+import { collection, addDoc } from 'firebase/firestore';
+import { db as firebaseDb } from './firebase'; // Import Firebase db with a different name
 
 const DB_NAME = 'pos_offline_db';
 const DB_VERSION = 1;
@@ -58,7 +58,8 @@ export const initLocalDatabase = async (): Promise<IDBPDatabase<LocalDatabase>> 
         db.createObjectStore('menuItems', { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains('orders')) {
-        db.createObjectStore('orders', { keyPath: 'id' });
+        const ordersStore = db.createObjectStore('orders', { keyPath: 'id' });
+        ordersStore.createIndex('status', 'status'); // Create index on 'status'
       }
       if (!db.objectStoreNames.contains('checks')) {
         db.createObjectStore('checks', { keyPath: 'id' });
@@ -66,6 +67,7 @@ export const initLocalDatabase = async (): Promise<IDBPDatabase<LocalDatabase>> 
     },
   });
 };
+
 
 export const addMenuItem = async (item: MenuItem) => {
   const db = await initLocalDatabase();
@@ -83,7 +85,7 @@ export const addOrder = async (order: Order) => {
   if (navigator.onLine) {
     try {
       // Add to Firebase
-      const docRef = await addDoc(collection(db, 'orders'), {
+      const docRef = await addDoc(collection(firebaseDb, 'orders'), {
         ...order,
         status: 'synced',
       });
@@ -127,3 +129,29 @@ export const deleteCheck = async (checkId: string) => {
   const db = await initLocalDatabase();
   await db.delete('checks', checkId);
 }
+
+export const syncOrders = async () => {
+  const db = await initLocalDatabase();
+  const pendingOrders = await db.getAllFromIndex('orders', 'status', 'pending_sync');
+
+  for (const order of pendingOrders) {
+    if (navigator.onLine) {
+      try {
+        await addDoc(collection(firebaseDb, 'orders'), { // Use firebaseDb here
+          ...order,
+          status: 'synced',
+        });
+        // Update local order status or delete it
+        await db.put('orders', { ...order, status: 'synced' });
+        // Or delete if you don't need the synced order in local DB
+        // await db.delete('orders', order.id);
+      } catch (error) {
+        console.error('Error syncing order to Firebase:', error);
+        // Handle errors (e.g., retry later)
+      }
+    } else {
+      // If offline again during sync, stop and wait for next online event
+      break;
+    }
+  }
+};
