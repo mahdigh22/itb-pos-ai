@@ -5,6 +5,7 @@ const urlsToCache = [
   '/',
   '/index.html', // Or your main HTML file
   '/globals.css', // Example CSS file
+  '/offline.html'
   // Add other critical assets here (JS bundles, etc.)
 ];
 
