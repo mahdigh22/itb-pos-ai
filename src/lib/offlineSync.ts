@@ -1,11 +1,12 @@
-// src/lib/offlineSync.ts
+"use client";
+
 import { dbQueue } from './dexieOfflineQueue';
 import { v4 as uuidv4 } from 'uuid';
 import { addDoc, updateDoc, deleteDoc, doc, collection } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const isOnline = () => typeof navigator !== 'undefined' && navigator.onLine;
-
+console.log('isOnline', isOnline());
 export async function safeAdd(path: string, data: any) {
   if (isOnline()) {
     const colRef = collection(db, path);

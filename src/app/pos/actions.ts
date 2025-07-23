@@ -28,8 +28,13 @@ import type {
   PriceList,
 } from "@/lib/types";
 import { safeAdd, safeUpdate } from "@/lib/offlineSync";
+import { serverAdd, serverUpdate } from "@/lib/server-action";
+import { unifiedAdd, unifiedUpdate } from "@/lib/unified-actions";
 
 // Check Actions
+
+const isServer = typeof window === "undefined";
+
 export async function getChecks(restaurantId: string): Promise<Check[]> {
   try {
     if (!restaurantId) return [];
@@ -55,7 +60,7 @@ export async function addCheck(
   //   collection(db, "restaurants", restaurantId, "checks"),
   //   check
   // );
-  const docRef = await safeAdd(`restaurants/${restaurantId}/checks`, check);
+  const docRef = await unifiedAdd(`restaurants/${restaurantId}/checks`, check);
   revalidatePath("/");
   return { id: docRef.id, ...check };
 }
@@ -67,7 +72,8 @@ export async function updateCheck(
 ) {
   try {
     const checkRef = doc(db, "restaurants", restaurantId, "checks", checkId);
-    await safeUpdate(`restaurants/${restaurantId}/checks/${checkId}`, updates);
+    unifiedUpdate(`restaurants/${restaurantId}/checks/${checkId}`, updates);
+
     // await updateDoc(checkRef, updates);
     return { success: true };
   } catch (e) {
@@ -427,7 +433,10 @@ export async function getOrders(restaurantId: string): Promise<ActiveOrder[]> {
 export async function archiveOrder(restaurantId: string, orderId: string) {
   try {
     const orderRef = doc(db, "restaurants", restaurantId, "orders", orderId);
-    await updateDoc(orderRef, { status: "Archived" });
+    await unifiedUpdate(`restaurants/${restaurantId}/orders/${orderId}`, {
+      status: "Archived",
+    });
+    // await updateDoc(orderRef, { status: "Archived" });
     revalidatePath("/");
     return { success: true };
   } catch (e) {

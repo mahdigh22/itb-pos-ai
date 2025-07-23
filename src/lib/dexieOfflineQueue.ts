@@ -1,4 +1,5 @@
 // src/lib/dexieOfflineQueue.ts
+
 import Dexie, { Table } from 'dexie';
 
 export interface OfflineMutation {
