@@ -1,7 +1,6 @@
-import type {NextConfig} from 'next';
- 
-const nextConfig: NextConfig = {
-  /* config options here */
+import type { NextConfig } from "next";
+
+const baseConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -11,13 +10,22 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
-      }
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };
- 
-export default nextConfig;
+
+const withPWA = require("next-pwa")({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
+
+module.exports = withPWA({
+  ...baseConfig,
+});

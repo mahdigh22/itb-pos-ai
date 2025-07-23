@@ -27,6 +27,7 @@ import type {
   OrderStatus,
   PriceList,
 } from "@/lib/types";
+import { safeAdd } from "@/lib/offlineSync";
 
 // Check Actions
 export async function getChecks(restaurantId: string): Promise<Check[]> {
@@ -50,10 +51,11 @@ export async function addCheck(
   restaurantId: string,
   check: Omit<Check, "id">
 ): Promise<Check> {
-  const docRef = await addDoc(
-    collection(db, "restaurants", restaurantId, "checks"),
-    check
-  );
+  // const docRef = await addDoc(
+  //   collection(db, "restaurants", restaurantId, "checks"),
+  //   check
+  // );
+  const docRef = await safeAdd(`restaurants/${restaurantId}/checks`, check);
   revalidatePath("/");
   return { id: docRef.id, ...check };
 }
@@ -418,49 +420,6 @@ export async function getOrders(restaurantId: string): Promise<ActiveOrder[]> {
   } catch (error) {
     console.error("Error fetching orders: ", error);
     return [];
-  }
-}
-
-export async function addOrder(
-  restaurantId: string,
-  orderData: Omit<ActiveOrder, "id" | "createdAt"> & { createdAt: Date }
-) {
-  try {
-    await runTransaction(db, async (transaction) => {
-      await deductStockForItems(restaurantId, orderData.items, transaction);
-
-      const sanitizedItems = orderData.items.map((item) => {
-        const { ingredients, ...rest } = item;
-        return { ...rest, cost: item.cost || 0 };
-      });
-
-      const dataToSave = {
-        ...orderData,
-        items: sanitizedItems,
-        createdAt: Timestamp.fromDate(orderData.createdAt),
-        tableId: orderData.tableId || null,
-        tableName: orderData.tableName || null,
-        customerName: orderData.customerName || null,
-        priceListId: orderData.priceListId || null,
-        employeeId: orderData.employeeId || null,
-        employeeName: orderData.employeeName || null,
-      };
-
-      const newOrderRef = doc(
-        collection(db, "restaurants", restaurantId, "orders")
-      );
-      transaction.set(newOrderRef, dataToSave);
-    });
-
-    revalidatePath("/");
-    revalidatePath("/admin/ingredients");
-    return { success: true };
-  } catch (e) {
-    console.error("Error adding order: ", e);
-    if (e instanceof Error) {
-      return { success: false, error: e.message };
-    }
-    return { success: false, error: "Failed to add order." };
   }
 }
 
