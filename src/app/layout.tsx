@@ -3,8 +3,6 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import TranslationsProvider from "@/components/i18n-provider";
-import { useOnlineSync } from "@/hooks/use-online-sync";
-import { SyncPrompt } from "@/components/syncPrompt";
 import { ClientServiceWorker } from "@/hooks/use-client-service-worker";
 
 export const metadata = {
