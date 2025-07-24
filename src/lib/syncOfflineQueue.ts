@@ -2,6 +2,7 @@
 import { dbQueue } from './dexieOfflineQueue';
 import { db } from './firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { serverCancelOrderItem } from './server-action';
 
 type SyncCallbacks = {
   onStart?: (total: number) => void;
@@ -21,7 +22,10 @@ export async function syncOfflineQueue(callbacks: SyncCallbacks = {}) {
   for (const mutation of queue) {
     try {
       const { type, path, data } = mutation;
-
+      if (type === 'cancelOrderItem') {
+        const { restaurantId, orderId, lineItemId } = data;
+        await serverCancelOrderItem(restaurantId, orderId, lineItemId);
+      }
       if (type === 'add') {
         const colRef = collection(db, path);
         await addDoc(colRef, data);

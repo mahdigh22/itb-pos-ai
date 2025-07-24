@@ -47,7 +47,6 @@ export async function initDB() {
       if (!db.objectStoreNames.contains("restaurantInfo")) {
         db.createObjectStore("restaurantInfo", { keyPath: "id" });
       }
-      
     },
   });
 }
@@ -169,4 +168,20 @@ export async function safeDelete(path: string) {
       timestamp: Date.now(),
     });
   }
+}
+export async function SafeCancelOrderItem(
+  restaurantId: string,
+  orderId: string,
+  lineItemId: string,
+) {
+  await dbQueue.mutations.add({
+    id: uuidv4(),
+    type: "cancelOrderItem",
+    data: { restaurantId, orderId, lineItemId },
+    timestamp: Date.now(),
+    path: "",
+  });
+
+  // Optimistic UI update
+  return { success: true, message: "Queued for offline processing" };
 }
