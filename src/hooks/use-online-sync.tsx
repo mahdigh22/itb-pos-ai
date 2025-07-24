@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 
 export function useOnlineSync() {
   const [shouldPrompt, setShouldPrompt] = useState(false);
-  const [wasOffline, setWasOffline] = useState(!navigator.onLine);
   const wasOfflineRef = useRef(!navigator.onLine);
 
   async function checkInternetAccess(): Promise<boolean> {
@@ -25,14 +24,12 @@ export function useOnlineSync() {
         const reallyOnline = await checkInternetAccess();
         if (reallyOnline) {
           setShouldPrompt(true);
-          setWasOffline(false);
           wasOfflineRef.current = false;
         }
       }
     };
 
     const handleOffline = () => {
-      setWasOffline(true);
       wasOfflineRef.current = true;
     };
 
@@ -52,11 +49,9 @@ export function useOnlineSync() {
         const reallyOnline = await checkInternetAccess();
         if (reallyOnline) {
           setShouldPrompt(true);
-          setWasOffline(false);
           wasOfflineRef.current = false;
         }
       } else if (!online && !wasOfflineRef.current) {
-        setWasOffline(true);
         wasOfflineRef.current = true;
       }
     }, 5000);

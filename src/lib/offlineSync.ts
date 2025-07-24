@@ -16,7 +16,7 @@ export const isOnline = () =>
   typeof navigator !== "undefined" && navigator.onLine;
 
 const DB_NAME = "restaurantAppDB";
-const DB_VERSION = 1;
+const DB_VERSION = 1.1;
 
 // Initialize the database
 export async function initDB() {
