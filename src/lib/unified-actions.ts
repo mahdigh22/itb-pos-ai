@@ -4,7 +4,7 @@ import { serverAdd, serverUpdate, serverDelete } from './server-action';
 
 // Detect if running on server
 const isServer = typeof window === 'undefined';
-
+ console.log('isserver', isServer);
 export const unifiedAdd = async (path: string, data: any) => {
   return isServer 
     ? serverAdd(path, data) 

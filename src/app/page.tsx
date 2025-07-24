@@ -90,6 +90,12 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  clearAllStores,
+  getDataByKey,
+  loadData,
+  saveData,
+} from "@/lib/offlineSync";
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation("common");
@@ -99,12 +105,9 @@ function LanguageSwitcher() {
   };
 
   useEffect(() => {
-
     document.documentElement.lang = i18n.language;
     document.documentElement.dir = i18n.dir(i18n.language);
   }, [i18n.language, i18n]);
-  
- 
 
   return (
     <TooltipProvider>
@@ -112,17 +115,33 @@ function LanguageSwitcher() {
         <TooltipTrigger asChild>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label={t('changeLanguage')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t("changeLanguage")}
+              >
                 <Languages className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => changeLanguage('en')} disabled={i18n.language === 'en'}>English</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLanguage('ar')} disabled={i18n.language === 'ar'}>العربية</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => changeLanguage("en")}
+                disabled={i18n.language === "en"}
+              >
+                English
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => changeLanguage("ar")}
+                disabled={i18n.language === "ar"}
+              >
+                العربية
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </TooltipTrigger>
-        <TooltipContent side="bottom" align="center">{t('changeLanguage')}</TooltipContent>
+        <TooltipContent side="bottom" align="center">
+          {t("changeLanguage")}
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
@@ -195,12 +214,10 @@ export default function Home() {
     }, 500)
   ).current;
 
-  
-  
   useEffect(() => {
     const handlePrint = async () => {
       if (billToPrint) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // allow component to render
+        await new Promise((resolve) => setTimeout(resolve, 100)); // allow component to render
         window.print();
       }
     };
@@ -211,11 +228,11 @@ export default function Home() {
     const afterPrint = () => {
       if (billToPrint) {
         // If it was a Dine In order, finalize it after printing
-        if (billToPrint.orderType === 'Dine In' && currentUser?.restaurantId) {
+        if (billToPrint.orderType === "Dine In" && currentUser?.restaurantId) {
           deleteCheck(currentUser.restaurantId, billToPrint.id);
           toast({
-            title: t('billClosedTitle'),
-            description: t('billClosedDescription', { name: billToPrint.name }),
+            title: t("billClosedTitle"),
+            description: t("billClosedDescription", { name: billToPrint.name }),
           });
         }
         setBillToPrint(null);
@@ -249,43 +266,123 @@ export default function Home() {
     }
 
     setCurrentUser(employeeData);
+    const restaurantId = employeeData.restaurantId;
+
     const fetchInitialData = async () => {
       setIsLoading(true);
-      const restaurantId = employeeData.restaurantId;
-      const [
-        fetchedMembers,
-        fetchedMenuItems,
-        fetchedCategories,
-        fetchedExtras,
-        fetchedSettings,
-        fetchedTables,
-        restaurantDoc,
-      ] = await Promise.all([
-        getUsers(restaurantId),
-        fetchMenuItems(restaurantId),
-        getCategories(restaurantId),
-        getExtras(restaurantId),
-        getSettings(restaurantId),
-        getTables(restaurantId),
-        getDoc(doc(db, "restaurants", restaurantId)),
-      ]);
-      setMembers(fetchedMembers);
-      setMenuItems(fetchedMenuItems);
-      setCategories(fetchedCategories);
-      setAvailableExtras(fetchedExtras);
-      setSettings(fetchedSettings);
-      setTables(fetchedTables);
 
-      if (fetchedSettings && !sessionStorage.getItem("i18nextLng")) {
-        i18n.changeLanguage(fetchedSettings.defaultLanguage);
+      try {
+        // Try fetching online
+        const [
+          members,
+          menuItems,
+          categories,
+          extras,
+          settings,
+          tables,
+          restaurantDoc,
+        ] = await Promise.all([
+          getUsers(restaurantId),
+          fetchMenuItems(restaurantId),
+          getCategories(restaurantId),
+          getExtras(restaurantId),
+          getSettings(restaurantId),
+          getTables(restaurantId),
+          getDoc(doc(db, "restaurants", restaurantId)),
+        ]);
+
+        // Update UI state
+        setMembers(members);
+        setMenuItems(menuItems);
+        setCategories(categories);
+        setAvailableExtras(extras);
+        setSettings(settings);
+        setTables(tables);
+
+        // Ensure valid keys before saving to IndexedDB
+        const promises = [
+          members?.length && saveData("members", members),
+          menuItems?.length && saveData("menuItems", menuItems),
+          categories?.length && saveData("categories", categories),
+          extras?.length && saveData("extras", extras),
+          tables?.length && saveData("tables", tables),
+        ];
+        if (settings) {
+          const settingsWithId = { ...settings, restaurantId };
+          promises.push(saveData("settings", settingsWithId));
+        }
+        // Restaurant info save
+        if (restaurantDoc.exists()) {
+          const restaurantData = restaurantDoc.data();
+          setRestaurantName(restaurantData.name);
+
+          if (restaurantData && restaurantId) {
+            promises.push(
+              saveData("restaurantInfo", {
+                id: restaurantId,
+                ...restaurantData,
+              })
+            );
+          }
+        }
+
+        await Promise.all(promises);
+
+        // Set language
+        if (settings && !sessionStorage.getItem("i18nextLng")) {
+          i18n.changeLanguage(settings.defaultLanguage);
+          sessionStorage.setItem("i18nextLng", settings.defaultLanguage);
+        }
+      } catch (onlineError) {
+        console.error("Online fetch failed, using offline data:", onlineError);
+
+        try {
+          const [
+            members,
+            menuItems,
+            categories,
+            extras,
+            cachedSettings,
+            tables,
+            restaurantInfo,
+          ] = await Promise.all([
+            loadData("members"),
+            loadData("menuItems"),
+            loadData("categories"),
+            loadData("extras"),
+            getDataByKey("settings", restaurantId),
+            loadData("tables"),
+            getDataByKey("restaurantInfo", restaurantId),
+          ]);
+
+          // Update state
+          setMembers(members);
+          setMenuItems(menuItems);
+          setCategories(categories);
+          setAvailableExtras(extras);
+          setSettings(cachedSettings || null);
+          setTables(tables);
+
+          if (restaurantInfo) {
+            setRestaurantName(restaurantInfo.name);
+          }
+
+          if (cachedSettings && !sessionStorage.getItem("i18nextLng")) {
+            i18n.changeLanguage(cachedSettings.defaultLanguage);
+            sessionStorage.setItem(
+              "i18nextLng",
+              cachedSettings.defaultLanguage
+            );
+          }
+        } catch (offlineError) {
+          console.error("Failed to load offline data:", offlineError);
+          // Optionally: show user-facing error message
+        }
+      } finally {
+        setIsLoading(false);
       }
-
-      if (restaurantDoc.exists()) {
-        setRestaurantName(restaurantDoc.data().name);
-      }
-
-      setIsLoading(false);
     };
+
     fetchInitialData();
   }, [router, i18n]);
 
@@ -325,11 +422,26 @@ export default function Home() {
       checksQuery,
       async (querySnapshot) => {
         const liveChecks: Check[] = [];
-        querySnapshot.forEach((doc) => {
-          liveChecks.push({ id: doc.id, ...doc.data() } as Check);
-        });
-        setChecks(liveChecks.sort((a, b) => a.name.localeCompare(b.name)));
+        try {
+          querySnapshot.forEach((doc) => {
+            liveChecks.push({ id: doc.id, ...doc.data() } as Check);
+          });
 
+          // Save live data to IndexedDB (assumes saveData handles key paths correctly)
+          await saveData("checks", liveChecks);
+
+          setChecks(liveChecks.sort((a, b) => a.name.localeCompare(b.name)));
+        } catch (error) {
+          console.error(
+            "Failed to save live checks to IndexedDB, loading offline data",
+            error
+          );
+
+          // Load from IndexedDB as fallback
+          const cachedChecks = await loadData("checks");
+
+          setChecks(cachedChecks.sort((a, b) => a.name.localeCompare(b.name)));
+        }
         if (!activeCheckId || !liveChecks.some((c) => c.id === activeCheckId)) {
           if (liveChecks.length > 0) {
             setActiveCheckId(liveChecks[0].id);
@@ -435,7 +547,9 @@ export default function Home() {
     );
     setChecks(updatedChecks);
 
-    await updateCheck(currentUser.restaurantId, activeCheck.id, { items: newItems });
+    await updateCheck(currentUser.restaurantId, activeCheck.id, {
+      items: newItems,
+    });
   };
 
   const handleUpdateQuantity = async (lineItemId: string, quantity: number) => {
@@ -612,7 +726,6 @@ export default function Home() {
     setBillToPrint(activeCheck);
   };
 
-
   const handleCloseCheck = () => {
     if (activeCheck?.orderType === "Take Away") {
       toast({
@@ -653,9 +766,11 @@ export default function Home() {
     });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     sessionStorage.removeItem("currentEmployee");
     setCurrentUser(null);
+    await clearAllStores();
+
     router.push("/login");
   };
 
@@ -671,7 +786,13 @@ export default function Home() {
     <>
       <div className="print-only">
         {billToPrint && settings && (
-          <Bill ref={billRef} check={billToPrint} priceLists={settings.priceLists} taxRate={settings.taxRate} restaurantName={restaurantName} />
+          <Bill
+            ref={billRef}
+            check={billToPrint}
+            priceLists={settings.priceLists}
+            taxRate={settings.taxRate}
+            restaurantName={restaurantName}
+          />
         )}
       </div>
       <div className="no-print h-full flex flex-col">
