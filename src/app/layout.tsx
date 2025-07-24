@@ -52,7 +52,6 @@ export default function RootLayout({
         )}
       >
         <ClientServiceWorker />
-        <SyncPrompt />
         <TranslationsProvider>
           <ThemeProvider>
             <main className="flex-grow min-h-0">{children}</main>

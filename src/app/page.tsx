@@ -96,6 +96,7 @@ import {
   loadData,
   saveData,
 } from "@/lib/offlineSync";
+import SyncButtonWithStatus from "@/components/syn-button-status";
 
 function LanguageSwitcher() {
   const { i18n, t } = useTranslation("common");
@@ -849,6 +850,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <ThemeToggle />
                   <LanguageSwitcher />
+                  <SyncButtonWithStatus/>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button

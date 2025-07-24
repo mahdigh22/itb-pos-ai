@@ -3,8 +3,20 @@ import { dbQueue } from './dexieOfflineQueue';
 import { db } from './firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-export async function syncOfflineQueue() {
+type SyncCallbacks = {
+  onStart?: (total: number) => void;
+  onProgress?: (completed: number, total: number, mutation: any) => void;
+  onSuccess?: (mutation: any) => void;
+  onError?: (mutation: any, error: any) => void;
+  onComplete?: (completed: number, total: number) => void;
+};
+
+export async function syncOfflineQueue(callbacks: SyncCallbacks = {}) {
   const queue = await dbQueue.mutations.orderBy('timestamp').toArray();
+  const total = queue.length;
+  let completed = 0;
+
+  callbacks.onStart?.(total);
 
   for (const mutation of queue) {
     try {
@@ -22,10 +34,15 @@ export async function syncOfflineQueue() {
       }
 
       await dbQueue.mutations.delete(mutation.id);
-    } catch (err) {
-      console.error('Failed to sync mutation:', mutation, err);
-      // stop sync if a single operation fails (to avoid corrupt state)
-      break;
+      completed++;
+
+      callbacks.onSuccess?.(mutation);
+      callbacks.onProgress?.(completed, total, mutation);
+    } catch (error) {
+      callbacks.onError?.(mutation, error);
+      break; // stop on first failure
     }
   }
+
+  callbacks.onComplete?.(completed, total);
 }
